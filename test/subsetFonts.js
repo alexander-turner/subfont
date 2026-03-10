@@ -4098,5 +4098,30 @@ describe('subsetFonts', function () {
         });
       });
     });
+
+    it('should not crash when an SVG asset fails to load and has no parseTree', async function () {
+      const assetGraph = new AssetGraph({
+        root: pathModule.resolve(
+          __dirname,
+          '../testdata/subsetFonts/svg/img-element/'
+        ),
+      });
+      await assetGraph.loadAssets('index.html');
+      await assetGraph.populate({
+        followRelations: {
+          crossorigin: false,
+        },
+      });
+
+      // Simulate an SVG that failed to load (e.g. DNS error) by adding
+      // an unloaded SVG asset to the graph
+      const brokenSvg = assetGraph.addAsset({
+        type: 'Svg',
+        url: 'https://broken.example.com/missing.svg',
+      });
+      expect(brokenSvg.isLoaded, 'to be false');
+
+      await subsetFonts(assetGraph);
+    });
   });
 });
