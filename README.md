@@ -113,6 +113,8 @@ Options:
   --debug, -d                        Verbose insights into font glyph detection
                                                                         [boolean] [default: false]
   --dry-run, --dry, --dryrun         Don't write anything to disk       [boolean] [default: false]
+  --skip-source-map-processing       Skip CSS source map processing for faster execution when
+                                     source maps are not needed          [boolean] [default: true]
 ```
 
 ## Other great font tools

@@ -3506,7 +3506,7 @@ describe('subsetFonts', function () {
             );
           }
           checkSourceMap();
-          await subsetFonts(assetGraph);
+          await subsetFonts(assetGraph, { skipSourceMapProcessing: false });
           checkSourceMap();
         });
       });
@@ -4150,6 +4150,154 @@ describe('subsetFonts', function () {
       expect(brokenSvg.isLoaded, 'to be false');
 
       await subsetFonts(assetGraph);
+    });
+  });
+
+  describe('caching optimizations', function () {
+    describe('fontTracer content-hash cache', function () {
+      it('should produce identical results for pages with identical HTML and CSS', async function () {
+        const assetGraph = new AssetGraph({
+          root: pathModule.resolve(
+            __dirname,
+            '../testdata/subsetFonts/multi-page-identical/'
+          ),
+        });
+        const [page1, page2] = await assetGraph.loadAssets('page*.html');
+        await assetGraph.populate({
+          followRelations: {
+            crossorigin: false,
+          },
+        });
+        await subsetFonts(assetGraph);
+
+        // Both pages should get the same subset font and identical output
+        expect(page1.text, 'to equal', page2.text);
+
+        // Both should have a preload link to the same subset font
+        const preloads1 = page1.outgoingRelations.filter(
+          (r) => r.type === 'HtmlPreloadLink'
+        );
+        const preloads2 = page2.outgoingRelations.filter(
+          (r) => r.type === 'HtmlPreloadLink'
+        );
+        expect(preloads1, 'to have length', 1);
+        expect(preloads2, 'to have length', 1);
+        expect(preloads1[0].to, 'to be', preloads2[0].to);
+      });
+
+      it('should produce correct but distinct results for pages with different text content', async function () {
+        const assetGraph = new AssetGraph({
+          root: pathModule.resolve(
+            __dirname,
+            '../testdata/subsetFonts/multi-page-different-text/'
+          ),
+        });
+        await assetGraph.loadAssets('page*.html');
+        await assetGraph.populate({
+          followRelations: {
+            crossorigin: false,
+          },
+        });
+        await subsetFonts(assetGraph);
+
+        // The subset font should contain characters from both pages
+        const subsetFonts_ = assetGraph.findAssets({
+          fileName: { $regex: /^IBM_Plex_Sans-400-/ },
+          extension: '.woff2',
+        });
+        expect(subsetFonts_, 'to have length', 1);
+        const fontInfo = await getFontInfo(subsetFonts_[0].rawSrc);
+        const chars = fontInfo.characterSet.map((cp) =>
+          String.fromCodePoint(cp)
+        );
+        // Characters from page1
+        for (const ch of 'ABCDEF') {
+          expect(chars, 'to contain', ch);
+        }
+        // Characters from page2
+        for (const ch of 'GHIJKL') {
+          expect(chars, 'to contain', ch);
+        }
+      });
+    });
+
+    describe('font snapping result cache', function () {
+      it('should correctly handle multiple font weights across pages sharing the same CSS', async function () {
+        const assetGraph = new AssetGraph({
+          root: pathModule.resolve(
+            __dirname,
+            '../testdata/subsetFonts/multi-page-multi-weight/'
+          ),
+        });
+        await assetGraph.loadAssets('page*.html');
+        await assetGraph.populate({
+          followRelations: {
+            crossorigin: false,
+          },
+        });
+        await subsetFonts(assetGraph);
+
+        // Should produce two subset fonts: one for weight 400, one for 500
+        const subset400 = assetGraph.findAssets({
+          fileName: { $regex: /^Roboto-400-/ },
+          extension: '.woff2',
+        });
+        const subset500 = assetGraph.findAssets({
+          fileName: { $regex: /^Roboto-500-/ },
+          extension: '.woff2',
+        });
+        expect(subset400, 'to have length', 1);
+        expect(subset500, 'to have length', 1);
+
+        // The 400-weight subset should contain chars from both pages' body text
+        const fontInfo400 = await getFontInfo(subset400[0].rawSrc);
+        const chars400 = fontInfo400.characterSet.map((cp) =>
+          String.fromCodePoint(cp)
+        );
+        // 'Regular text on page one' and 'Regular text on page two' share most chars
+        for (const ch of 'Regulartxonpw') {
+          expect(chars400, 'to contain', ch);
+        }
+
+        // The 500-weight subset should contain chars from both pages' h1 text
+        const fontInfo500 = await getFontInfo(subset500[0].rawSrc);
+        const chars500 = fontInfo500.characterSet.map((cp) =>
+          String.fromCodePoint(cp)
+        );
+        // 'Title One' and 'Title Two'
+        for (const ch of 'TitleOnwo') {
+          expect(chars500, 'to contain', ch);
+        }
+      });
+    });
+
+    describe('stylesheet result caching', function () {
+      it('should produce correct results when multiple pages share the same stylesheet', async function () {
+        const assetGraph = new AssetGraph({
+          root: pathModule.resolve(
+            __dirname,
+            '../testdata/subsetFonts/multi-page-with-same-local-style-file/'
+          ),
+        });
+        await assetGraph.loadAssets('*.html');
+        await assetGraph.populate({
+          followRelations: {
+            crossorigin: false,
+          },
+        });
+        await subsetFonts(assetGraph);
+
+        const htmlAssets = assetGraph.findAssets({ type: 'Html', isLoaded: true, isInline: false });
+        expect(htmlAssets.length, 'to be greater than or equal to', 2);
+
+        // Each page should have preload links (the caching should not cause missed subsets)
+        for (const htmlAsset of htmlAssets) {
+          const preloads = htmlAsset.outgoingRelations.filter(
+            (r) => r.type === 'HtmlPreloadLink'
+          );
+          expect(preloads.length, 'to be greater than or equal to', 1);
+        }
+      });
     });
   });
 });
