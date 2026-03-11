@@ -3352,6 +3352,34 @@ describe('subsetFonts', function () {
     });
   });
 
+  describe('stylesheet result caching across pages with shared CSS', function () {
+    it('should reuse cached stylesheet results and still produce correct per-page text', async function () {
+      const assetGraph = new AssetGraph({
+        root: pathModule.resolve(
+          __dirname,
+          '../testdata/subsetFonts/multi-page-with-same-local-style-file/'
+        ),
+      });
+      await assetGraph.loadAssets(['index.html', 'subindex.html']);
+      await assetGraph.populate();
+      const { fontInfo } = await subsetFonts(assetGraph);
+      expect(fontInfo, 'to have length', 2);
+
+      // Both pages share the same CSS, so the stylesheet cache should be hit,
+      // but each page must still have its own distinct pageText
+      const page1 = fontInfo.find((info) => /index\.html$/.test(info.assetFileName));
+      const page2 = fontInfo.find((info) => /subindex\.html$/.test(info.assetFileName));
+      expect(page1, 'to be defined');
+      expect(page2, 'to be defined');
+
+      // Verify that per-page text differs (proves fontTracer runs per page
+      // even though stylesheet results are cached)
+      const page1Texts = page1.fontUsages.map((u) => u.pageText).join('');
+      const page2Texts = page2.fontUsages.map((u) => u.pageText).join('');
+      expect(page1Texts, 'not to equal', page2Texts);
+    });
+  });
+
   describe('with two pages that have different non-UTF-16 characters', function () {
     it('should not break when combining the characters', async function () {
       const assetGraph = new AssetGraph({
