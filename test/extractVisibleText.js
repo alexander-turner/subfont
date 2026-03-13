@@ -64,6 +64,14 @@ describe('extractVisibleText', function () {
     expect(result, 'not to contain', 'svg text');
   });
 
+  it('should strip template elements and their contents', function () {
+    const result = extractVisibleText(
+      '<p>visible</p><template><div>template content</div></template>'
+    );
+    expect(result, 'to contain', 'visible');
+    expect(result, 'not to contain', 'template content');
+  });
+
   it('should decode HTML entities', function () {
     const result = extractVisibleText('<p>&amp; &lt; &gt; &quot; &apos;</p>');
     expect(result, 'to contain', '&');
