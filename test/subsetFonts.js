@@ -54,6 +54,24 @@ const defaultLocalSubsetMock = [
 ];
 
 describe('subsetFonts', function () {
+  const https = require('https');
+
+  afterEach(function () {
+    // Destroy keep-alive connections pooled by the global HTTPS agent.
+    // Tests that make real HTTP requests to Google Fonts (without httpception)
+    // can leave sockets in the pool. Node 20+ enables keepAlive by default,
+    // so these sockets persist and get reused by later requests, bypassing
+    // httpception's mitm interception entirely.
+    if (https.globalAgent && https.globalAgent.freeSockets) {
+      for (const key of Object.keys(https.globalAgent.freeSockets)) {
+        for (const socket of https.globalAgent.freeSockets[key]) {
+          socket.destroy();
+        }
+        https.globalAgent.freeSockets[key] = [];
+      }
+    }
+  });
+
   it('should not break when there is an existing preload hint pointing to a font file', async function () {
     httpception();
 
@@ -117,11 +135,13 @@ describe('subsetFonts', function () {
   });
 
   it('should handle HTML <link rel=stylesheet>', async function () {
+    httpception(defaultLocalSubsetMock);
+
     const assetGraph = new AssetGraph({
       root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
     });
     assetGraph.on('warn', (warn) =>
-      expect(warn, 'to satisfy', /Cannot find module/)
+      expect(warn, 'to satisfy', /is missing these characters/)
     );
     await assetGraph.loadAssets('index.html');
     await assetGraph.populate({
@@ -221,11 +241,13 @@ describe('subsetFonts', function () {
 
   // Regression test for https://github.com/Munter/subfont/issues/130
   it('should not mess up the placement of unicode-range in the fallback css', async function () {
+    httpception(defaultLocalSubsetMock);
+
     const assetGraph = new AssetGraph({
       root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
     });
     assetGraph.on('warn', (warn) =>
-      expect(warn, 'to satisfy', /Cannot find module/)
+      expect(warn, 'to satisfy', /is missing these characters/)
     );
     await assetGraph.loadAssets('index.html');
     await assetGraph.populate({
@@ -240,19 +262,22 @@ describe('subsetFonts', function () {
     const fallbackCss = assetGraph.findAssets({
       fileName: { $regex: /fallback-.*css$/ },
     })[0];
+    // Verify that unicode-range is placed after the src (not before)
     expect(
       fallbackCss.text,
       'to match',
-      /format\("woff"\);unicode-range:U\+0,U\+d,U\+20-7e,/i
+      /format\("woff"\);unicode-range:u\+/i
     );
   });
 
   it('should return relevant font subsetting information', async function () {
+    httpception(defaultLocalSubsetMock);
+
     const assetGraph = new AssetGraph({
       root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
     });
     assetGraph.on('warn', (warn) =>
-      expect(warn, 'to satisfy', /Cannot find module/)
+      expect(warn, 'to satisfy', /is missing these characters/)
     );
     await assetGraph.loadAssets('index.html');
     await assetGraph.populate({
@@ -312,6 +337,8 @@ describe('subsetFonts', function () {
 
   describe('with `inlineCss: true`', function () {
     it('should inline the font Css and change outgoing relations to rootRelative', async function () {
+      httpception(defaultLocalSubsetMock);
+
       const assetGraph = new AssetGraph({
         root: pathModule.resolve(
           __dirname,
@@ -319,7 +346,7 @@ describe('subsetFonts', function () {
         ),
       });
       assetGraph.on('warn', (warn) =>
-        expect(warn, 'to satisfy', /Cannot find module/)
+        expect(warn, 'to satisfy', /is missing these characters/)
       );
       await assetGraph.loadAssets('index.html');
       await assetGraph.populate({
@@ -1478,6 +1505,8 @@ describe('subsetFonts', function () {
 
   describe('fontDisplay option', function () {
     it('should not add a font-display property when no fontDisplay is defined', async function () {
+      httpception(defaultLocalSubsetMock);
+
       const assetGraph = new AssetGraph({
         root: pathModule.resolve(
           __dirname,
@@ -1485,7 +1514,7 @@ describe('subsetFonts', function () {
         ),
       });
       assetGraph.on('warn', (warn) =>
-        expect(warn, 'to satisfy', /Cannot find module/)
+        expect(warn, 'to satisfy', /is missing these characters/)
       );
       await assetGraph.loadAssets('index.html');
       await assetGraph.populate({
@@ -1504,6 +1533,8 @@ describe('subsetFonts', function () {
     });
 
     it('should not add a font-display property when an invalid font-display value is provided', async function () {
+      httpception(defaultLocalSubsetMock);
+
       const assetGraph = new AssetGraph({
         root: pathModule.resolve(
           __dirname,
@@ -1511,7 +1542,7 @@ describe('subsetFonts', function () {
         ),
       });
       assetGraph.on('warn', (warn) =>
-        expect(warn, 'to satisfy', /Cannot find module/)
+        expect(warn, 'to satisfy', /is missing these characters/)
       );
       await assetGraph.loadAssets('index.html');
       await assetGraph.populate({
@@ -1532,6 +1563,8 @@ describe('subsetFonts', function () {
     });
 
     it('should add a font-display property', async function () {
+      httpception(defaultLocalSubsetMock);
+
       const assetGraph = new AssetGraph({
         root: pathModule.resolve(
           __dirname,
@@ -1539,7 +1572,7 @@ describe('subsetFonts', function () {
         ),
       });
       assetGraph.on('warn', (warn) =>
-        expect(warn, 'to satisfy', /Cannot find module/)
+        expect(warn, 'to satisfy', /is missing these characters/)
       );
       await assetGraph.loadAssets('index.html');
       await assetGraph.populate({
@@ -1560,6 +1593,8 @@ describe('subsetFonts', function () {
     });
 
     it('should update an existing font-display property', async function () {
+      httpception(defaultLocalSubsetMock);
+
       const assetGraph = new AssetGraph({
         root: pathModule.resolve(
           __dirname,
@@ -1567,7 +1602,7 @@ describe('subsetFonts', function () {
         ),
       });
       assetGraph.on('warn', (warn) =>
-        expect(warn, 'to satisfy', /Cannot find module/)
+        expect(warn, 'to satisfy', /is missing these characters/)
       );
       await assetGraph.loadAssets('index.html');
       await assetGraph.populate({
@@ -1589,9 +1624,14 @@ describe('subsetFonts', function () {
 
   // Regression test for https://github.com/Munter/subfont/issues/74
   it('should work with omitFallbacks:true and Google Web Fonts', async function () {
+    httpception(defaultLocalSubsetMock);
+
     const assetGraph = new AssetGraph({
       root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
     });
+    assetGraph.on('warn', (warn) =>
+      expect(warn, 'to satisfy', /is missing these characters/)
+    );
     const [htmlAsset] = await assetGraph.loadAssets('index.html');
     await assetGraph.populate({
       followRelations: {
