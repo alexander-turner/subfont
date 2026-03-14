@@ -144,14 +144,10 @@ describe('extractVisibleText', function () {
   });
 
   it('should not extract value from hidden inputs', function () {
-    // extractVisibleText currently extracts all value attributes,
-    // including from hidden inputs. This is a known limitation of
-    // the regex-based approach.
     const result = extractVisibleText(
       '<input type="hidden" value="secret">'
     );
-    // The function extracts value attrs regardless of input type
-    expect(result, 'to contain', 'secret');
+    expect(result, 'not to contain', 'secret');
   });
 
   it('should handle attributes with HTML entities', function () {
@@ -162,10 +158,8 @@ describe('extractVisibleText', function () {
   });
 
   it('should handle unquoted attributes', function () {
-    // Unquoted attributes are not matched by the regex extractors
     const result = extractVisibleText('<img alt=hello>');
-    // The regex only matches quoted attributes, so unquoted ones are ignored
-    expect(result, 'to be a', 'string');
+    expect(result, 'to contain', 'hello');
   });
 
   it('should not extract data- attributes that look like extractable attrs', function () {

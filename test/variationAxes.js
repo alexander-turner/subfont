@@ -1,4 +1,5 @@
 const expect = require('unexpected');
+const proxyquire = require('proxyquire');
 const {
   renderNumberRange,
   getVariationAxisUsage,
@@ -231,6 +232,82 @@ describe('variationAxes', function () {
       );
       // Only the first page's values should be recorded (dedup by fontUrl)
       expect(getAxes(result).get('wght').has(400), 'to be true');
+    });
+  });
+
+  describe('getVariationAxisBounds', function () {
+    // Use proxyquire to mock getFontInfo so we don't need real font files
+    const { getVariationAxisBounds } = proxyquire('../lib/variationAxes', {
+      './getFontInfo': async function mockGetFontInfo() {
+        return {
+          variationAxes: {
+            wght: { min: 100, max: 900, default: 400 },
+            wdth: { min: 75, max: 125, default: 100 },
+          },
+        };
+      },
+    });
+
+    function makeSeenAxes(entries) {
+      const map = new Map();
+      for (const [axisName, values] of entries) {
+        map.set(axisName, new Set(values));
+      }
+      const outer = new Map();
+      outer.set('font://test', map);
+      return outer;
+    }
+
+    it('should restrict min bound using Math.max (not Math.min)', async function () {
+      // Seen values: wght 400 and 700, font range 100-900
+      // min should be max(400, 100) = 400, not min(400, 100) = 100
+      const fontAssetsByUrl = new Map();
+      fontAssetsByUrl.set('font://test', { rawSrc: Buffer.from('mock') });
+
+      const result = await getVariationAxisBounds(
+        fontAssetsByUrl,
+        'font://test',
+        makeSeenAxes([['wght', [400, 700]]])
+      );
+
+      expect(result.variationAxes.wght.min, 'to equal', 400);
+      expect(result.variationAxes.wght.max, 'to equal', 700);
+      // wght is reduced (400-700 vs 100-900); wdth is pinned to default
+      expect(result.numAxesReduced, 'to equal', 1);
+      expect(result.fullyInstanced, 'to be false');
+    });
+
+    it('should clamp min to font axis min when seen value is below range', async function () {
+      // Seen values: wght 50 and 500, font range 100-900
+      // min should be max(50, 100) = 100
+      const fontAssetsByUrl = new Map();
+      fontAssetsByUrl.set('font://test', { rawSrc: Buffer.from('mock') });
+
+      const result = await getVariationAxisBounds(
+        fontAssetsByUrl,
+        'font://test',
+        makeSeenAxes([['wght', [50, 500]]])
+      );
+
+      expect(result.variationAxes.wght.min, 'to equal', 100);
+      expect(result.variationAxes.wght.max, 'to equal', 500);
+    });
+
+    it('should pin axis when only one value is seen', async function () {
+      const fontAssetsByUrl = new Map();
+      fontAssetsByUrl.set('font://test', { rawSrc: Buffer.from('mock') });
+
+      const result = await getVariationAxisBounds(
+        fontAssetsByUrl,
+        'font://test',
+        makeSeenAxes([['wght', [400]]])
+      );
+
+      // Single value should be pinned (scalar, not range)
+      expect(result.variationAxes.wght, 'to equal', 400);
+      // Both wght and wdth are pinned (wdth defaults to single value)
+      expect(result.numAxesPinned, 'to be greater than or equal to', 1);
+      expect(result.fullyInstanced, 'to be true');
     });
   });
 });
