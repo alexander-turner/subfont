@@ -16,6 +16,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '20'
+      - name: Install system dependencies for canvas
+        run: sudo apt-get update && sudo apt-get install -y build-essential libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev
       - run: npm install
       - run: npx puppeteer browsers install chrome
       - run: npm test
@@ -41,6 +43,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '20'
+      - name: Install system dependencies for canvas
+        run: sudo apt-get update && sudo apt-get install -y build-essential libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev
       - run: npm install
       - run: npx puppeteer browsers install chrome
       - run: npm run coverage
