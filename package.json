@@ -10,7 +10,8 @@
     "test": "mocha && npm run lint",
     "travis": "npm run coverage && npm run lint",
     "coverage": "nyc --reporter=lcov --reporter=text -- mocha",
-    "preversion": "offline-github-changelog --next=${npm_new_version} > CHANGELOG.md && git add CHANGELOG.md"
+    "preversion": "offline-github-changelog --next=${npm_new_version} > CHANGELOG.md && git add CHANGELOG.md",
+    "prepare": "husky"
   },
   "bin": {
     "subfont": "lib/cli.js"
@@ -84,6 +85,7 @@
     "eslint-plugin-standard": "^4.0.0",
     "html-generators": "^1.0.3",
     "httpception": "^3.0.0",
+    "husky": "^9.1.7",
     "magicpen-prism": "^3.0.2",
     "mocha": "^8.0.1",
     "nyc": "^15.1.0",
