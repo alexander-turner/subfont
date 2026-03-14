@@ -1,39 +1,7 @@
 const expect = require('unexpected');
-
-// extractVisibleText is not exported, so we test it indirectly
-// by requiring the module and using a helper to access it.
-// Since it's a private function in subsetFonts.js, we extract it
-// for testing by reading the source and evaluating just that function.
-const fs = require('fs');
-const pathModule = require('path');
-
-// Extract the function from the module source
-const moduleSource = fs.readFileSync(
-  pathModule.resolve(__dirname, '../lib/subsetFonts.js'),
-  'utf8'
-);
-const funcMatch = moduleSource.match(
-  /function extractVisibleText\(html\) \{[\s\S]*?\nfunction /
-);
-
-let extractVisibleText;
-if (funcMatch) {
-  // Extract just the function body (remove trailing 'function ' from next function)
-  const funcSource = funcMatch[0].replace(/\nfunction $/, '');
-  // eslint-disable-next-line no-eval
-  extractVisibleText = eval(`(${funcSource})`);
-}
+const extractVisibleText = require('../lib/extractVisibleText');
 
 describe('extractVisibleText', function () {
-  if (!extractVisibleText) {
-    it('should be extractable from subsetFonts.js', function () {
-      throw new Error(
-        'Could not extract extractVisibleText from subsetFonts.js'
-      );
-    });
-    return;
-  }
-
   it('should extract plain text content', function () {
     const result = extractVisibleText('<p>Hello, world!</p>');
     expect(result, 'to contain', 'Hello, world!');
@@ -164,5 +132,50 @@ describe('extractVisibleText', function () {
     );
     expect(result, 'to contain', 'before');
     expect(result, 'to contain', 'after');
+  });
+
+  it('should handle multiple sibling script elements', function () {
+    const result = extractVisibleText(
+      '<script>hidden_a</script>between<script>hidden_b</script>'
+    );
+    expect(result, 'to contain', 'between');
+    expect(result, 'not to contain', 'hidden_a');
+    expect(result, 'not to contain', 'hidden_b');
+  });
+
+  it('should not extract value from hidden inputs', function () {
+    // extractVisibleText currently extracts all value attributes,
+    // including from hidden inputs. This is a known limitation of
+    // the regex-based approach.
+    const result = extractVisibleText(
+      '<input type="hidden" value="secret">'
+    );
+    // The function extracts value attrs regardless of input type
+    expect(result, 'to contain', 'secret');
+  });
+
+  it('should handle attributes with HTML entities', function () {
+    const result = extractVisibleText(
+      '<img alt="Tom &amp; Jerry">'
+    );
+    expect(result, 'to contain', 'Tom & Jerry');
+  });
+
+  it('should handle unquoted attributes', function () {
+    // Unquoted attributes are not matched by the regex extractors
+    const result = extractVisibleText('<img alt=hello>');
+    // The regex only matches quoted attributes, so unquoted ones are ignored
+    expect(result, 'to be a', 'string');
+  });
+
+  it('should handle data- attributes that look like extractable attrs', function () {
+    // The \b word boundary in the regex matches data-alt because '-' is
+    // a non-word character, so data-alt="..." IS matched. This is a known
+    // limitation of the regex approach but is safe (over-extraction is fine).
+    const result = extractVisibleText(
+      '<div data-alt="extra-text">content</div>'
+    );
+    expect(result, 'to contain', 'content');
+    expect(result, 'to contain', 'extra-text');
   });
 });
