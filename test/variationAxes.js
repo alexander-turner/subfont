@@ -10,20 +10,15 @@ const {
 
 describe('variationAxes', function () {
   describe('renderNumberRange', function () {
-    it('should render a single number when min equals max', function () {
-      expect(renderNumberRange(400, 400), 'to equal', '400');
-    });
-
-    it('should render a range when min differs from max', function () {
-      expect(renderNumberRange(100, 900), 'to equal', '100-900');
-    });
-
-    it('should handle zero', function () {
-      expect(renderNumberRange(0, 0), 'to equal', '0');
-    });
-
-    it('should handle negative numbers', function () {
-      expect(renderNumberRange(-14, 0), 'to equal', '-14-0');
+    [
+      { min: 400, max: 400, expected: '400', desc: 'single value' },
+      { min: 100, max: 900, expected: '100-900', desc: 'range' },
+      { min: 0, max: 0, expected: '0', desc: 'zero' },
+      { min: -14, max: 0, expected: '-14-0', desc: 'negative to zero' },
+    ].forEach(({ min, max, expected, desc }) => {
+      it(`should render ${desc}: ${expected}`, function () {
+        expect(renderNumberRange(min, max), 'to equal', expected);
+      });
     });
   });
 
@@ -44,6 +39,20 @@ describe('variationAxes', function () {
       };
     }
 
+    function runUsage(fontUsages) {
+      return getVariationAxisUsage(
+        [{ fontUsages }],
+        parseFontWeightRange,
+        parseFontStretchRange
+      );
+    }
+
+    function getAxes(result, fontUrl) {
+      return result.seenAxisValuesByFontUrlAndAxisName.get(
+        fontUrl || 'https://example.com/font.woff2'
+      );
+    }
+
     it('should return empty maps for empty fontUsages', function () {
       const result = getVariationAxisUsage(
         [],
@@ -54,243 +63,174 @@ describe('variationAxes', function () {
       expect(result.outOfBoundsAxesByFontUrl.size, 'to equal', 0);
     });
 
-    it('should track multiple distinct fontUrls independently', function () {
-      const usage1 = makeFontUsage({
-        fontUrl: 'https://example.com/font1.woff2',
-        fontWeights: new Set([400]),
-        props: { 'font-weight': '100 900', 'font-stretch': '100%' },
+    describe('font-style to ital/slnt axis mapping', function () {
+      [
+        {
+          fontStyles: ['normal'],
+          axis: 'ital',
+          expectedValues: [0],
+          desc: 'normal -> ital=0',
+        },
+        {
+          fontStyles: ['italic'],
+          axis: 'ital',
+          expectedValues: [1],
+          desc: 'italic -> ital=1',
+        },
+        {
+          fontStyles: ['normal', 'italic'],
+          axis: 'ital',
+          expectedValues: [0, 1],
+          desc: 'normal+italic -> ital=0,1',
+        },
+        {
+          fontStyles: ['oblique'],
+          axis: 'slnt',
+          expectedValues: [-14],
+          desc: 'oblique -> slnt=-14',
+        },
+        {
+          fontStyles: ['normal'],
+          axis: 'slnt',
+          expectedValues: [0],
+          desc: 'normal -> slnt=0',
+        },
+        {
+          fontStyles: ['normal', 'oblique'],
+          axis: 'slnt',
+          expectedValues: [0, -14],
+          desc: 'normal+oblique -> slnt=0,-14',
+        },
+      ].forEach(({ fontStyles, axis, expectedValues, desc }) => {
+        it(`should record ${desc}`, function () {
+          const result = runUsage([
+            makeFontUsage({ fontStyles: new Set(fontStyles) }),
+          ]);
+          const axes = getAxes(result);
+          expectedValues.forEach((val) => {
+            expect(axes.get(axis).has(val), 'to be true');
+          });
+        });
       });
-      const usage2 = makeFontUsage({
-        fontUrl: 'https://example.com/font2.woff2',
-        fontWeights: new Set([700]),
-        props: { 'font-weight': '100 900', 'font-stretch': '100%' },
+    });
+
+    describe('font-weight to wght axis mapping', function () {
+      [
+        {
+          weight: 700,
+          range: '400 700',
+          expectedPresent: [700],
+          expectedAbsent: [],
+          desc: 'in-range value',
+        },
+        {
+          weight: 900,
+          range: '400 700',
+          expectedPresent: [700],
+          expectedAbsent: [900],
+          desc: 'out-of-range value clamped to max',
+        },
+        {
+          weight: 100,
+          range: '400 700',
+          expectedPresent: [400],
+          expectedAbsent: [100],
+          desc: 'below-range value clamped to min',
+        },
+      ].forEach(({ weight, range, expectedPresent, expectedAbsent, desc }) => {
+        it(`should handle ${desc}`, function () {
+          const result = runUsage([
+            makeFontUsage({
+              fontWeights: new Set([weight]),
+              props: { 'font-weight': range, 'font-stretch': '100%' },
+            }),
+          ]);
+          const axes = getAxes(result);
+          expectedPresent.forEach((val) => {
+            expect(axes.get('wght').has(val), 'to be true');
+          });
+          expectedAbsent.forEach((val) => {
+            expect(axes.get('wght').has(val), 'to be false');
+          });
+        });
       });
-      const result = getVariationAxisUsage(
-        [{ fontUsages: [usage1, usage2] }],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes1 = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font1.woff2'
-      );
-      const axes2 = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font2.woff2'
-      );
-      expect(axes1.get('wght').has(400), 'to be true');
-      expect(axes1.get('wght').has(700), 'to be false');
-      expect(axes2.get('wght').has(700), 'to be true');
-      expect(axes2.get('wght').has(400), 'to be false');
     });
 
-    it('should record ital=0 for normal font-style', function () {
-      const result = getVariationAxisUsage(
-        [{ fontUsages: [makeFontUsage({ fontStyles: new Set(['normal']) })] }],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('ital').has(0), 'to be true');
-    });
-
-    it('should record ital=1 for italic font-style', function () {
-      const result = getVariationAxisUsage(
-        [{ fontUsages: [makeFontUsage({ fontStyles: new Set(['italic']) })] }],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('ital').has(1), 'to be true');
-    });
-
-    it('should record both ital=0 and ital=1 for normal+italic', function () {
-      const result = getVariationAxisUsage(
-        [
-          {
-            fontUsages: [
-              makeFontUsage({
-                fontStyles: new Set(['normal', 'italic']),
-              }),
-            ],
-          },
-        ],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('ital').has(0), 'to be true');
-      expect(axes.get('ital').has(1), 'to be true');
-    });
-
-    it('should record slnt=-14 for oblique font-style', function () {
-      const result = getVariationAxisUsage(
-        [{ fontUsages: [makeFontUsage({ fontStyles: new Set(['oblique']) })] }],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('slnt').has(-14), 'to be true');
-    });
-
-    it('should record slnt=0 for normal font-style', function () {
-      const result = getVariationAxisUsage(
-        [{ fontUsages: [makeFontUsage({ fontStyles: new Set(['normal']) })] }],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('slnt').has(0), 'to be true');
-    });
-
-    it('should record font weight values clamped to the range', function () {
-      const result = getVariationAxisUsage(
-        [
-          {
-            fontUsages: [
-              makeFontUsage({
-                fontWeights: new Set([700]),
-                props: { 'font-weight': '400 700', 'font-stretch': '100%' },
-              }),
-            ],
-          },
-        ],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('wght').has(700), 'to be true');
-    });
-
-    it('should clamp font weight values to the declared range', function () {
-      const result = getVariationAxisUsage(
-        [
-          {
-            fontUsages: [
-              makeFontUsage({
-                fontWeights: new Set([900]),
-                props: { 'font-weight': '400 700', 'font-stretch': '100%' },
-              }),
-            ],
-          },
-        ],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('wght').has(700), 'to be true');
-      expect(axes.get('wght').has(900), 'to be false');
-    });
-
-    it('should record font stretch values', function () {
-      const result = getVariationAxisUsage(
-        [
-          {
-            fontUsages: [
-              makeFontUsage({
-                fontStretches: new Set([75]),
-                props: { 'font-weight': '400', 'font-stretch': '75% 125%' },
-              }),
-            ],
-          },
-        ],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('wdth').has(75), 'to be true');
+    it('should record font stretch values as wdth axis', function () {
+      const result = runUsage([
+        makeFontUsage({
+          fontStretches: new Set([75]),
+          props: { 'font-weight': '400', 'font-stretch': '75% 125%' },
+        }),
+      ]);
+      expect(getAxes(result).get('wdth').has(75), 'to be true');
     });
 
     it('should parse font-variation-settings and record axis values', function () {
-      const result = getVariationAxisUsage(
-        [
-          {
-            fontUsages: [
-              makeFontUsage({
-                fontVariationSettings: new Set(['"wght" 600']),
-              }),
-            ],
-          },
-        ],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
-      expect(axes.get('wght').has(600), 'to be true');
+      const result = runUsage([
+        makeFontUsage({
+          fontVariationSettings: new Set(['"wght" 600']),
+        }),
+      ]);
+      expect(getAxes(result).get('wght').has(600), 'to be true');
     });
 
-    it('should track out-of-bounds axes when hasOutOfBoundsAnimationTimingFunction is true', function () {
-      const result = getVariationAxisUsage(
-        [
-          {
-            fontUsages: [
-              makeFontUsage({
-                fontVariationSettings: new Set(['"CUST" 100']),
-                hasOutOfBoundsAnimationTimingFunction: true,
-              }),
-            ],
-          },
-        ],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const outOfBounds = result.outOfBoundsAxesByFontUrl.get(
-        'https://example.com/font.woff2'
-      );
-      expect(outOfBounds.has('CUST'), 'to be true');
+    describe('out-of-bounds animation tracking', function () {
+      [true, false].forEach((hasOutOfBounds) => {
+        it(`should ${hasOutOfBounds ? '' : 'not '}track out-of-bounds axes when flag is ${hasOutOfBounds}`, function () {
+          const result = runUsage([
+            makeFontUsage({
+              fontVariationSettings: new Set(['"CUST" 100']),
+              hasOutOfBoundsAnimationTimingFunction: hasOutOfBounds,
+            }),
+          ]);
+          const outOfBounds = result.outOfBoundsAxesByFontUrl.get(
+            'https://example.com/font.woff2'
+          );
+          if (hasOutOfBounds) {
+            expect(outOfBounds.has('CUST'), 'to be true');
+          } else {
+            expect(outOfBounds, 'to be undefined');
+          }
+        });
+      });
     });
 
-    it('should not track out-of-bounds axes when hasOutOfBoundsAnimationTimingFunction is false', function () {
-      const result = getVariationAxisUsage(
-        [
-          {
-            fontUsages: [
-              makeFontUsage({
-                fontVariationSettings: new Set(['"CUST" 100']),
-                hasOutOfBoundsAnimationTimingFunction: false,
-              }),
-            ],
-          },
-        ],
-        parseFontWeightRange,
-        parseFontStretchRange
-      );
-      const outOfBounds = result.outOfBoundsAxesByFontUrl.get(
-        'https://example.com/font.woff2'
-      );
-      expect(outOfBounds, 'to be undefined');
+    it('should track multiple distinct fontUrls independently', function () {
+      const result = runUsage([
+        makeFontUsage({
+          fontUrl: 'https://example.com/font1.woff2',
+          fontWeights: new Set([400]),
+          props: { 'font-weight': '100 900', 'font-stretch': '100%' },
+        }),
+        makeFontUsage({
+          fontUrl: 'https://example.com/font2.woff2',
+          fontWeights: new Set([700]),
+          props: { 'font-weight': '100 900', 'font-stretch': '100%' },
+        }),
+      ]);
+
+      [
+        { url: 'https://example.com/font1.woff2', present: 400, absent: 700 },
+        { url: 'https://example.com/font2.woff2', present: 700, absent: 400 },
+      ].forEach(({ url, present, absent }) => {
+        const axes = getAxes(result, url);
+        expect(axes.get('wght').has(present), 'to be true');
+        expect(axes.get('wght').has(absent), 'to be false');
+      });
     });
 
     it('should deduplicate fontUrls across multiple pages', function () {
-      const fontUsage1 = makeFontUsage({ fontWeights: new Set([400]) });
-      const fontUsage2 = makeFontUsage({ fontWeights: new Set([700]) });
-      // Same fontUrl appears in two "pages"
       const result = getVariationAxisUsage(
-        [{ fontUsages: [fontUsage1] }, { fontUsages: [fontUsage2] }],
+        [
+          { fontUsages: [makeFontUsage({ fontWeights: new Set([400]) })] },
+          { fontUsages: [makeFontUsage({ fontWeights: new Set([700]) })] },
+        ],
         parseFontWeightRange,
         parseFontStretchRange
       );
-      const axes = result.seenAxisValuesByFontUrlAndAxisName.get(
-        'https://example.com/font.woff2'
-      );
       // Only the first page's values should be recorded (dedup by fontUrl)
-      expect(axes.get('wght').has(400), 'to be true');
+      expect(getAxes(result).get('wght').has(400), 'to be true');
     });
   });
 });

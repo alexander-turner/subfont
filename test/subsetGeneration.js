@@ -3,94 +3,56 @@ const { getSubsetPromiseId } = require('../lib/subsetGeneration');
 
 describe('subsetGeneration', function () {
   describe('getSubsetPromiseId', function () {
-    it('should produce a deterministic id from fontUsage, format, and axes', function () {
-      const fontUsage = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      const id = getSubsetPromiseId(fontUsage, 'woff2', { wght: 400 });
+    const baseFontUsage = {
+      text: 'abc',
+      fontUrl: 'https://example.com/font.woff2',
+    };
+
+    it('should produce a deterministic id', function () {
+      const id = getSubsetPromiseId(baseFontUsage, 'woff2', { wght: 400 });
       expect(id, 'to be a string');
-      // Should be the same for the same inputs
-      expect(id, 'to equal', getSubsetPromiseId(fontUsage, 'woff2', { wght: 400 }));
-    });
-
-    it('should produce different ids for different formats', function () {
-      const fontUsage = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      const id1 = getSubsetPromiseId(fontUsage, 'woff2');
-      const id2 = getSubsetPromiseId(fontUsage, 'woff');
-      expect(id1, 'not to equal', id2);
-    });
-
-    it('should produce different ids for different texts', function () {
-      const fontUsage1 = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      const fontUsage2 = {
-        text: 'xyz',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      expect(
-        getSubsetPromiseId(fontUsage1, 'woff2'),
-        'not to equal',
-        getSubsetPromiseId(fontUsage2, 'woff2')
-      );
-    });
-
-    it('should produce different ids for different font URLs', function () {
-      const fontUsage1 = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font1.woff2',
-      };
-      const fontUsage2 = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font2.woff2',
-      };
-      expect(
-        getSubsetPromiseId(fontUsage1, 'woff2'),
-        'not to equal',
-        getSubsetPromiseId(fontUsage2, 'woff2')
-      );
-    });
-
-    it('should produce different ids for different variation axes', function () {
-      const fontUsage = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      const id1 = getSubsetPromiseId(fontUsage, 'woff2', { wght: 400 });
-      const id2 = getSubsetPromiseId(fontUsage, 'woff2', { wght: 700 });
-      expect(id1, 'not to equal', id2);
-    });
-
-    it('should handle null variation axes', function () {
-      const fontUsage = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      const id = getSubsetPromiseId(fontUsage, 'woff2', null);
-      expect(id, 'to be a string');
-    });
-
-    it('should handle no variation axes argument', function () {
-      const fontUsage = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      const id = getSubsetPromiseId(fontUsage, 'woff2');
-      expect(id, 'to be a string');
+      expect(id, 'to equal', getSubsetPromiseId(baseFontUsage, 'woff2', { wght: 400 }));
     });
 
     it('should use record separator as delimiter', function () {
-      const fontUsage = {
-        text: 'abc',
-        fontUrl: 'https://example.com/font.woff2',
-      };
-      const id = getSubsetPromiseId(fontUsage, 'woff2');
-      expect(id, 'to contain', '\x1d');
+      expect(getSubsetPromiseId(baseFontUsage, 'woff2'), 'to contain', '\x1d');
+    });
+
+    [
+      {
+        desc: 'format',
+        a: [baseFontUsage, 'woff2'],
+        b: [baseFontUsage, 'woff'],
+      },
+      {
+        desc: 'text',
+        a: [{ text: 'abc', fontUrl: baseFontUsage.fontUrl }, 'woff2'],
+        b: [{ text: 'xyz', fontUrl: baseFontUsage.fontUrl }, 'woff2'],
+      },
+      {
+        desc: 'fontUrl',
+        a: [{ text: 'abc', fontUrl: 'https://example.com/font1.woff2' }, 'woff2'],
+        b: [{ text: 'abc', fontUrl: 'https://example.com/font2.woff2' }, 'woff2'],
+      },
+      {
+        desc: 'variation axes',
+        a: [baseFontUsage, 'woff2', { wght: 400 }],
+        b: [baseFontUsage, 'woff2', { wght: 700 }],
+      },
+    ].forEach(({ desc, a, b }) => {
+      it(`should produce different ids for different ${desc}`, function () {
+        expect(
+          getSubsetPromiseId(...a),
+          'not to equal',
+          getSubsetPromiseId(...b)
+        );
+      });
+    });
+
+    [null, undefined].forEach((axes) => {
+      it(`should handle ${axes === null ? 'null' : 'undefined'} variation axes`, function () {
+        expect(getSubsetPromiseId(baseFontUsage, 'woff2', axes), 'to be a string');
+      });
     });
   });
 });
