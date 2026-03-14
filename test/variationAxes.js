@@ -1,30 +1,14 @@
 const expect = require('unexpected');
 const {
-  standardVariationAxes,
-  ignoredVariationAxes,
   renderNumberRange,
   getVariationAxisUsage,
 } = require('../lib/variationAxes');
+const {
+  parseFontWeightRange,
+  parseFontStretchRange,
+} = require('../lib/fontFaceHelpers');
 
 describe('variationAxes', function () {
-  describe('standardVariationAxes', function () {
-    it('should contain the 5 standard axes', function () {
-      expect(standardVariationAxes.has('wght'), 'to be true');
-      expect(standardVariationAxes.has('wdth'), 'to be true');
-      expect(standardVariationAxes.has('ital'), 'to be true');
-      expect(standardVariationAxes.has('slnt'), 'to be true');
-      expect(standardVariationAxes.has('opsz'), 'to be true');
-      expect(standardVariationAxes.size, 'to equal', 5);
-    });
-  });
-
-  describe('ignoredVariationAxes', function () {
-    it('should ignore opsz', function () {
-      expect(ignoredVariationAxes.has('opsz'), 'to be true');
-      expect(ignoredVariationAxes.size, 'to equal', 1);
-    });
-  });
-
   describe('renderNumberRange', function () {
     it('should render a single number when min equals max', function () {
       expect(renderNumberRange(400, 400), 'to equal', '400');
@@ -60,23 +44,43 @@ describe('variationAxes', function () {
       };
     }
 
-    function parseFontWeightRange(str) {
-      if (typeof str === 'undefined' || str === 'auto') {
-        return [-Infinity, Infinity];
-      }
-      const tokens = str.split(/\s+/).map(Number);
-      if (tokens.length === 2) return tokens;
-      return [tokens[0], tokens[0]];
-    }
+    it('should return empty maps for empty fontUsages', function () {
+      const result = getVariationAxisUsage(
+        [],
+        parseFontWeightRange,
+        parseFontStretchRange
+      );
+      expect(result.seenAxisValuesByFontUrlAndAxisName.size, 'to equal', 0);
+      expect(result.outOfBoundsAxesByFontUrl.size, 'to equal', 0);
+    });
 
-    function parseFontStretchRange(str) {
-      if (typeof str === 'undefined' || str === 'auto') {
-        return [-Infinity, Infinity];
-      }
-      const tokens = str.split(/\s+/).map(parseFloat);
-      if (tokens.length === 2) return tokens;
-      return [tokens[0], tokens[0]];
-    }
+    it('should track multiple distinct fontUrls independently', function () {
+      const usage1 = makeFontUsage({
+        fontUrl: 'https://example.com/font1.woff2',
+        fontWeights: new Set([400]),
+        props: { 'font-weight': '100 900', 'font-stretch': '100%' },
+      });
+      const usage2 = makeFontUsage({
+        fontUrl: 'https://example.com/font2.woff2',
+        fontWeights: new Set([700]),
+        props: { 'font-weight': '100 900', 'font-stretch': '100%' },
+      });
+      const result = getVariationAxisUsage(
+        [{ fontUsages: [usage1, usage2] }],
+        parseFontWeightRange,
+        parseFontStretchRange
+      );
+      const axes1 = result.seenAxisValuesByFontUrlAndAxisName.get(
+        'https://example.com/font1.woff2'
+      );
+      const axes2 = result.seenAxisValuesByFontUrlAndAxisName.get(
+        'https://example.com/font2.woff2'
+      );
+      expect(axes1.get('wght').has(400), 'to be true');
+      expect(axes1.get('wght').has(700), 'to be false');
+      expect(axes2.get('wght').has(700), 'to be true');
+      expect(axes2.get('wght').has(400), 'to be false');
+    });
 
     it('should record ital=0 for normal font-style', function () {
       const result = getVariationAxisUsage(

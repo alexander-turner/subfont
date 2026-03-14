@@ -10,27 +10,12 @@ const {
   uniqueCharsFromArray,
   md5HexPrefix,
   cssAssetIsEmpty,
-  contentTypeByFontFormat,
   getFontFaceForFontUsage,
   getFontUsageStylesheet,
   getUnusedVariantsStylesheet,
 } = require('../lib/fontFaceHelpers');
 
 describe('fontFaceHelpers', function () {
-  describe('contentTypeByFontFormat', function () {
-    it('should map woff to font/woff', function () {
-      expect(contentTypeByFontFormat.woff, 'to equal', 'font/woff');
-    });
-
-    it('should map woff2 to font/woff2', function () {
-      expect(contentTypeByFontFormat.woff2, 'to equal', 'font/woff2');
-    });
-
-    it('should map truetype to font/ttf', function () {
-      expect(contentTypeByFontFormat.truetype, 'to equal', 'font/ttf');
-    });
-  });
-
   describe('stringifyFontFamily', function () {
     it('should return a simple name as-is', function () {
       expect(stringifyFontFamily('Arial'), 'to equal', 'Arial');
@@ -314,6 +299,40 @@ describe('fontFaceHelpers', function () {
       expect(result, 'to contain', "format('woff2')");
       expect(result, 'to contain', 'data:font/woff2;base64,');
     });
+
+    it('should include multiple formats in order woff2, woff, truetype', function () {
+      const fontUsage = {
+        props: {
+          'font-family': 'Test',
+          src: 'url(original.woff2)',
+        },
+        subsets: {
+          woff2: Buffer.from('w2'),
+          woff: Buffer.from('w1'),
+          truetype: Buffer.from('tt'),
+        },
+        codepoints: { used: [65] },
+      };
+      const result = getFontFaceForFontUsage(fontUsage);
+      const woff2Pos = result.indexOf("format('woff2')");
+      const woffPos = result.indexOf("format('woff')");
+      const ttPos = result.indexOf("format('truetype')");
+      expect(woff2Pos, 'to be less than', woffPos);
+      expect(woffPos, 'to be less than', ttPos);
+    });
+
+    it('should produce correct unicode-range for given codepoints', function () {
+      const fontUsage = {
+        props: {
+          'font-family': 'Test',
+          src: 'url(x)',
+        },
+        subsets: { woff2: Buffer.from('data') },
+        codepoints: { used: [0x41, 0x42, 0x43] },
+      };
+      const result = getFontFaceForFontUsage(fontUsage);
+      expect(result, 'to contain', 'U+41-43');
+    });
   });
 
   describe('getFontUsageStylesheet', function () {
@@ -412,6 +431,38 @@ describe('fontFaceHelpers', function () {
       expect(result, 'to contain', 'Arial__subset');
       expect(result, 'to contain', 'font-weight:700');
       expect(result, 'to contain', 'font-style:italic');
+    });
+
+    it('should rewrite URLs from relations when present', function () {
+      const fontUsages = [
+        {
+          fontFamilies: new Set(['Arial']),
+          props: {
+            'font-family': 'arial',
+            'font-style': 'normal',
+            'font-weight': '400',
+            'font-stretch': 'normal',
+          },
+        },
+      ];
+      const tokenRegExp = /url\([^)]+\)/g;
+      const declarations = [
+        {
+          'font-family': 'Arial',
+          'font-style': 'italic',
+          'font-weight': '700',
+          'font-stretch': 'normal',
+          src: "url('old.woff2') format('woff2')",
+          relations: [
+            {
+              to: { url: 'https://cdn.example.com/new-font.woff2' },
+              tokenRegExp,
+            },
+          ],
+        },
+      ];
+      const result = getUnusedVariantsStylesheet(fontUsages, declarations);
+      expect(result, 'to contain', 'https://cdn.example.com/new-font.woff2');
     });
 
     it('should not include variants for unused font families', function () {

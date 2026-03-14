@@ -13,12 +13,12 @@ jobs:
           - '14'
           - '16'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 npm install
+      - run: npm install
       - run: npm test
 
   test-targets:
@@ -33,12 +33,12 @@ jobs:
             target: 'coverage'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '14'
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 npm install
+      - run: npm install
       - run: npm run ${{ matrix.targets.target }}
       - name: Upload coverage
         uses: coverallsapp/github-action@master
