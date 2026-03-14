@@ -165,4 +165,20 @@ describe('extractVisibleText', function () {
     expect(result, 'to contain', 'before');
     expect(result, 'to contain', 'after');
   });
+
+  it('should not extract value from hidden inputs', function () {
+    const result = extractVisibleText(
+      '<input type="hidden" value="secret_token"><input placeholder="Enter name" type="text">'
+    );
+    expect(result, 'not to contain', 'secret_token');
+    expect(result, 'to contain', 'Enter name');
+  });
+
+  it('should not extract value attributes from any element', function () {
+    const result = extractVisibleText(
+      '<input type="text" value="some_value"><select><option value="opt1">Option 1</option></select>'
+    );
+    expect(result, 'not to contain', 'some_value');
+    expect(result, 'not to contain', 'opt1');
+  });
 });
