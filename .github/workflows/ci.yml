@@ -13,12 +13,12 @@ jobs:
           - '14'
           - '16'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: npm install
+      - run: PUPPETEER_SKIP_DOWNLOAD=1 npm install
       - run: npm test
 
   test-targets:
@@ -33,15 +33,31 @@ jobs:
             target: 'coverage'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
           node-version: '14'
-      - run: npm install
+      - run: PUPPETEER_SKIP_DOWNLOAD=1 npm install
       - run: npm run ${{ matrix.targets.target }}
       - name: Upload coverage
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         if: ${{ matrix.targets.target == 'coverage' }}
+
+  # Single status check that can be used as a required check / merge gate.
+  # It passes only when all test matrix jobs succeed.
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [test, test-targets]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [[ "${{ needs.test.result }}" != "success" || "${{ needs.test-targets.result }}" != "success" ]]; then
+            echo "One or more required jobs failed"
+            exit 1
+          fi
+          echo "All checks passed"
