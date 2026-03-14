@@ -10,7 +10,9 @@
     "test": "mocha && npm run lint",
     "travis": "npm run coverage && npm run lint",
     "coverage": "nyc --reporter=lcov --reporter=text -- mocha",
-    "preversion": "offline-github-changelog --next=${npm_new_version} > CHANGELOG.md && git add CHANGELOG.md"
+    "preversion": "offline-github-changelog --next=${npm_new_version} > CHANGELOG.md && git add CHANGELOG.md",
+    "postinstall": "git config core.hooksPath .hooks || true",
+    "format": "prettier --write ."
   },
   "bin": {
     "subfont": "lib/cli.js"
@@ -96,6 +98,32 @@
     "unexpected-check": "^2.3.1",
     "unexpected-resemble": "^5.0.1",
     "unexpected-set": "^2.0.1",
-    "unexpected-sinon": "^10.11.2"
+    "unexpected-sinon": "^10.11.2",
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
+    "lint-staged": "^16.2.7"
+  },
+  "lint-staged": {
+    "*.{css,scss}": [
+      "prettier --write"
+    ],
+    "*.json": [
+      "prettier --write"
+    ],
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{yaml,yml}": [
+      "prettier --write"
+    ],
+    "*.md": [
+      "prettier --write"
+    ],
+    ".claude/skills/*/SKILL.md": [
+      ".hooks/lint-skills.sh"
+    ],
+    "{*.sh,.hooks/*}": [
+      "shfmt -i 2 -w"
+    ]
   }
 }

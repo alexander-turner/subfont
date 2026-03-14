@@ -1,10 +1,19 @@
-/node_modules/
-/coverage/
-/.nyc_output/
-/puppeteer-browsers/
+# Dependencies
+node_modules/
 
-# Don't battle npm i --save
-/package.json
+# Build outputs
+dist/
+build/
 
-# Generated
-/CHANGELOG.md
+# Package manager
+pnpm-lock.yaml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.uv/
+uv.lock
+
+# Template sync
+.template-version
