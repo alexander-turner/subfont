@@ -168,14 +168,12 @@ describe('extractVisibleText', function () {
     expect(result, 'to be a', 'string');
   });
 
-  it('should handle data- attributes that look like extractable attrs', function () {
-    // The \b word boundary in the regex matches data-alt because '-' is
-    // a non-word character, so data-alt="..." IS matched. This is a known
-    // limitation of the regex approach but is safe (over-extraction is fine).
+  it('should not extract data- attributes that look like extractable attrs', function () {
+    // parse5 matches exact attribute names, so data-alt is correctly ignored.
     const result = extractVisibleText(
       '<div data-alt="extra-text">content</div>'
     );
     expect(result, 'to contain', 'content');
-    expect(result, 'to contain', 'extra-text');
+    expect(result, 'not to contain', 'extra-text');
   });
 });
