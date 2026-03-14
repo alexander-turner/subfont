@@ -126,10 +126,7 @@ describe('regression bug fixes', function () {
   describe('Bug 5: FontTracerPool should reject pending tasks when all workers crash', function () {
     it('should reject the promise when a worker crashes', async function () {
       // Create a minimal worker that exits immediately with code 1
-      const crashWorkerPath = pathModule.resolve(
-        __dirname,
-        '_crashWorker.js'
-      );
+      const crashWorkerPath = pathModule.resolve(__dirname, '_crashWorker.js');
       fs.writeFileSync(
         crashWorkerPath,
         `

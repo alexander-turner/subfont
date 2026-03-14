@@ -616,13 +616,19 @@ describe('subfont', function () {
         mockConsole
       );
       expect(mockConsole.error, 'to have a call satisfying', [
-        expect.it('to contain', 'GET https://domainthatdoesnotexist12873621321312.com/blablabla.js failed:'),
+        expect.it(
+          'to contain',
+          'GET https://domainthatdoesnotexist12873621321312.com/blablabla.js failed:'
+        ),
       ])
         .and('to have a call satisfying', [
           'ReferenceError: iAmNotAFunction is not defined\n    at https://example.com/index.html:20:7',
         ])
         .and('to have a call satisfying', [
-          expect.it('to contain', 'GET https://assetgraph.org/nonexistent12345.js failed:'),
+          expect.it(
+            'to contain',
+            'GET https://assetgraph.org/nonexistent12345.js failed:'
+          ),
         ]);
     });
 

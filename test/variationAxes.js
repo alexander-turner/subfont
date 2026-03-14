@@ -178,7 +178,9 @@ describe('variationAxes', function () {
 
     describe('out-of-bounds animation tracking', function () {
       [true, false].forEach((hasOutOfBounds) => {
-        it(`should ${hasOutOfBounds ? '' : 'not '}track out-of-bounds axes when flag is ${hasOutOfBounds}`, function () {
+        it(`should ${
+          hasOutOfBounds ? '' : 'not '
+        }track out-of-bounds axes when flag is ${hasOutOfBounds}`, function () {
           const result = runUsage([
             makeFontUsage({
               fontVariationSettings: new Set(['"CUST" 100']),

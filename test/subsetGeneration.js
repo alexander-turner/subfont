@@ -11,7 +11,11 @@ describe('subsetGeneration', function () {
     it('should produce a deterministic id', function () {
       const id = getSubsetPromiseId(baseFontUsage, 'woff2', { wght: 400 });
       expect(id, 'to be a string');
-      expect(id, 'to equal', getSubsetPromiseId(baseFontUsage, 'woff2', { wght: 400 }));
+      expect(
+        id,
+        'to equal',
+        getSubsetPromiseId(baseFontUsage, 'woff2', { wght: 400 })
+      );
     });
 
     it('should use record separator as delimiter', function () {
@@ -31,8 +35,14 @@ describe('subsetGeneration', function () {
       },
       {
         desc: 'fontUrl',
-        a: [{ text: 'abc', fontUrl: 'https://example.com/font1.woff2' }, 'woff2'],
-        b: [{ text: 'abc', fontUrl: 'https://example.com/font2.woff2' }, 'woff2'],
+        a: [
+          { text: 'abc', fontUrl: 'https://example.com/font1.woff2' },
+          'woff2',
+        ],
+        b: [
+          { text: 'abc', fontUrl: 'https://example.com/font2.woff2' },
+          'woff2',
+        ],
       },
       {
         desc: 'variation axes',
@@ -50,8 +60,13 @@ describe('subsetGeneration', function () {
     });
 
     [null, undefined].forEach((axes) => {
-      it(`should handle ${axes === null ? 'null' : 'undefined'} variation axes`, function () {
-        expect(getSubsetPromiseId(baseFontUsage, 'woff2', axes), 'to be a string');
+      it(`should handle ${
+        axes === null ? 'null' : 'undefined'
+      } variation axes`, function () {
+        expect(
+          getSubsetPromiseId(baseFontUsage, 'woff2', axes),
+          'to be a string'
+        );
       });
     });
   });

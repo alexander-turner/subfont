@@ -144,16 +144,12 @@ describe('extractVisibleText', function () {
   });
 
   it('should not extract value from hidden inputs', function () {
-    const result = extractVisibleText(
-      '<input type="hidden" value="secret">'
-    );
+    const result = extractVisibleText('<input type="hidden" value="secret">');
     expect(result, 'not to contain', 'secret');
   });
 
   it('should handle attributes with HTML entities', function () {
-    const result = extractVisibleText(
-      '<img alt="Tom &amp; Jerry">'
-    );
+    const result = extractVisibleText('<img alt="Tom &amp; Jerry">');
     expect(result, 'to contain', 'Tom & Jerry');
   });
 

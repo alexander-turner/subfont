@@ -3367,8 +3367,12 @@ describe('subsetFonts', function () {
 
       // Both pages share the same CSS, so the stylesheet cache should be hit,
       // but each page must still have its own distinct pageText
-      const page1 = fontInfo.find((info) => /index\.html$/.test(info.assetFileName));
-      const page2 = fontInfo.find((info) => /subindex\.html$/.test(info.assetFileName));
+      const page1 = fontInfo.find((info) =>
+        /index\.html$/.test(info.assetFileName)
+      );
+      const page2 = fontInfo.find((info) =>
+        /subindex\.html$/.test(info.assetFileName)
+      );
       expect(page1, 'to be defined');
       expect(page2, 'to be defined');
 
@@ -4287,7 +4291,11 @@ describe('subsetFonts', function () {
         });
         await subsetFonts(assetGraph);
 
-        const htmlAssets = assetGraph.findAssets({ type: 'Html', isLoaded: true, isInline: false });
+        const htmlAssets = assetGraph.findAssets({
+          type: 'Html',
+          isLoaded: true,
+          isInline: false,
+        });
         expect(htmlAssets.length, 'to be greater than or equal to', 2);
 
         // Each page should have preload links (the caching should not cause missed subsets)

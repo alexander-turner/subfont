@@ -20,8 +20,16 @@ describe('fontFaceHelpers', function () {
     [
       { input: 'Arial', expected: 'Arial', desc: 'simple name' },
       { input: 'Open-Sans', expected: 'Open-Sans', desc: 'hyphenated name' },
-      { input: 'font\\name', expected: '"font\\\\name"', desc: 'name with backslash' },
-      { input: 'font"name', expected: '"font\\"name"', desc: 'name with double quote' },
+      {
+        input: 'font\\name',
+        expected: '"font\\\\name"',
+        desc: 'name with backslash',
+      },
+      {
+        input: 'font"name',
+        expected: '"font\\"name"',
+        desc: 'name with double quote',
+      },
       { input: 'Open Sans', expected: '"Open Sans"', desc: 'name with space' },
     ].forEach(({ input, expected, desc }) => {
       it(`should handle ${desc}: ${JSON.stringify(input)}`, function () {
@@ -34,7 +42,11 @@ describe('fontFaceHelpers', function () {
     [
       { input: 'normal', expected: 'normal', desc: 'simple word' },
       { input: 'Open Sans', expected: "'Open Sans'", desc: 'value with space' },
-      { input: 'font-name!', expected: "'font-name!'", desc: 'value with special char' },
+      {
+        input: 'font-name!',
+        expected: "'font-name!'",
+        desc: 'value with special char',
+      },
       { input: "it's", expected: "'it\\'s'", desc: 'value with single quote' },
     ].forEach(({ input, expected, desc }) => {
       it(`should handle ${desc}: ${JSON.stringify(input)}`, function () {
@@ -135,7 +147,11 @@ describe('fontFaceHelpers', function () {
       { input: 'auto', expected: [-Infinity, Infinity], desc: '"auto"' },
       { input: '700', expected: [700, 700], desc: 'single value' },
       { input: '400 700', expected: [400, 700], desc: 'range' },
-      { input: 'bold', expected: [400, 400], desc: 'non-numeric (defaults to 400)' },
+      {
+        input: 'bold',
+        expected: [400, 400],
+        desc: 'non-numeric (defaults to 400)',
+      },
     ].forEach(({ input, expected, desc }) => {
       it(`should parse ${desc}`, function () {
         expect(parseFontWeightRange(input), 'to equal', expected);
@@ -147,7 +163,11 @@ describe('fontFaceHelpers', function () {
     [
       { input: undefined, expected: [-Infinity, Infinity], desc: 'undefined' },
       { input: 'auto', expected: [-Infinity, Infinity], desc: '"auto"' },
-      { input: 'Auto', expected: [-Infinity, Infinity], desc: '"Auto" (case insensitive)' },
+      {
+        input: 'Auto',
+        expected: [-Infinity, Infinity],
+        desc: '"Auto" (case insensitive)',
+      },
       { input: '75%', expected: [75, 75], desc: 'single value' },
       { input: '75% 125%', expected: [75, 125], desc: 'range' },
     ].forEach(({ input, expected, desc }) => {
@@ -183,7 +203,9 @@ describe('fontFaceHelpers', function () {
 
   describe('md5HexPrefix', function () {
     ['hello', 'test', 'subfont'].forEach((input) => {
-      it(`should return a 10-char hex string for ${JSON.stringify(input)}`, function () {
+      it(`should return a 10-char hex string for ${JSON.stringify(
+        input
+      )}`, function () {
         expect(md5HexPrefix(input), 'to match', /^[a-f0-9]{10}$/);
       });
     });
@@ -248,7 +270,13 @@ describe('fontFaceHelpers', function () {
       };
       const result = getFontFaceForFontUsage(fontUsage);
 
-      ['@font-face {', '__subset', 'unicode-range:', "format('woff2')", 'data:font/woff2;base64,'].forEach((expected) => {
+      [
+        '@font-face {',
+        '__subset',
+        'unicode-range:',
+        "format('woff2')",
+        'data:font/woff2;base64,',
+      ].forEach((expected) => {
         expect(result, 'to contain', expected);
       });
     });
