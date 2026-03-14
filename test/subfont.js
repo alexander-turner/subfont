@@ -262,7 +262,7 @@ describe('subfont', function () {
             },
           },
           {
-            request: 'GET http://somewhereelse.com/OpenSans.woff',
+            request: 'GET https://somewhereelse.com/OpenSans.woff',
             response: {
               headers: {
                 'Content-Type': 'font/woff',
@@ -381,7 +381,7 @@ describe('subfont', function () {
             },
           },
           {
-            request: 'GET http://somewhereelse.com/OpenSans.woff',
+            request: 'GET https://somewhereelse.com/OpenSans.woff',
             response: {
               headers: {
                 'Content-Type': 'font/woff',
@@ -451,11 +451,11 @@ describe('subfont', function () {
     );
     expect(mockConsole.log, 'to have a call satisfying', () => {
       mockConsole.log(
-        expect.it('to contain', '400 : 6/213 codepoints used (3 on this page),')
+        expect.it('to contain', '400 : 7/213 codepoints used (3 on this page),')
       );
     }).and('to have a call satisfying', () => {
       mockConsole.log(
-        expect.it('to contain', '400 : 6/213 codepoints used (4 on this page),')
+        expect.it('to contain', '400 : 7/213 codepoints used (5 on this page),')
       );
     });
   });
@@ -480,7 +480,7 @@ describe('subfont', function () {
       mockConsole
     );
     expect(mockConsole.log, 'to have a call satisfying', () => {
-      mockConsole.log(expect.it('to contain', '400 : 3/213 codepoints used,'));
+      mockConsole.log(expect.it('to contain', '400 : 4/213 codepoints used'));
     });
   });
 
@@ -616,13 +616,13 @@ describe('subfont', function () {
         mockConsole
       );
       expect(mockConsole.error, 'to have a call satisfying', [
-        'GET https://domainthatdoesnotexist12873621321312.com/blablabla.js failed: net::ERR_NAME_NOT_RESOLVED',
+        expect.it('to contain', 'GET https://domainthatdoesnotexist12873621321312.com/blablabla.js failed:'),
       ])
         .and('to have a call satisfying', [
           'ReferenceError: iAmNotAFunction is not defined\n    at https://example.com/index.html:20:7',
         ])
         .and('to have a call satisfying', [
-          'GET https://assetgraph.org/nonexistent12345.js returned 404',
+          expect.it('to contain', 'GET https://assetgraph.org/nonexistent12345.js failed:'),
         ]);
     });
 

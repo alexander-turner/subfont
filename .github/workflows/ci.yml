@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm install
+      - run: npx puppeteer browsers install chrome
       - run: npm test
 
   test-targets:
@@ -42,6 +43,8 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
+      - run: npx puppeteer browsers install chrome
+        if: ${{ matrix.targets.target == 'coverage' }}
       - run: npm run ${{ matrix.targets.target }}
       - name: Upload coverage
         uses: coverallsapp/github-action@master

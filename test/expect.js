@@ -12,7 +12,10 @@ const sinon = require('sinon');
 let browser;
 async function getBrowser() {
   if (!browser) {
-    browser = await require('puppeteer').launch();
+    browser = await require('puppeteer').launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
 
     after(async function () {
       await browser.close();
