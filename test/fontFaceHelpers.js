@@ -20,9 +20,9 @@ describe('fontFaceHelpers', function () {
     [
       { input: 'Arial', expected: 'Arial', desc: 'simple name' },
       { input: 'Open-Sans', expected: 'Open-Sans', desc: 'hyphenated name' },
-      { input: 'font\\name', expected: 'font\\\\name', desc: 'name with backslash' },
-      { input: 'font"name', expected: 'font\\"name', desc: 'name with double quote' },
-      { input: 'Open Sans', expected: 'Open Sans', desc: 'name with space' },
+      { input: 'font\\name', expected: '"font\\\\name"', desc: 'name with backslash' },
+      { input: 'font"name', expected: '"font\\"name"', desc: 'name with double quote' },
+      { input: 'Open Sans', expected: '"Open Sans"', desc: 'name with space' },
     ].forEach(({ input, expected, desc }) => {
       it(`should handle ${desc}: ${JSON.stringify(input)}`, function () {
         expect(stringifyFontFamily(input), 'to equal', expected);
