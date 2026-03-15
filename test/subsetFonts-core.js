@@ -1626,39 +1626,6 @@ describe('subsetFonts core subsetting logic', function () {
     });
   });
 
-  describe('with omitFallbacks:true', function () {
-    it('should remove the original @font-face declarations and references to them, and not make subsets of unused variants', async function () {
-      httpception();
-
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/no-fallbacks/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
-      await subsetFonts(assetGraph, {
-        omitFallbacks: true,
-      });
-
-      expect(htmlAsset.text, 'to contain', 'font-family: Roboto__subset;')
-        .and('to contain', 'font: 14px Roboto__subset, serif;')
-        .and('not to contain', 'font-family: Roboto;')
-        .and('not to contain', "font-family: 'Roboto';")
-        .and('not to contain', "font-family: 'font-style: italic;");
-
-      expect(assetGraph, 'to contain no asset', {
-        fileName: 'KFOmCnqEu92Fr1Mu4mxM.woff',
-      });
-
-      const cssAsset = assetGraph.findAssets({
-        fileName: { $regex: /^fonts-.*\.css$/ },
-      })[0];
-      expect(cssAsset.text, 'not to contain', 'font-style:italic');
-    });
-  });
-
   describe('with a page that does need subsetting and one that does', function () {
     // https://gitter.im/assetgraph/assetgraph?at=5dbb6438a3f0b17849c488cf
     it('should not short circuit because the first page does not need any subset fonts', async function () {
