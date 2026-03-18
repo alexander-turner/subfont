@@ -441,7 +441,9 @@ describe('subsetFonts CSS injection and rewriting', function () {
     describe('on a single page', function () {
       it('should inline the font subsets', async function () {
         const assetGraph = createGraph('inline-subsets');
-        const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
+        const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', {
+          crossorigin: false,
+        });
 
         await subsetFonts(assetGraph, {
           formats: ['woff2'],
@@ -503,7 +505,9 @@ describe('subsetFonts CSS injection and rewriting', function () {
       describe('when a font is used on all pages', function () {
         it('should inline the font subsets', async function () {
           const assetGraph = createGraph('inline-subsets-multi-page');
-          await loadAndPopulate(assetGraph, ['index-1.html', 'index-2.html'], { crossorigin: false });
+          await loadAndPopulate(assetGraph, ['index-1.html', 'index-2.html'], {
+            crossorigin: false,
+          });
 
           await subsetFonts(assetGraph, {
             formats: ['woff2'],
@@ -539,7 +543,9 @@ describe('subsetFonts CSS injection and rewriting', function () {
       describe('when a font is not used on all pages', function () {
         it('should not inline the subset', async function () {
           const assetGraph = createGraph('inline-one-subset-multi-page');
-          await loadAndPopulate(assetGraph, ['index-1.html', 'index-2.html'], { crossorigin: false });
+          await loadAndPopulate(assetGraph, ['index-1.html', 'index-2.html'], {
+            crossorigin: false,
+          });
 
           await subsetFonts(assetGraph, {
             formats: ['woff2'],
@@ -609,12 +615,14 @@ describe('subsetFonts CSS injection and rewriting', function () {
   describe('when the same Google Web Font is referenced multiple times', function () {
     for (const { description, testDir, htmlStyleCount } of [
       {
-        description: 'should not break for two identical CSS @imports from the same asset',
+        description:
+          'should not break for two identical CSS @imports from the same asset',
         testDir: 'css-import-twice',
         htmlStyleCount: 3,
       },
       {
-        description: 'should not break for two CSS @imports in different stylesheets',
+        description:
+          'should not break for two CSS @imports in different stylesheets',
         testDir: 'css-import-twice-different-css',
         htmlStyleCount: 4,
       },
@@ -1080,7 +1088,10 @@ describe('subsetFonts CSS injection and rewriting', function () {
 
     it('should inject all @font-face declarations into every page, but only preload the used ones', async function () {
       const assetGraph = createGraph('multi-entry-points-ssr');
-      const [firstHtmlAsset, secondHtmlAsset] = await loadAndPopulate(assetGraph, ['first.html', 'second.html']);
+      const [firstHtmlAsset, secondHtmlAsset] = await loadAndPopulate(
+        assetGraph,
+        ['first.html', 'second.html']
+      );
       await subsetFonts(assetGraph);
       expect(
         assetGraph.findRelations({
@@ -1128,7 +1139,10 @@ describe('subsetFonts CSS injection and rewriting', function () {
     describe('when one of the pages does not use any webfonts, but has the original @font-face declarations', function () {
       it('should still include the __subset @font-face declarations on that page', async function () {
         const assetGraph = createGraph('one-page-with-no-usage-ssr');
-        const [firstHtmlAsset, secondHtmlAsset] = await loadAndPopulate(assetGraph, ['first.html', 'second.html']);
+        const [firstHtmlAsset, secondHtmlAsset] = await loadAndPopulate(
+          assetGraph,
+          ['first.html', 'second.html']
+        );
         await subsetFonts(assetGraph);
         const firstSubfontCss = assetGraph.findRelations({
           from: firstHtmlAsset,
@@ -1148,7 +1162,10 @@ describe('subsetFonts CSS injection and rewriting', function () {
     describe('when one of the pages does not use any webfonts and does not have the @font-face declarations in scope', function () {
       it('should not include the __subset @font-face declarations on that page', async function () {
         const assetGraph = createGraph('one-page-with-no-font-face-ssr');
-        const [firstHtmlAsset, secondHtmlAsset] = await loadAndPopulate(assetGraph, ['first.html', 'second.html']);
+        const [firstHtmlAsset, secondHtmlAsset] = await loadAndPopulate(
+          assetGraph,
+          ['first.html', 'second.html']
+        );
         await subsetFonts(assetGraph);
         const firstSubfontCss = assetGraph.findRelations({
           from: firstHtmlAsset,
@@ -1167,15 +1184,22 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   describe('fontDisplay option', function () {
-    for (const { description, fontDisplayValue, assertionFlag, assertionText } of [
+    for (const {
+      description,
+      fontDisplayValue,
+      assertionFlag,
+      assertionText,
+    } of [
       {
-        description: 'should not add a font-display property when no fontDisplay is defined',
+        description:
+          'should not add a font-display property when no fontDisplay is defined',
         fontDisplayValue: undefined,
         assertionFlag: 'not to contain',
         assertionText: 'font-display',
       },
       {
-        description: 'should not add a font-display property when an invalid font-display value is provided',
+        description:
+          'should not add a font-display property when an invalid font-display value is provided',
         fontDisplayValue: 'foo',
         assertionFlag: 'not to contain',
         assertionText: 'font-display',
@@ -1202,9 +1226,10 @@ describe('subsetFonts CSS injection and rewriting', function () {
         );
         await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
 
-        const subsetFontsOptions = fontDisplayValue !== undefined
-          ? { fontDisplay: fontDisplayValue }
-          : undefined;
+        const subsetFontsOptions =
+          fontDisplayValue !== undefined
+            ? { fontDisplay: fontDisplayValue }
+            : undefined;
         await subsetFonts(assetGraph, subsetFontsOptions);
 
         const cssAsset = assetGraph.findAssets({

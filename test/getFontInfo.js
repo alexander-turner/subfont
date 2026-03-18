@@ -1,6 +1,4 @@
-const expect = require('unexpected')
-  .clone()
-  .use(require('unexpected-sinon'));
+const expect = require('unexpected').clone().use(require('unexpected-sinon'));
 const sinon = require('sinon');
 const proxyquire = require('proxyquire').noCallThru();
 
@@ -85,10 +83,7 @@ describe('getFontInfo', function () {
     const buf2 = Buffer.from('font-b');
 
     // Launch both concurrently
-    const [r1, r2] = await Promise.all([
-      getFontInfo(buf1),
-      getFontInfo(buf2),
-    ]);
+    const [r1, r2] = await Promise.all([getFontInfo(buf1), getFontInfo(buf2)]);
 
     // Both should resolve successfully
     expect(r1.characterSet, 'to equal', [0x41, 0x42, 0x43]);

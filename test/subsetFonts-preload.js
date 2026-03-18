@@ -55,7 +55,9 @@ describe('subsetFonts preload/prefetch handling', function () {
   describe('with jsPreload:false', function () {
     it('should not add the JavaScript-based preload "polyfill"', async function () {
       const assetGraph = createGraph('unused-variant');
-      const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
+      const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', {
+        crossorigin: false,
+      });
       await subsetFonts(assetGraph, {
         jsPreload: false,
       });

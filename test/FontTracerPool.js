@@ -1,7 +1,17 @@
 const expect = require('unexpected');
 const FontTracerPool = require('../lib/FontTracerPool');
 
-describe('FontTracerPool', function () {
+// FontTracerPool spawns worker threads that load jsdom via fontTracerWorker.js.
+// jsdom requires the native `canvas` module, which may not be available in all
+// environments.  Probe for it and skip the suite when it's missing.
+let canvasAvailable = true;
+try {
+  require('canvas');
+} catch {
+  canvasAvailable = false;
+}
+
+(canvasAvailable ? describe : describe.skip)('FontTracerPool', function () {
   this.timeout(30000);
 
   it('should initialize workers and process trace requests', async function () {

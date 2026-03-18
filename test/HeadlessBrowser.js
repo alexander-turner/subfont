@@ -1,6 +1,4 @@
-const expect = require('unexpected')
-  .clone()
-  .use(require('unexpected-sinon'));
+const expect = require('unexpected').clone().use(require('unexpected-sinon'));
 const sinon = require('sinon');
 const proxyquire = require('proxyquire').noCallThru();
 
@@ -40,9 +38,9 @@ describe('HeadlessBrowser', function () {
       Browser: { CHROME: 'chrome' },
       detectBrowserPlatform: sinon.stub().returns('linux'),
       Cache: sinon.stub().returns({
-        getInstalledBrowsers: sinon.stub().returns([
-          { browser: 'chrome', executablePath: '/fake/chrome' },
-        ]),
+        getInstalledBrowsers: sinon
+          .stub()
+          .returns([{ browser: 'chrome', executablePath: '/fake/chrome' }]),
       }),
     };
 
@@ -104,7 +102,7 @@ describe('HeadlessBrowser', function () {
       await expect(
         hb._launchBrowserMemoized(),
         'to be rejected with',
-        'Chrome not found'
+        /Chrome not found/
       );
     });
   });

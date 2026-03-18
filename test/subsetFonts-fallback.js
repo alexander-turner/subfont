@@ -27,11 +27,7 @@ describe('subsetFonts fallback CSS generation', function () {
       fileName: { $regex: /fallback-.*css$/ },
     })[0];
     // Verify that unicode-range is placed after the src (not before)
-    expect(
-      fallbackCss.text,
-      'to match',
-      /format\("woff"\);unicode-range:u\+/i
-    );
+    expect(fallbackCss.text, 'to match', /format\("woff"\);unicode-range:u\+/i);
   });
 
   it('should work with omitFallbacks:true and Google Web Fonts', async function () {
@@ -41,7 +37,9 @@ describe('subsetFonts fallback CSS generation', function () {
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /is missing these characters/)
     );
-    const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
+    const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', {
+      crossorigin: false,
+    });
     await subsetFonts(assetGraph, {
       inlineCss: true,
       omitFallbacks: true,

@@ -34,11 +34,7 @@ describe('unicode range', function () {
   });
 
   it('should handle large unicode values in a range', function () {
-    expect(
-      unicodeRange([0x10fffe, 0x10ffff]),
-      'to equal',
-      'U+10FFFE-10FFFF'
-    );
+    expect(unicodeRange([0x10fffe, 0x10ffff]), 'to equal', 'U+10FFFE-10FFFF');
   });
 
   it('should sort unsorted input and produce the same result as sorted input', function () {
@@ -56,10 +52,6 @@ describe('unicode range', function () {
   });
 
   it('should handle all isolated code points with no consecutive ranges', function () {
-    expect(
-      unicodeRange([0x41, 0x43, 0x45]),
-      'to equal',
-      'U+41,U+43,U+45'
-    );
+    expect(unicodeRange([0x41, 0x43, 0x45]), 'to equal', 'U+41,U+43,U+45');
   });
 });

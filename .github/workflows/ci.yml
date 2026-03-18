@@ -19,7 +19,10 @@ jobs:
       - name: Install system dependencies for canvas
         run: sudo apt-get update && sudo apt-get install -y build-essential libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev
       - run: npm install
-      - run: npx puppeteer browsers install chrome
+      - name: Install Chrome and set executable path
+        run: |
+          npx puppeteer browsers install chrome
+          echo "PUPPETEER_EXECUTABLE_PATH=$(node -e "const p=require('puppeteer');console.log(p.executablePath())")" >> $GITHUB_ENV
       - run: npm test
 
   lint:
@@ -46,7 +49,10 @@ jobs:
       - name: Install system dependencies for canvas
         run: sudo apt-get update && sudo apt-get install -y build-essential libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev
       - run: npm install
-      - run: npx puppeteer browsers install chrome
+      - name: Install Chrome and set executable path
+        run: |
+          npx puppeteer browsers install chrome
+          echo "PUPPETEER_EXECUTABLE_PATH=$(node -e "const p=require('puppeteer');console.log(p.executablePath())")" >> $GITHUB_ENV
       - run: npm run coverage
       - name: Upload coverage
         uses: coverallsapp/github-action@master
