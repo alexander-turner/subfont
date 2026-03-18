@@ -1,15 +1,14 @@
 const {
   expect,
-  AssetGraph,
-  pathModule,
   LinesAndColumns,
   httpception,
   sinon,
-  fs,
   defaultLocalSubsetMock,
   subsetFonts,
   getFontInfo,
   setupCleanup,
+  createGraph,
+  loadAndPopulate,
 } = require('./subsetFonts-helpers');
 
 describe('subsetFonts core subsetting logic', function () {
@@ -18,18 +17,8 @@ describe('subsetFonts core subsetting logic', function () {
   it('should error out on multiple @font-face declarations with the same family/weight/style/stretch', async function () {
     httpception();
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/woff2-original/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate({
-      followRelations: {
-        crossorigin: false,
-      },
-    });
+    const assetGraph = createGraph('woff2-original');
+    await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await expect(
       subsetFonts(assetGraph),
       'to be rejected with',
@@ -42,17 +31,11 @@ describe('subsetFonts core subsetting logic', function () {
 
     const warnings = [];
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/local-invalid/'
-      ),
-    });
+    const assetGraph = createGraph('local-invalid');
     assetGraph.on('warn', function (warning) {
       warnings.push(warning);
     });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    await loadAndPopulate(assetGraph);
     await subsetFonts(assetGraph, {
       inlineCss: true,
     });
@@ -111,19 +94,9 @@ describe('subsetFonts core subsetting logic', function () {
       httpception();
 
       const infoSpy = sinon.spy().named('warn');
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/missing-glyphs/'
-        ),
-      });
+      const assetGraph = createGraph('missing-glyphs');
       assetGraph.on('info', infoSpy);
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
       await subsetFonts(assetGraph);
 
       expect(infoSpy, 'to have calls satisfying', function () {
@@ -140,19 +113,9 @@ describe('subsetFonts core subsetting logic', function () {
       it('should add a unicode-range property', async function () {
         httpception();
 
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/missing-glyphs/'
-          ),
-        });
+        const assetGraph = createGraph('missing-glyphs');
         assetGraph.on('warn', () => {}); // Don't fail due to the missing glyphs warning
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         const [originalFontFaceSrcRelation] = assetGraph.findRelations({
@@ -171,20 +134,10 @@ describe('subsetFonts core subsetting logic', function () {
       it('should add a unicode-range property to all of the @font-face declarations of the font-familys', async function () {
         httpception();
 
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/missing-glyphs-multiple-variants/'
-          ),
-        });
+        const assetGraph = createGraph('missing-glyphs-multiple-variants');
         assetGraph.on('warn', () => {}); // Don't fail due to the missing glyphs warning
 
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         const [outputSansRegularRelation] = assetGraph.findRelations({
@@ -231,19 +184,9 @@ describe('subsetFonts core subsetting logic', function () {
       it('should leave the existing unicode-range alone', async function () {
         httpception();
 
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/missing-glyphs-unicode-range/'
-          ),
-        });
+        const assetGraph = createGraph('missing-glyphs-unicode-range');
         assetGraph.on('warn', () => {}); // Don't fail due to the missing glyphs warning
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         const [originalFontFaceSrcRelation] = assetGraph.findRelations({
@@ -262,19 +205,9 @@ describe('subsetFonts core subsetting logic', function () {
       httpception();
 
       const infoSpy = sinon.spy().named('info');
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/missing-glyphs/'
-        ),
-      });
+      const assetGraph = createGraph('missing-glyphs');
       assetGraph.on('info', infoSpy);
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
       await subsetFonts(assetGraph, {
         formats: [`woff2`],
       });
@@ -294,19 +227,9 @@ describe('subsetFonts core subsetting logic', function () {
       httpception();
 
       const infoSpy = sinon.spy().named('info');
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/missing-tab-and-newline-glyphs/'
-        ),
-      });
+      const assetGraph = createGraph('missing-tab-and-newline-glyphs');
       assetGraph.on('warn', infoSpy);
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
       await subsetFonts(assetGraph);
 
       expect(infoSpy, 'was not called');
@@ -316,14 +239,8 @@ describe('subsetFonts core subsetting logic', function () {
   it('should subset local fonts', async function () {
     httpception();
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/local-single/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    const assetGraph = createGraph('local-single');
+    await loadAndPopulate(assetGraph);
     await subsetFonts(assetGraph);
 
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
@@ -399,14 +316,8 @@ describe('subsetFonts core subsetting logic', function () {
   it('should foo', async function () {
     httpception();
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/local-with-noscript/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    const assetGraph = createGraph('local-with-noscript');
+    await loadAndPopulate(assetGraph);
     await subsetFonts(assetGraph);
 
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
@@ -434,14 +345,8 @@ describe('subsetFonts core subsetting logic', function () {
     it('should issue relative urls instead of root-relative ones', async function () {
       httpception();
 
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/local-single/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('local-single');
+      await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph, {
         inlineFonts: false,
         hrefType: 'relative',
@@ -520,14 +425,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('when the stylesheet containing the original @font-face declarations did not contain anything else', function () {
     it('should be removed', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/local-with-no-css-rules-in-font-face-stylesheet/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('local-with-no-css-rules-in-font-face-stylesheet');
+      const [htmlAsset] = await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph);
       expect(htmlAsset.text, 'not to contain', '<style>');
     });
@@ -535,14 +434,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('when the stylesheet containing the original @font-face declarations did not contain anything else but a comment', function () {
     it('should be removed', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/local-with-no-css-rules-in-font-face-stylesheet-only-comment/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('local-with-no-css-rules-in-font-face-stylesheet-only-comment');
+      const [htmlAsset] = await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph);
       expect(htmlAsset.text, 'not to contain', '<style>');
     });
@@ -550,14 +443,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('when the stylesheet containing the original @font-face declarations did not contain anything else but a license comment', function () {
     it('should be preserved', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/local-with-no-css-rules-in-font-face-stylesheet-only-license-comment/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('local-with-no-css-rules-in-font-face-stylesheet-only-license-comment');
+      const [htmlAsset] = await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph);
       expect(
         htmlAsset.text,
@@ -571,14 +458,8 @@ describe('subsetFonts core subsetting logic', function () {
     it('should provide a @font-face declaration for the __subset version of an unused variant', async function () {
       httpception();
 
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/unused-variant/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('unused-variant');
+      await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph, {
         inlineCss: true,
       });
@@ -605,14 +486,8 @@ describe('subsetFonts core subsetting logic', function () {
       it('should put the @font-face declarations for the unused variants in the main subfont CSS rather than a separate one after the JS preload script', async function () {
         httpception();
 
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/unused-variant/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('unused-variant');
+        await loadAndPopulate(assetGraph);
         await subsetFonts(assetGraph, {
           inlineCss: false,
         });
@@ -641,14 +516,8 @@ describe('subsetFonts core subsetting logic', function () {
     it('should not provide a @font-face declaration for the __subset version of an unused variant that did not get any subsets created', async function () {
       httpception();
 
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/unused-font/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('unused-font');
+      await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph);
 
       const subfontCss = assetGraph.findAssets({
@@ -666,14 +535,8 @@ describe('subsetFonts core subsetting logic', function () {
     });
 
     it('should not move any of the original fonts to /subfont/', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/unused-variant-on-one-page/'
-        ),
-      });
-      await assetGraph.loadAssets('index*.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('unused-variant-on-one-page');
+      await loadAndPopulate(assetGraph, 'index*.html');
       await subsetFonts(assetGraph);
 
       expect(assetGraph, 'to contain asset', {
@@ -684,18 +547,8 @@ describe('subsetFonts core subsetting logic', function () {
     });
 
     it('should not preload the unused variants', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/unused-variant-preload/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      const assetGraph = createGraph('unused-variant-preload');
+      const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
       await subsetFonts(assetGraph);
       const preloadLinks = assetGraph.findRelations({
         from: htmlAsset,
@@ -708,18 +561,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('with Google Web Fonts', function () {
       it('should not preload the unused variants', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/unused-variant-preload-google/'
-          ),
-        });
-        const [htmlAsset] = await assetGraph.loadAssets('index.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        const assetGraph = createGraph('unused-variant-preload-google');
+        const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
         await subsetFonts(assetGraph);
         const preloadLinks = assetGraph.findRelations({
           from: htmlAsset,
@@ -735,14 +578,8 @@ describe('subsetFonts core subsetting logic', function () {
   it('should return a fontInfo object with defaulted/normalized props', async function () {
     httpception();
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/font-face-defaults-and-casing/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    const assetGraph = createGraph('font-face-defaults-and-casing');
+    await loadAndPopulate(assetGraph);
     const { fontInfo } = await subsetFonts(assetGraph);
 
     expect(fontInfo, 'to satisfy', [
@@ -776,14 +613,8 @@ describe('subsetFonts core subsetting logic', function () {
   it('should support multiple @font-face blocks with different font-family, but same src', async function () {
     httpception();
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/multiple-font-face-with-same-src/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    const assetGraph = createGraph('multiple-font-face-with-same-src');
+    await loadAndPopulate(assetGraph);
     const { fontInfo } = await subsetFonts(assetGraph);
 
     expect(fontInfo, 'to satisfy', [
@@ -810,14 +641,8 @@ describe('subsetFonts core subsetting logic', function () {
   it('should tolerate case differences in font-family', async function () {
     httpception();
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/local-font-family-case-difference/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    const assetGraph = createGraph('local-font-family-case-difference');
+    await loadAndPopulate(assetGraph);
     const { fontInfo } = await subsetFonts(assetGraph);
 
     expect(fontInfo, 'to satisfy', [
@@ -840,19 +665,12 @@ describe('subsetFonts core subsetting logic', function () {
   it('should handle HTML <link rel=stylesheet> with Google Fonts', async function () {
     httpception(defaultLocalSubsetMock);
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
-    });
+    const assetGraph = createGraph('html-link');
     // FIXME: Maybe use a font that's not missing any chars?
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /is missing these characters/)
     );
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate({
-      followRelations: {
-        crossorigin: false,
-      },
-    });
+    await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await subsetFonts(assetGraph);
 
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
@@ -944,14 +762,8 @@ describe('subsetFonts core subsetting logic', function () {
   });
 
   it('should assume font-weight:normal and font-style:normal when not explicitly mentioned in the @font-face block', async function () {
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/font-weight-and-style-omitted/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    const assetGraph = createGraph('font-weight-and-style-omitted');
+    await loadAndPopulate(assetGraph);
     const { fontInfo } = await subsetFonts(assetGraph);
     expect(fontInfo, 'to satisfy', [
       {
@@ -973,20 +785,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('when multiple pages contain the same subsets', function () {
     // https://github.com/Munter/subfont/issues/50
     it('should link to and preload the same subset files rather than creating two copies', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/multi-page-same-subset/'
-        ),
-      });
-      const [htmlAsset1, htmlAsset2] = await assetGraph.loadAssets(
-        'index*.html'
-      );
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      const assetGraph = createGraph('multi-page-same-subset');
+      const [htmlAsset1, htmlAsset2] = await loadAndPopulate(assetGraph, 'index*.html', { crossorigin: false });
       await subsetFonts(assetGraph);
       const preloads1 = htmlAsset1.outgoingRelations.filter(
         (relation) => relation.type === 'HtmlPreloadLink'
@@ -1012,22 +812,12 @@ describe('subsetFonts core subsetting logic', function () {
   it('should handle mixed local fonts and Google fonts', async function () {
     httpception(defaultLocalSubsetMock);
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/local-mixed/'
-      ),
-    });
+    const assetGraph = createGraph('local-mixed');
     // FIXME: Maybe use a font that's not missing any chars?
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /is missing these characters/)
     );
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate({
-      followRelations: {
-        crossorigin: false,
-      },
-    });
+    await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await subsetFonts(assetGraph);
 
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
@@ -1168,14 +958,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('with a variable font defined in a @supports block and a non-variable fallback', function () {
     it('should subset both the variable font and the fallback font', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/variable-font-in-supports-block-with-fallback/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('variable-font-in-supports-block-with-fallback');
+      await loadAndPopulate(assetGraph);
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to satisfy', [
         {
@@ -1212,14 +996,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('with a variable font defined in a @supports block and a non-variable fallback with two variants', function () {
     it('should subset both the variable font and the fallback font', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/variable-font-in-supports-block-with-two-fallback-variants/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('variable-font-in-supports-block-with-two-fallback-variants');
+      await loadAndPopulate(assetGraph);
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to satisfy', [
         {
@@ -1264,14 +1042,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('with two variable fonts that provide different font-weight ranges of the same font-family', function () {
     it('should subset both fonts when a CSS animation sweeps over both ranges', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/two-variable-fonts-animated/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('two-variable-fonts-animated');
+      await loadAndPopulate(assetGraph);
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to satisfy', [
         {
@@ -1302,14 +1074,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('with a variable font that has unused axis ranges', function () {
     it('should emit an info event', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/variable-font-unused-axes/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('variable-font-unused-axes');
+      await loadAndPopulate(assetGraph);
       const infoSpy = sinon.spy().named('info');
       assetGraph.on('info', infoSpy);
 
@@ -1327,14 +1093,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('for the wght axis', function () {
       it('should emit an info event', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/variable-font-unused-wght-axis/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('variable-font-unused-wght-axis');
+        await loadAndPopulate(assetGraph);
         const infoSpy = sinon.spy().named('info');
         assetGraph.on('info', infoSpy);
 
@@ -1353,14 +1113,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('for the wdth axis', function () {
       it('should emit an info event', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/variable-font-unused-wdth-axis/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('variable-font-unused-wdth-axis');
+        await loadAndPopulate(assetGraph);
         const infoSpy = sinon.spy().named('info');
         assetGraph.on('info', infoSpy);
 
@@ -1380,14 +1134,8 @@ describe('subsetFonts core subsetting logic', function () {
     describe('for the ital axis', function () {
       describe('when only font-style: normal is used', function () {
         it('should emit an info event', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-unused-ital-axis/'
-            ),
-          });
-          await assetGraph.loadAssets('normal.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-unused-ital-axis');
+          await loadAndPopulate(assetGraph, 'normal.html');
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1403,14 +1151,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('when only font-style: italic is used', function () {
         it('should emit an info event', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-unused-ital-axis/'
-            ),
-          });
-          await assetGraph.loadAssets('italic.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-unused-ital-axis');
+          await loadAndPopulate(assetGraph, 'italic.html');
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1429,14 +1171,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('when both font-style: normal and font-style: italic are used', function () {
         it('should not emit an info event', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-unused-ital-axis/'
-            ),
-          });
-          await assetGraph.loadAssets('normal_and_italic.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-unused-ital-axis');
+          await loadAndPopulate(assetGraph, 'normal_and_italic.html');
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1450,14 +1186,8 @@ describe('subsetFonts core subsetting logic', function () {
     describe('for the slnt axis', function () {
       describe('when only font-style: normal is used', function () {
         it('should emit an info event', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-unused-slnt-axis/'
-            ),
-          });
-          await assetGraph.loadAssets('normal.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-unused-slnt-axis');
+          await loadAndPopulate(assetGraph, 'normal.html');
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1473,14 +1203,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('when only font-style: oblique is used', function () {
         it('should emit an info event', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-unused-slnt-axis/'
-            ),
-          });
-          await assetGraph.loadAssets('oblique.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-unused-slnt-axis');
+          await loadAndPopulate(assetGraph, 'oblique.html');
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1499,14 +1223,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('when both font-style: normal and font-style: oblique are used', function () {
         it('should emit an info event', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-unused-slnt-axis/'
-            ),
-          });
-          await assetGraph.loadAssets('normal_and_oblique.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-unused-slnt-axis');
+          await loadAndPopulate(assetGraph, 'normal_and_oblique.html');
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1527,14 +1245,8 @@ describe('subsetFonts core subsetting logic', function () {
     describe('being animated with a cubic-bezier timing function', function () {
       describe('that stays within bounds', function () {
         it('should inform about the axis being underutilized', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-underutilized-axis-with-bezier/'
-            ),
-          });
-          await assetGraph.loadAssets('index.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-underutilized-axis-with-bezier');
+          await loadAndPopulate(assetGraph);
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1553,14 +1265,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('that goes out of bounds', function () {
         it('should not inform about the axis being underutilized', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/variable-font-underutilized-axis-with-bezier-out-of-bounds/'
-            ),
-          });
-          await assetGraph.loadAssets('index.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('variable-font-underutilized-axis-with-bezier-out-of-bounds');
+          await loadAndPopulate(assetGraph);
           const infoSpy = sinon.spy().named('info');
           assetGraph.on('info', infoSpy);
 
@@ -1579,14 +1285,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('instancing of variable fonts', function () {
     describe('with a variable font that can be fully instanced', function () {
       it('should remove the variation axes', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/variable-font-that-can-be-fully-instanced/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('variable-font-that-can-be-fully-instanced');
+        await loadAndPopulate(assetGraph);
         const infoSpy = sinon.spy().named('info');
         assetGraph.on('info', infoSpy);
 
@@ -1601,14 +1301,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('with a variable font that can be partially instanced', function () {
       it('should perform a partial instancing', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/variable-font-that-can-be-partially-instanced/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('variable-font-that-can-be-partially-instanced');
+        await loadAndPopulate(assetGraph);
         const infoSpy = sinon.spy().named('info');
         assetGraph.on('info', infoSpy);
 
@@ -1629,14 +1323,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('with a page that does need subsetting and one that does', function () {
     // https://gitter.im/assetgraph/assetgraph?at=5dbb6438a3f0b17849c488cf
     it('should not short circuit because the first page does not need any subset fonts', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/firstPageNoSubset/'
-        ),
-      });
-      await assetGraph.loadAssets(['index-1.html', 'index-2.html']);
-      await assetGraph.populate();
+      const assetGraph = createGraph('firstPageNoSubset');
+      await loadAndPopulate(assetGraph, ['index-1.html', 'index-2.html']);
       const { fontInfo } = await subsetFonts(assetGraph, {
         omitFallbacks: true,
       });
@@ -1667,14 +1355,8 @@ describe('subsetFonts core subsetting logic', function () {
   // From https://github.com/Munter/subfont/pull/84
   describe('with two pages that share the same CSS', function () {
     it('should discover subsets on both pages', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/multi-page-with-same-local-style-file/'
-        ),
-      });
-      await assetGraph.loadAssets(['index.html', 'subindex.html']);
-      await assetGraph.populate();
+      const assetGraph = createGraph('multi-page-with-same-local-style-file');
+      await loadAndPopulate(assetGraph, ['index.html', 'subindex.html']);
       const { fontInfo } = await subsetFonts(assetGraph, {
         omitFallbacks: true,
       });
@@ -1705,14 +1387,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('stylesheet result caching across pages with shared CSS', function () {
     it('should reuse cached stylesheet results and still produce correct per-page text', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/multi-page-with-same-local-style-file/'
-        ),
-      });
-      await assetGraph.loadAssets(['index.html', 'subindex.html']);
-      await assetGraph.populate();
+      const assetGraph = createGraph('multi-page-with-same-local-style-file');
+      await loadAndPopulate(assetGraph, ['index.html', 'subindex.html']);
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to have length', 2);
 
@@ -1737,11 +1413,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('with two pages that have different non-UTF-16 characters', function () {
     it('should not break when combining the characters', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(__dirname, '../testdata/subsetFonts/emojis/'),
-      });
-      await assetGraph.loadAssets(['index-1.html', 'index-2.html']);
-      await assetGraph.populate();
+      const assetGraph = createGraph('emojis');
+      await loadAndPopulate(assetGraph, ['index-1.html', 'index-2.html']);
       assetGraph.on('warn', () => {}); // Ignore warning about IBMPlexSans-Regular.woff not containing the emojis
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to have length', 2);
@@ -1760,15 +1433,9 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('when a subset is created, but an unused variant points at a file that does not exist', function () {
     it('should leave the url of the unused variant as-is', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/nonExistentFont/'
-        ),
-      });
-      await assetGraph.loadAssets(['index.html']);
+      const assetGraph = createGraph('nonExistentFont');
       assetGraph.on('warn', () => {}); // Don't halt on ENOENT Roboto-400-not-found-italic.woff2
-      await assetGraph.populate();
+      await loadAndPopulate(assetGraph);
       assetGraph.removeAllListeners('warn'); // Defensively don't suppress any further warnings
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to satisfy', [
@@ -1792,14 +1459,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('when two pages @import the same CSS file which in turn imports a Google font', function () {
     // Regression test for https://github.com/Munter/netlify-plugin-subfont/issues/32
     it('should not break', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/two-pages-import-css/'
-        ),
-      });
-      await assetGraph.loadAssets(['index1.html', 'index2.html']);
-      await assetGraph.populate();
+      const assetGraph = createGraph('two-pages-import-css');
+      await loadAndPopulate(assetGraph, ['index1.html', 'index2.html']);
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to satisfy', [
         {
@@ -1819,14 +1480,8 @@ describe('subsetFonts core subsetting logic', function () {
       describe(testCase, function () {
         it('should update the source map', async function () {
           // lessc --source-map testdata/subsetFonts/css-source-map-${testCase}/styles.{less,css}
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              `../testdata/subsetFonts/css-source-map-${testCase}/`
-            ),
-          });
-          await assetGraph.loadAssets('index.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph(`css-source-map-${testCase}`);
+          await loadAndPopulate(assetGraph);
           function checkSourceMap() {
             const [sourceMap] = assetGraph.findAssets({ type: 'SourceMap' });
             expect(sourceMap.parseTree.sources, 'to satisfy', {
@@ -1870,27 +1525,15 @@ describe('subsetFonts core subsetting logic', function () {
 
   // Regression test: Used to break with Cannot read property 'toLowerCase' of undefined
   it('should not break when a @font-face declaration is missing font-family', async function () {
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/missing-font-family/'
-      ),
-    });
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate();
+    const assetGraph = createGraph('missing-font-family');
+    await loadAndPopulate(assetGraph);
     await subsetFonts(assetGraph);
   });
 
   describe('with escaped characters in font-family', function () {
     it('should issue a correct subset font family and subset font file name', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/font-family-with-escape/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('font-family-with-escape');
+      const [htmlAsset] = await loadAndPopulate(assetGraph);
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to satisfy', [
         { fontUsages: [{ fontFamilies: new Set(['Font Awesome 5 Free']) }] },
@@ -1907,14 +1550,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('with inlineCss:true', function () {
       it('should handle escaped characters in font-family', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/font-family-with-escape/'
-          ),
-        });
-        const [htmlAsset] = await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('font-family-with-escape');
+        const [htmlAsset] = await loadAndPopulate(assetGraph);
         const { fontInfo } = await subsetFonts(assetGraph, { inlineCss: true });
         expect(fontInfo, 'to satisfy', [
           { fontUsages: [{ fontFamilies: new Set(['Font Awesome 5 Free']) }] },
@@ -1938,14 +1575,8 @@ describe('subsetFonts core subsetting logic', function () {
 
   describe('with non-truetype fonts in the mix', function () {
     it('should not attempt to subset non-truetype fonts', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/non-truetype-font/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('non-truetype-font');
+      await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph);
 
       const html = assetGraph.findAssets({ type: 'Html' })[0];
@@ -1977,18 +1608,8 @@ describe('subsetFonts core subsetting logic', function () {
     });
 
     it('should only subset truetype fonts despite non-truetype in the same declaration', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/non-truetype-and-truetype/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      const assetGraph = createGraph('non-truetype-and-truetype');
+      await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
       await subsetFonts(assetGraph);
       expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
 
@@ -2099,14 +1720,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('with -subfont-text', function () {
     describe('with a @font-face that is unused', function () {
       it('should make a subset with the specified characters', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/local-unused-with-subfont-text/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('local-unused-with-subfont-text');
+        await loadAndPopulate(assetGraph);
         const { fontInfo } = await subsetFonts(assetGraph);
 
         expect(fontInfo, 'to satisfy', {
@@ -2130,14 +1745,8 @@ describe('subsetFonts core subsetting logic', function () {
     describe('with a @font-face that is also used', function () {
       describe('on a single page', function () {
         it('should add the specified characters to the subset', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/local-used-with-subfont-text/'
-            ),
-          });
-          await assetGraph.loadAssets('index.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('local-used-with-subfont-text');
+          await loadAndPopulate(assetGraph);
           const { fontInfo } = await subsetFonts(assetGraph);
 
           expect(fontInfo, 'to satisfy', {
@@ -2160,14 +1769,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('when the CSS is shared between multiple pages', function () {
         it('should add the specified characters to the subset', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/local-used-multipage-with-subfont-text/'
-            ),
-          });
-          await assetGraph.loadAssets('page*.html');
-          await assetGraph.populate();
+          const assetGraph = createGraph('local-used-multipage-with-subfont-text');
+          await loadAndPopulate(assetGraph, 'page*.html');
           const { fontInfo } = await subsetFonts(assetGraph);
 
           expect(fontInfo, 'to satisfy', {
@@ -2201,14 +1804,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('with text explicitly passed to be included in all fonts', function () {
     describe('with a @font-face that is unused', function () {
       it('should make a subset with the specified characters', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/local-unused/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('local-unused');
+        await loadAndPopulate(assetGraph);
         const { fontInfo } = await subsetFonts(assetGraph, {
           text: '0123456789',
         });
@@ -2228,14 +1825,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('with a @font-face that is used', function () {
       it('should add the specified characters to the subset', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/local-used/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate();
+        const assetGraph = createGraph('local-used');
+        await loadAndPopulate(assetGraph);
         const { fontInfo } = await subsetFonts(assetGraph, {
           text: '0123456789',
         });
@@ -2257,18 +1848,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('with SVG using webfonts', function () {
     describe('in a standalone SVG', function () {
       it('should trace the correct characters and patch up the stylesheet', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/svg/img-element/'
-          ),
-        });
-        await assetGraph.loadAssets('index.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        const assetGraph = createGraph('svg/img-element');
+        await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
         const result = await subsetFonts(assetGraph);
 
         expect(result, 'to satisfy', {
@@ -2310,18 +1891,8 @@ describe('subsetFonts core subsetting logic', function () {
     describe('within HTML', function () {
       describe('using webfonts defined in a stylesheet in the HTML', function () {
         it('should trace the correct characters and patch up the font-family attribute', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/svg/inline-in-html-with-html-font-face/'
-            ),
-          });
-          const [htmlAsset] = await assetGraph.loadAssets('index.html');
-          await assetGraph.populate({
-            followRelations: {
-              crossorigin: false,
-            },
-          });
+          const assetGraph = createGraph('svg/inline-in-html-with-html-font-face');
+          const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
           const result = await subsetFonts(assetGraph);
 
           expect(result, 'to satisfy', {
@@ -2353,18 +1924,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('using webfonts defined in a stylesheet defined in the SVG', function () {
         it('should trace the correct characters and patch up the SVG stylesheet', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/svg/inline-in-html-with-own-font-face/'
-            ),
-          });
-          const [htmlAsset] = await assetGraph.loadAssets('index.html');
-          await assetGraph.populate({
-            followRelations: {
-              crossorigin: false,
-            },
-          });
+          const assetGraph = createGraph('svg/inline-in-html-with-own-font-face');
+          const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
           const result = await subsetFonts(assetGraph);
 
           expect(result, 'to satisfy', {
@@ -2404,18 +1965,8 @@ describe('subsetFonts core subsetting logic', function () {
 
       describe('using a webfont defined both in the HTML and the SVG', function () {
         it('should trace the correct characters in both contexts and patch up both stylesheets', async function () {
-          const assetGraph = new AssetGraph({
-            root: pathModule.resolve(
-              __dirname,
-              '../testdata/subsetFonts/svg/inline-in-html-font-face-in-both-places/'
-            ),
-          });
-          const [htmlAsset] = await assetGraph.loadAssets('index.html');
-          await assetGraph.populate({
-            followRelations: {
-              crossorigin: false,
-            },
-          });
+          const assetGraph = createGraph('svg/inline-in-html-font-face-in-both-places');
+          const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
           const result = await subsetFonts(assetGraph);
 
           expect(result, 'to satisfy', {
@@ -2483,18 +2034,8 @@ describe('subsetFonts core subsetting logic', function () {
     });
 
     it('should not crash when an SVG asset fails to load and has no parseTree', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/svg/img-element/'
-        ),
-      });
-      await assetGraph.loadAssets('index.html');
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      const assetGraph = createGraph('svg/img-element');
+      await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
 
       // Simulate an SVG that failed to load (e.g. DNS error) by adding
       // an unloaded SVG asset to the graph
@@ -2511,18 +2052,8 @@ describe('subsetFonts core subsetting logic', function () {
   describe('caching optimizations', function () {
     describe('fontTracer content-hash cache', function () {
       it('should produce identical results for pages with identical HTML and CSS', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/multi-page-identical/'
-          ),
-        });
-        const [page1, page2] = await assetGraph.loadAssets('page*.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        const assetGraph = createGraph('multi-page-identical');
+        const [page1, page2] = await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         // Both pages should get the same subset font and identical output
@@ -2541,18 +2072,8 @@ describe('subsetFonts core subsetting logic', function () {
       });
 
       it('should produce correct but distinct results for pages with different text content', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/multi-page-different-text/'
-          ),
-        });
-        await assetGraph.loadAssets('page*.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        const assetGraph = createGraph('multi-page-different-text');
+        await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         // The subset font should contain characters from both pages
@@ -2578,18 +2099,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('font snapping result cache', function () {
       it('should correctly handle multiple font weights across pages sharing the same CSS', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/multi-page-multi-weight/'
-          ),
-        });
-        await assetGraph.loadAssets('page*.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        const assetGraph = createGraph('multi-page-multi-weight');
+        await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         // Should produce two subset fonts: one for weight 400, one for 500
@@ -2628,18 +2139,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('stylesheet result caching', function () {
       it('should produce correct results when multiple pages share the same stylesheet', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/multi-page-with-same-local-style-file/'
-          ),
-        });
-        await assetGraph.loadAssets('*.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        const assetGraph = createGraph('multi-page-with-same-local-style-file');
+        await loadAndPopulate(assetGraph, '*.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         const htmlAssets = assetGraph.findAssets({
@@ -2661,18 +2162,8 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('worker pool parallelization', function () {
       it('should produce correct subsets when using the worker pool (5 pages)', async function () {
-        const assetGraph = new AssetGraph({
-          root: pathModule.resolve(
-            __dirname,
-            '../testdata/subsetFonts/multi-page-worker-pool/'
-          ),
-        });
-        await assetGraph.loadAssets('page*.html');
-        await assetGraph.populate({
-          followRelations: {
-            crossorigin: false,
-          },
-        });
+        const assetGraph = createGraph('multi-page-worker-pool');
+        await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
         await subsetFonts(assetGraph);
 
         // The subset font should contain characters from all 5 pages

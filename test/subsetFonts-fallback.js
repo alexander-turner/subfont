@@ -1,11 +1,11 @@
 const {
   expect,
-  AssetGraph,
-  pathModule,
   httpception,
   defaultLocalSubsetMock,
   subsetFonts,
   setupCleanup,
+  createGraph,
+  loadAndPopulate,
 } = require('./subsetFonts-helpers');
 
 describe('subsetFonts fallback CSS generation', function () {
@@ -14,18 +14,11 @@ describe('subsetFonts fallback CSS generation', function () {
   it('should not mess up the placement of unicode-range in the fallback css', async function () {
     httpception(defaultLocalSubsetMock);
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
-    });
+    const assetGraph = createGraph('html-link');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /is missing these characters/)
     );
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate({
-      followRelations: {
-        crossorigin: false,
-      },
-    });
+    await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await subsetFonts(assetGraph, {
       inlineFonts: false,
     });
@@ -44,18 +37,11 @@ describe('subsetFonts fallback CSS generation', function () {
   it('should work with omitFallbacks:true and Google Web Fonts', async function () {
     httpception(defaultLocalSubsetMock);
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
-    });
+    const assetGraph = createGraph('html-link');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /is missing these characters/)
     );
-    const [htmlAsset] = await assetGraph.loadAssets('index.html');
-    await assetGraph.populate({
-      followRelations: {
-        crossorigin: false,
-      },
-    });
+    const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await subsetFonts(assetGraph, {
       inlineCss: true,
       omitFallbacks: true,
@@ -71,14 +57,8 @@ describe('subsetFonts fallback CSS generation', function () {
     it('should remove the original @font-face declarations and references to them, and not make subsets of unused variants', async function () {
       httpception();
 
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/no-fallbacks/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate();
+      const assetGraph = createGraph('no-fallbacks');
+      const [htmlAsset] = await loadAndPopulate(assetGraph);
       await subsetFonts(assetGraph, {
         omitFallbacks: true,
       });

@@ -69,6 +69,22 @@ function setupCleanup() {
   });
 }
 
+function createGraph(testDir) {
+  return new AssetGraph({
+    root: pathModule.resolve(__dirname, `../testdata/subsetFonts/${testDir}/`),
+  });
+}
+
+async function loadAndPopulate(assetGraph, assets = 'index.html', opts = {}) {
+  const loaded = await assetGraph.loadAssets(assets);
+  const populateOpts =
+    opts.crossorigin !== undefined
+      ? { followRelations: { crossorigin: opts.crossorigin } }
+      : undefined;
+  await assetGraph.populate(populateOpts);
+  return loaded;
+}
+
 module.exports = {
   expect,
   AssetGraph,
@@ -81,4 +97,6 @@ module.exports = {
   getFontInfo,
   defaultLocalSubsetMock,
   setupCleanup,
+  createGraph,
+  loadAndPopulate,
 };

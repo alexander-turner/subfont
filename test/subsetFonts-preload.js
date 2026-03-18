@@ -1,10 +1,10 @@
 const {
   expect,
-  AssetGraph,
-  pathModule,
   httpception,
   subsetFonts,
   setupCleanup,
+  createGraph,
+  loadAndPopulate,
 } = require('./subsetFonts-helpers');
 
 describe('subsetFonts preload/prefetch handling', function () {
@@ -13,21 +13,11 @@ describe('subsetFonts preload/prefetch handling', function () {
   it('should not break when there is an existing preload hint pointing to a font file', async function () {
     httpception();
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/existing-preload/'
-      ),
-    });
+    const assetGraph = createGraph('existing-preload');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
     );
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate({
-      followRelations: {
-        crossorigin: false,
-      },
-    });
+    await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await subsetFonts(assetGraph);
 
     expect(assetGraph, 'to contain relation', 'HtmlPreloadLink');
@@ -38,22 +28,12 @@ describe('subsetFonts preload/prefetch handling', function () {
 
     const infos = [];
 
-    const assetGraph = new AssetGraph({
-      root: pathModule.resolve(
-        __dirname,
-        '../testdata/subsetFonts/existing-prefetch/'
-      ),
-    });
+    const assetGraph = createGraph('existing-prefetch');
     assetGraph.on('info', function (info) {
       infos.push(info);
     });
 
-    await assetGraph.loadAssets('index.html');
-    await assetGraph.populate({
-      followRelations: {
-        crossorigin: false,
-      },
-    });
+    await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await subsetFonts(assetGraph);
 
     expect(assetGraph, 'to contain no relation', 'HtmlPrefetchLink');
@@ -74,18 +54,8 @@ describe('subsetFonts preload/prefetch handling', function () {
 
   describe('with jsPreload:false', function () {
     it('should not add the JavaScript-based preload "polyfill"', async function () {
-      const assetGraph = new AssetGraph({
-        root: pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/unused-variant/'
-        ),
-      });
-      const [htmlAsset] = await assetGraph.loadAssets('index.html');
-      await assetGraph.populate({
-        followRelations: {
-          crossorigin: false,
-        },
-      });
+      const assetGraph = createGraph('unused-variant');
+      const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
       await subsetFonts(assetGraph, {
         jsPreload: false,
       });
