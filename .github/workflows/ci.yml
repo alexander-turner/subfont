@@ -23,7 +23,17 @@ jobs:
         run: npx puppeteer browsers install chrome
       - name: Set PUPPETEER_EXECUTABLE_PATH
         run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -p 'require(\"puppeteer\").executablePath()')" >> $GITHUB_ENV
-      - run: npm test
+      - name: Run tests
+        run: |
+          npx mocha --reporter spec 2>&1 | tee test-output.txt
+          exit ${PIPESTATUS[0]}
+      - name: Save test results
+        if: always()
+        run: |
+          echo '## Test Results' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "passing|failing|Error|AssertionError|✓|✗|×" test-output.txt | tail -100 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
   lint:
     runs-on: ubuntu-latest
