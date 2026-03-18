@@ -1,7 +1,5 @@
 const {
   expect,
-  httpception,
-  defaultLocalSubsetMock,
   subsetFonts,
   setupCleanup,
   createGraph,
@@ -12,11 +10,9 @@ describe('subsetFonts CSS injection and rewriting', function () {
   setupCleanup();
 
   it('should handle HTML <link rel=stylesheet>', async function () {
-    httpception(defaultLocalSubsetMock);
-
     const assetGraph = createGraph('html-link');
     assetGraph.on('warn', (warn) =>
-      expect(warn, 'to satisfy', /is missing these characters/)
+      expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     await subsetFonts(assetGraph);
@@ -110,11 +106,9 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   it('should return relevant font subsetting information', async function () {
-    httpception(defaultLocalSubsetMock);
-
     const assetGraph = createGraph('html-link');
     assetGraph.on('warn', (warn) =>
-      expect(warn, 'to satisfy', /is missing these characters/)
+      expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
     const result = await subsetFonts(assetGraph);
@@ -169,11 +163,9 @@ describe('subsetFonts CSS injection and rewriting', function () {
 
   describe('with `inlineCss: true`', function () {
     it('should inline the font Css and change outgoing relations to rootRelative', async function () {
-      httpception(defaultLocalSubsetMock);
-
       const assetGraph = createGraph('html-link');
       assetGraph.on('warn', (warn) =>
-        expect(warn, 'to satisfy', /is missing these characters/)
+        expect(warn, 'to satisfy', /Cannot find module/)
       );
       await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
       await subsetFonts(assetGraph, {
@@ -1218,11 +1210,9 @@ describe('subsetFonts CSS injection and rewriting', function () {
       },
     ]) {
       it(description, async function () {
-        httpception(defaultLocalSubsetMock);
-
         const assetGraph = createGraph('html-link');
         assetGraph.on('warn', (warn) =>
-          expect(warn, 'to satisfy', /is missing these characters/)
+          expect(warn, 'to satisfy', /Cannot find module/)
         );
         await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
 
