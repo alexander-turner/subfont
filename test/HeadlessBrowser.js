@@ -102,7 +102,7 @@ describe('HeadlessBrowser', function () {
       await expect(
         hb._launchBrowserMemoized(),
         'to be rejected with',
-        /Chrome not found/
+        'Chrome not found'
       );
     });
   });
