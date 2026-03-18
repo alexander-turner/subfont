@@ -423,36 +423,20 @@ describe('subsetFonts core subsetting logic', function () {
     });
   });
 
-  describe('when the stylesheet containing the original @font-face declarations did not contain anything else', function () {
-    it('should be removed', async function () {
-      const assetGraph = createGraph('local-with-no-css-rules-in-font-face-stylesheet');
-      const [htmlAsset] = await loadAndPopulate(assetGraph);
-      await subsetFonts(assetGraph);
-      expect(htmlAsset.text, 'not to contain', '<style>');
+  for (const [desc, testDir, assertion, expectedText] of [
+    ['when the stylesheet containing the original @font-face declarations did not contain anything else', 'local-with-no-css-rules-in-font-face-stylesheet', 'not to contain', '<style>'],
+    ['when the stylesheet containing the original @font-face declarations did not contain anything else but a comment', 'local-with-no-css-rules-in-font-face-stylesheet-only-comment', 'not to contain', '<style>'],
+    ['when the stylesheet containing the original @font-face declarations did not contain anything else but a license comment', 'local-with-no-css-rules-in-font-face-stylesheet-only-license-comment', 'to contain', '<style>/*! preserve me because of the exclamation mark */'],
+  ]) {
+    describe(desc, function () {
+      it(assertion === 'not to contain' ? 'should be removed' : 'should be preserved', async function () {
+        const assetGraph = createGraph(testDir);
+        const [htmlAsset] = await loadAndPopulate(assetGraph);
+        await subsetFonts(assetGraph);
+        expect(htmlAsset.text, assertion, expectedText);
+      });
     });
-  });
-
-  describe('when the stylesheet containing the original @font-face declarations did not contain anything else but a comment', function () {
-    it('should be removed', async function () {
-      const assetGraph = createGraph('local-with-no-css-rules-in-font-face-stylesheet-only-comment');
-      const [htmlAsset] = await loadAndPopulate(assetGraph);
-      await subsetFonts(assetGraph);
-      expect(htmlAsset.text, 'not to contain', '<style>');
-    });
-  });
-
-  describe('when the stylesheet containing the original @font-face declarations did not contain anything else but a license comment', function () {
-    it('should be preserved', async function () {
-      const assetGraph = createGraph('local-with-no-css-rules-in-font-face-stylesheet-only-license-comment');
-      const [htmlAsset] = await loadAndPopulate(assetGraph);
-      await subsetFonts(assetGraph);
-      expect(
-        htmlAsset.text,
-        'to contain',
-        '<style>/*! preserve me because of the exclamation mark */'
-      );
-    });
-  });
+  }
 
   describe('with unused variants', function () {
     it('should provide a @font-face declaration for the __subset version of an unused variant', async function () {
@@ -1132,192 +1116,110 @@ describe('subsetFonts core subsetting logic', function () {
     });
 
     describe('for the ital axis', function () {
-      describe('when only font-style: normal is used', function () {
-        it('should emit an info event', async function () {
-          const assetGraph = createGraph('variable-font-unused-ital-axis');
-          await loadAndPopulate(assetGraph, 'normal.html');
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
+      for (const [axisDesc, htmlFile, expectedMessage, shouldBeCalled] of [
+        ['when only font-style: normal is used', 'normal.html', 'Unused axes: ital', true],
+        ['when only font-style: italic is used', 'italic.html', 'Underutilized axes:\n    ital: 1 used (0-1 available)', true],
+        ['when both font-style: normal and font-style: italic are used', 'normal_and_italic.html', null, false],
+      ]) {
+        describe(axisDesc, function () {
+          it(shouldBeCalled ? 'should emit an info event' : 'should not emit an info event', async function () {
+            const assetGraph = createGraph('variable-font-unused-ital-axis');
+            await loadAndPopulate(assetGraph, htmlFile);
+            const infoSpy = sinon.spy().named('info');
+            assetGraph.on('info', infoSpy);
 
-          await subsetFonts(assetGraph);
+            await subsetFonts(assetGraph);
 
-          expect(infoSpy, 'to have calls satisfying', function () {
-            infoSpy({
-              message: expect.it('to contain', 'Unused axes: ital'),
-            });
+            if (shouldBeCalled) {
+              expect(infoSpy, 'to have calls satisfying', function () {
+                infoSpy({
+                  message: expect.it('to contain', expectedMessage),
+                });
+              });
+            } else {
+              expect(infoSpy, 'was not called');
+            }
           });
         });
-      });
-
-      describe('when only font-style: italic is used', function () {
-        it('should emit an info event', async function () {
-          const assetGraph = createGraph('variable-font-unused-ital-axis');
-          await loadAndPopulate(assetGraph, 'italic.html');
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
-
-          await subsetFonts(assetGraph);
-
-          expect(infoSpy, 'to have calls satisfying', function () {
-            infoSpy({
-              message: expect.it(
-                'to contain',
-                'Underutilized axes:\n    ital: 1 used (0-1 available)'
-              ),
-            });
-          });
-        });
-      });
-
-      describe('when both font-style: normal and font-style: italic are used', function () {
-        it('should not emit an info event', async function () {
-          const assetGraph = createGraph('variable-font-unused-ital-axis');
-          await loadAndPopulate(assetGraph, 'normal_and_italic.html');
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
-
-          await subsetFonts(assetGraph);
-
-          expect(infoSpy, 'was not called');
-        });
-      });
+      }
     });
 
     describe('for the slnt axis', function () {
-      describe('when only font-style: normal is used', function () {
-        it('should emit an info event', async function () {
-          const assetGraph = createGraph('variable-font-unused-slnt-axis');
-          await loadAndPopulate(assetGraph, 'normal.html');
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
+      for (const [axisDesc, htmlFile, expectedMessage] of [
+        ['when only font-style: normal is used', 'normal.html', 'Unused axes: slnt, TRAK, wght'],
+        ['when only font-style: oblique is used', 'oblique.html', 'Underutilized axes:\n    slnt: -14 used (-20-20 available)'],
+        ['when both font-style: normal and font-style: oblique are used', 'normal_and_oblique.html', 'Underutilized axes:\n    slnt: -14-0 used (-20-20 available)'],
+      ]) {
+        describe(axisDesc, function () {
+          it('should emit an info event', async function () {
+            const assetGraph = createGraph('variable-font-unused-slnt-axis');
+            await loadAndPopulate(assetGraph, htmlFile);
+            const infoSpy = sinon.spy().named('info');
+            assetGraph.on('info', infoSpy);
 
-          await subsetFonts(assetGraph);
+            await subsetFonts(assetGraph);
 
-          expect(infoSpy, 'to have calls satisfying', function () {
-            infoSpy({
-              message: expect.it('to contain', 'Unused axes: slnt, TRAK, wght'),
+            expect(infoSpy, 'to have calls satisfying', function () {
+              infoSpy({
+                message: expect.it('to contain', expectedMessage),
+              });
             });
           });
         });
-      });
-
-      describe('when only font-style: oblique is used', function () {
-        it('should emit an info event', async function () {
-          const assetGraph = createGraph('variable-font-unused-slnt-axis');
-          await loadAndPopulate(assetGraph, 'oblique.html');
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
-
-          await subsetFonts(assetGraph);
-
-          expect(infoSpy, 'to have calls satisfying', function () {
-            infoSpy({
-              message: expect.it(
-                'to contain',
-                'Underutilized axes:\n    slnt: -14 used (-20-20 available)'
-              ),
-            });
-          });
-        });
-      });
-
-      describe('when both font-style: normal and font-style: oblique are used', function () {
-        it('should emit an info event', async function () {
-          const assetGraph = createGraph('variable-font-unused-slnt-axis');
-          await loadAndPopulate(assetGraph, 'normal_and_oblique.html');
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
-
-          await subsetFonts(assetGraph);
-
-          expect(infoSpy, 'to have calls satisfying', function () {
-            infoSpy({
-              message: expect.it(
-                'to contain',
-                'Underutilized axes:\n    slnt: -14-0 used (-20-20 available)'
-              ),
-            });
-          });
-        });
-      });
+      }
     });
 
     describe('being animated with a cubic-bezier timing function', function () {
-      describe('that stays within bounds', function () {
-        it('should inform about the axis being underutilized', async function () {
-          const assetGraph = createGraph('variable-font-underutilized-axis-with-bezier');
-          await loadAndPopulate(assetGraph);
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
+      for (const [desc, testDir, itDesc, assertion] of [
+        ['that stays within bounds', 'variable-font-underutilized-axis-with-bezier', 'should inform about the axis being underutilized', 'to contain'],
+        ['that goes out of bounds', 'variable-font-underutilized-axis-with-bezier-out-of-bounds', 'should not inform about the axis being underutilized', 'not to contain'],
+      ]) {
+        describe(desc, function () {
+          it(itDesc, async function () {
+            const assetGraph = createGraph(testDir);
+            await loadAndPopulate(assetGraph);
+            const infoSpy = sinon.spy().named('info');
+            assetGraph.on('info', infoSpy);
 
-          await subsetFonts(assetGraph);
+            await subsetFonts(assetGraph);
 
-          expect(infoSpy, 'to have calls satisfying', function () {
-            infoSpy({
-              message: expect.it(
-                'to contain',
-                'Underutilized axes:\n    YTAS: 649-750 used (649-854 available)'
-              ),
+            expect(infoSpy, 'to have calls satisfying', function () {
+              infoSpy({
+                message: expect.it(
+                  assertion,
+                  assertion === 'to contain'
+                    ? 'Underutilized axes:\n    YTAS: 649-750 used (649-854 available)'
+                    : 'YTAS:'
+                ),
+              });
             });
           });
         });
-      });
-
-      describe('that goes out of bounds', function () {
-        it('should not inform about the axis being underutilized', async function () {
-          const assetGraph = createGraph('variable-font-underutilized-axis-with-bezier-out-of-bounds');
-          await loadAndPopulate(assetGraph);
-          const infoSpy = sinon.spy().named('info');
-          assetGraph.on('info', infoSpy);
-
-          await subsetFonts(assetGraph);
-
-          expect(infoSpy, 'to have calls satisfying', function () {
-            infoSpy({
-              message: expect.it('not to contain', 'YTAS:'),
-            });
-          });
-        });
-      });
+      }
     });
   });
 
   describe('instancing of variable fonts', function () {
-    describe('with a variable font that can be fully instanced', function () {
-      it('should remove the variation axes', async function () {
-        const assetGraph = createGraph('variable-font-that-can-be-fully-instanced');
-        await loadAndPopulate(assetGraph);
-        const infoSpy = sinon.spy().named('info');
-        assetGraph.on('info', infoSpy);
+    for (const [desc, testDir, expectedAxes] of [
+      ['with a variable font that can be fully instanced', 'variable-font-that-can-be-fully-instanced', {}],
+      ['with a variable font that can be partially instanced', 'variable-font-that-can-be-partially-instanced', { wght: { min: 100, default: 400, max: 405 } }],
+    ]) {
+      describe(desc, function () {
+        it(Object.keys(expectedAxes).length === 0 ? 'should remove the variation axes' : 'should perform a partial instancing', async function () {
+          const assetGraph = createGraph(testDir);
+          await loadAndPopulate(assetGraph);
+          const infoSpy = sinon.spy().named('info');
+          assetGraph.on('info', infoSpy);
 
-        await subsetFonts(assetGraph, { instance: true });
+          await subsetFonts(assetGraph, { instance: true });
 
-        const subsetFontAssets = assetGraph.findAssets({ type: 'Woff2' });
-        expect(subsetFontAssets, 'to have length', 1);
-        const { variationAxes } = await getFontInfo(subsetFontAssets[0].rawSrc);
-        expect(variationAxes, 'to equal', {});
-      });
-    });
-
-    describe('with a variable font that can be partially instanced', function () {
-      it('should perform a partial instancing', async function () {
-        const assetGraph = createGraph('variable-font-that-can-be-partially-instanced');
-        await loadAndPopulate(assetGraph);
-        const infoSpy = sinon.spy().named('info');
-        assetGraph.on('info', infoSpy);
-
-        await subsetFonts(assetGraph, { instance: true });
-
-        const subsetFontAssets = assetGraph.findAssets({ type: 'Woff2' });
-        expect(subsetFontAssets, 'to have length', 1);
-
-        const { variationAxes } = await getFontInfo(subsetFontAssets[0].rawSrc);
-
-        expect(variationAxes, 'to equal', {
-          wght: { min: 100, default: 400, max: 405 },
+          const subsetFontAssets = assetGraph.findAssets({ type: 'Woff2' });
+          expect(subsetFontAssets, 'to have length', 1);
+          const { variationAxes } = await getFontInfo(subsetFontAssets[0].rawSrc);
+          expect(variationAxes, 'to equal', expectedAxes);
         });
       });
-    });
+    }
   });
 
   describe('with a page that does need subsetting and one that does', function () {
