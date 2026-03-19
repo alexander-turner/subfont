@@ -11,8 +11,18 @@ const {
   loadAndPopulate,
 } = require('./subsetFonts-helpers');
 
+const canvasWorksInWorkerThread = require('./canvasAvailable');
+
+// Resolved once in the `before` hook so async probing can complete
+// before any `it`/`it.skip` decision.
+let canvasAvailable = false;
+
 describe('subsetFonts core subsetting logic', function () {
   setupCleanup();
+
+  before(async function () {
+    canvasAvailable = await canvasWorksInWorkerThread();
+  });
 
   it('should error out on multiple @font-face declarations with the same family/weight/style/stretch', async function () {
     httpception();
@@ -2169,6 +2179,7 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('worker pool parallelization', function () {
       it('should produce correct subsets when using the worker pool (5 pages)', async function () {
+        if (!canvasAvailable) return this.skip();
         const assetGraph = createGraph('multi-page-worker-pool');
         await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
         await subsetFonts(assetGraph);
