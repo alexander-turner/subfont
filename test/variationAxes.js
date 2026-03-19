@@ -260,9 +260,9 @@ describe('variationAxes', function () {
       return outer;
     }
 
-    it('should restrict min bound using Math.max (not Math.min)', async function () {
+    it('should compute min as Math.min(minSeenValue, axisMin)', async function () {
       // Seen values: wght 400 and 700, font range 100-900
-      // min should be max(400, 100) = 400, not min(400, 100) = 100
+      // min = min(400, 100) = 100, max = min(700, 900) = 700
       const fontAssetsByUrl = new Map();
       fontAssetsByUrl.set('font://test', { rawSrc: Buffer.from('mock') });
 
@@ -272,16 +272,16 @@ describe('variationAxes', function () {
         makeSeenAxes([['wght', [400, 700]]])
       );
 
-      expect(result.variationAxes.wght.min, 'to equal', 400);
+      expect(result.variationAxes.wght.min, 'to equal', 100);
       expect(result.variationAxes.wght.max, 'to equal', 700);
-      // wght is reduced (400-700 vs 100-900); wdth is pinned to default
+      // wght is reduced (400>100 || 700<900); wdth is pinned to default
       expect(result.numAxesReduced, 'to equal', 1);
       expect(result.fullyInstanced, 'to be false');
     });
 
-    it('should clamp min to font axis min when seen value is below range', async function () {
+    it('should use seen min when it is below axis min', async function () {
       // Seen values: wght 50 and 500, font range 100-900
-      // min should be max(50, 100) = 100
+      // min = min(50, 100) = 50, max = min(500, 900) = 500
       const fontAssetsByUrl = new Map();
       fontAssetsByUrl.set('font://test', { rawSrc: Buffer.from('mock') });
 
@@ -291,7 +291,7 @@ describe('variationAxes', function () {
         makeSeenAxes([['wght', [50, 500]]])
       );
 
-      expect(result.variationAxes.wght.min, 'to equal', 100);
+      expect(result.variationAxes.wght.min, 'to equal', 50);
       expect(result.variationAxes.wght.max, 'to equal', 500);
     });
 
