@@ -225,25 +225,24 @@ describe('subfont', function () {
   });
 
   describe('when fetching an entry point results in an HTTP redirect', function () {
-    describe('with a single entry point', function () {
-      beforeEach(function () {
-        httpception([
-          {
-            request: 'GET http://example.com/',
-            response: {
-              statusCode: 301,
-              headers: {
-                Location: 'https://somewhereelse.com/',
-              },
+    function setupSingleEntryPointMocks() {
+      httpception([
+        {
+          request: 'GET http://example.com/',
+          response: {
+            statusCode: 301,
+            headers: {
+              Location: 'https://somewhereelse.com/',
             },
           },
-          {
-            request: 'GET https://somewhereelse.com/',
-            response: {
-              headers: {
-                'Content-Type': 'text/html; charset=utf-8',
-              },
-              body: `<!DOCTYPE html>
+        },
+        {
+          request: 'GET https://somewhereelse.com/',
+          response: {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+            },
+            body: `<!DOCTYPE html>
               <html>
 
               <head>
@@ -263,22 +262,24 @@ describe('subfont', function () {
               </body>
               </html>
             `,
-            },
           },
-          {
-            request: 'GET https://somewhereelse.com/OpenSans.woff',
-            response: {
-              headers: {
-                'Content-Type': 'font/woff',
-              },
-              body: openSansBold,
+        },
+        {
+          request: 'GET https://somewhereelse.com/OpenSans.woff',
+          response: {
+            headers: {
+              'Content-Type': 'font/woff',
             },
+            body: openSansBold,
           },
-        ]);
-      });
+        },
+      ]);
+    }
 
+    describe('with a single entry point', function () {
       it('should issue a warning', async function () {
         if (!canvasAvailable) return this.skip();
+        setupSingleEntryPointMocks();
         const root = 'http://example.com/';
         sinon.stub(AssetGraph.prototype, 'info');
 
@@ -313,6 +314,7 @@ describe('subfont', function () {
 
       it('should change the root of the graph so that files get written to disc', async function () {
         if (!canvasAvailable) return this.skip();
+        setupSingleEntryPointMocks();
         const root = 'http://example.com/';
 
         sinon.stub(AssetGraph.prototype, 'info');
@@ -339,7 +341,8 @@ describe('subfont', function () {
     });
 
     describe('but other entry points do not get redirected', function () {
-      beforeEach(function () {
+      it('should not change the root', async function () {
+        if (!canvasAvailable) return this.skip();
         httpception([
           {
             request: 'GET http://example.com/',
@@ -396,10 +399,6 @@ describe('subfont', function () {
             },
           },
         ]);
-      });
-
-      it('should not change the root', async function () {
-        if (!canvasAvailable) return this.skip();
         const root = 'http://example.com/';
 
         const assetGraph = await subfont(
@@ -438,72 +437,60 @@ describe('subfont', function () {
     );
   });
 
-  (canvasAvailable ? it : it.skip)(
-    'should report how many codepoints are used on the page as well as globally',
-    async function () {
-      const root = encodeURI(
-        `file://${pathModule.resolve(
-          __dirname,
-          '..',
-          'testdata',
-          'differentCodepointsOnDifferentPages'
-        )}`
-      );
+  it('should report how many codepoints are used on the page as well as globally', async function () {
+    if (!canvasAvailable) return this.skip();
+    const root = encodeURI(
+      `file://${pathModule.resolve(
+        __dirname,
+        '..',
+        'testdata',
+        'differentCodepointsOnDifferentPages'
+      )}`
+    );
 
-      await subfont(
-        {
-          dryRun: true,
-          root,
-          inputFiles: [`${root}/first.html`, `${root}/second.html`],
-        },
-        mockConsole
+    await subfont(
+      {
+        dryRun: true,
+        root,
+        inputFiles: [`${root}/first.html`, `${root}/second.html`],
+      },
+      mockConsole
+    );
+    expect(mockConsole.log, 'to have a call satisfying', () => {
+      mockConsole.log(
+        expect.it('to contain', '400 : 6/213 codepoints used (3 on this page),')
       );
-      expect(mockConsole.log, 'to have a call satisfying', () => {
-        mockConsole.log(
-          expect.it(
-            'to contain',
-            '400 : 6/213 codepoints used (3 on this page),'
-          )
-        );
-      }).and('to have a call satisfying', () => {
-        mockConsole.log(
-          expect.it(
-            'to contain',
-            '400 : 6/213 codepoints used (4 on this page),'
-          )
-        );
-      });
-    }
-  );
+    }).and('to have a call satisfying', () => {
+      mockConsole.log(
+        expect.it('to contain', '400 : 6/213 codepoints used (4 on this page),')
+      );
+    });
+  });
 
   // Regression test for https://gitter.im/assetgraph/assetgraph?at=5f1ddc1afe6ecd2888764496
-  (canvasAvailable ? it : it.skip)(
-    'should not crash in the reporting code when a font has no text on a given page',
-    async function () {
-      const root = encodeURI(
-        `file://${pathModule.resolve(
-          __dirname,
-          '..',
-          'testdata',
-          'noFontUsageOnOnePage'
-        )}`
-      );
+  it('should not crash in the reporting code when a font has no text on a given page', async function () {
+    if (!canvasAvailable) return this.skip();
+    const root = encodeURI(
+      `file://${pathModule.resolve(
+        __dirname,
+        '..',
+        'testdata',
+        'noFontUsageOnOnePage'
+      )}`
+    );
 
-      await subfont(
-        {
-          dryRun: true,
-          root,
-          inputFiles: [`${root}/first.html`, `${root}/second.html`],
-        },
-        mockConsole
-      );
-      expect(mockConsole.log, 'to have a call satisfying', () => {
-        mockConsole.log(
-          expect.it('to contain', '400 : 3/213 codepoints used,')
-        );
-      });
-    }
-  );
+    await subfont(
+      {
+        dryRun: true,
+        root,
+        inputFiles: [`${root}/first.html`, `${root}/second.html`],
+      },
+      mockConsole
+    );
+    expect(mockConsole.log, 'to have a call satisfying', () => {
+      mockConsole.log(expect.it('to contain', '400 : 3/213 codepoints used,'));
+    });
+  });
 
   describe('with --dynamic', function () {
     it('should find glyphs added to the page via JavaScript', async function () {
