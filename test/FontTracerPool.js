@@ -1,20 +1,25 @@
 const expect = require('unexpected');
 const FontTracerPool = require('../lib/FontTracerPool');
+const canvasWorksInWorkerThread = require('./canvasAvailable');
 
 // FontTracerPool spawns worker threads that load jsdom via fontTracerWorker.js.
 // jsdom requires the native `canvas` module, which may not be available in all
-// environments.  Probe for it and skip the suite when it's missing or broken
-// (e.g. "Module did not self-register" on mismatched Node/binary versions).
-let canvasAvailable = true;
-try {
-  const { createCanvas } = require('canvas');
-  createCanvas(1, 1);
-} catch {
-  canvasAvailable = false;
-}
+// environments or may fail specifically in worker threads (e.g. "Module did not
+// self-register" on mismatched Node/binary versions).
 
-(canvasAvailable ? describe : describe.skip)('FontTracerPool', function () {
+describe('FontTracerPool', function () {
   this.timeout(30000);
+
+  let canvasAvailable;
+  before(async function () {
+    canvasAvailable = await canvasWorksInWorkerThread();
+  });
+
+  beforeEach(function () {
+    if (!canvasAvailable) {
+      this.skip();
+    }
+  });
 
   it('should initialize workers and process trace requests', async function () {
     const pool = new FontTracerPool(1);
