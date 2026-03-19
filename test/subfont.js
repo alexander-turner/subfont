@@ -640,7 +640,10 @@ describe('subfont', function () {
           'ReferenceError: iAmNotAFunction is not defined\n    at https://example.com/index.html:20:7',
         ])
         .and('to have a call satisfying', [
-          'GET https://assetgraph.org/nonexistent12345.js returned 404',
+          expect.it(
+            'to match',
+            /GET https:\/\/assetgraph\.org\/nonexistent12345\.js (returned 404|failed: net::ERR_BLOCKED_BY_ORB)/
+          ),
         ]);
     });
 
