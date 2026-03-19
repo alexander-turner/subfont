@@ -266,7 +266,7 @@ describe('subfont', function () {
             },
           },
           {
-            request: 'GET http://somewhereelse.com/OpenSans.woff',
+            request: 'GET https://somewhereelse.com/OpenSans.woff',
             response: {
               headers: {
                 'Content-Type': 'font/woff',
@@ -278,6 +278,7 @@ describe('subfont', function () {
       });
 
       it('should issue a warning', async function () {
+        if (!canvasAvailable) return this.skip();
         const root = 'http://example.com/';
         sinon.stub(AssetGraph.prototype, 'info');
 
@@ -311,6 +312,7 @@ describe('subfont', function () {
       });
 
       it('should change the root of the graph so that files get written to disc', async function () {
+        if (!canvasAvailable) return this.skip();
         const root = 'http://example.com/';
 
         sinon.stub(AssetGraph.prototype, 'info');
@@ -385,7 +387,7 @@ describe('subfont', function () {
             },
           },
           {
-            request: 'GET http://somewhereelse.com/OpenSans.woff',
+            request: 'GET https://somewhereelse.com/OpenSans.woff',
             response: {
               headers: {
                 'Content-Type': 'font/woff',
@@ -397,6 +399,7 @@ describe('subfont', function () {
       });
 
       it('should not change the root', async function () {
+        if (!canvasAvailable) return this.skip();
         const root = 'http://example.com/';
 
         const assetGraph = await subfont(
