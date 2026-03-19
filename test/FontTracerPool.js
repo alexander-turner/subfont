@@ -3,10 +3,12 @@ const FontTracerPool = require('../lib/FontTracerPool');
 
 // FontTracerPool spawns worker threads that load jsdom via fontTracerWorker.js.
 // jsdom requires the native `canvas` module, which may not be available in all
-// environments.  Probe for it and skip the suite when it's missing.
+// environments.  Probe for it and skip the suite when it's missing or broken
+// (e.g. "Module did not self-register" on mismatched Node/binary versions).
 let canvasAvailable = true;
 try {
-  require('canvas');
+  const { createCanvas } = require('canvas');
+  createCanvas(1, 1);
 } catch {
   canvasAvailable = false;
 }
