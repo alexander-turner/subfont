@@ -128,16 +128,6 @@ describe('subfont', function () {
             `,
           },
         },
-        {
-          request:
-            'GET http://themes.googleusercontent.com/static/fonts/opensans/v8/k3k702ZOKiLJc3WVjuplzHhCUOGz7vYGh680lGh-uXM.woff',
-          response: {
-            headers: {
-              'Content-Type': 'font/woff',
-            },
-            body: openSansBold,
-          },
-        },
       ]);
 
       const root = encodeURI(
