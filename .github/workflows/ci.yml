@@ -22,7 +22,7 @@ jobs:
       - name: Install Chrome for puppeteer
         run: npx puppeteer browsers install chrome
       - name: Set PUPPETEER_EXECUTABLE_PATH
-        run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -p 'require(\"puppeteer\").executablePath()')" >> $GITHUB_ENV
+        run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require("puppeteer").executablePath())')" >> $GITHUB_ENV
       - name: Run tests
         run: |
           npx mocha --reporter spec 2>&1 | tee test-output.txt
@@ -62,7 +62,7 @@ jobs:
       - name: Install Chrome for puppeteer
         run: npx puppeteer browsers install chrome
       - name: Set PUPPETEER_EXECUTABLE_PATH
-        run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -p 'require(\"puppeteer\").executablePath()')" >> $GITHUB_ENV
+        run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require("puppeteer").executablePath())')" >> $GITHUB_ENV
       - run: npm run coverage
       - name: Upload coverage
         uses: coverallsapp/github-action@master
