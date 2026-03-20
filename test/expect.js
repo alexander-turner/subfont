@@ -51,6 +51,7 @@ async function screenshot(browser, assetGraph, fileName, bannedUrls) {
     request.continue();
   });
   await page.goto(`https://example.com/${fileName}`);
+  await page.evaluate(() => document.fonts.ready);
   if (bannedUrls) {
     const loadedBannedUrls = loadedUrls.filter((url) =>
       bannedUrls.includes(url)
