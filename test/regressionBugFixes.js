@@ -9,33 +9,11 @@ const sinon = require('sinon');
 const subsetFonts = require('../lib/subsetFonts');
 const { Worker } = require('worker_threads');
 
-// Extract getFontFaceDeclarationText from source for unit testing
 const fs = require('fs');
-const moduleSource = fs.readFileSync(
-  pathModule.resolve(__dirname, '../lib/subsetFonts.js'),
-  'utf8'
-);
-const funcMatch = moduleSource.match(
-  /function getFontFaceDeclarationText\(node, relations\) \{[\s\S]*?\nfunction /
-);
-let getFontFaceDeclarationText;
-if (funcMatch) {
-  const funcSource = funcMatch[0].replace(/\nfunction $/, '');
-  // eslint-disable-next-line no-eval
-  getFontFaceDeclarationText = eval(`(${funcSource})`);
-}
+const { getFontFaceDeclarationText } = require('../lib/fontFaceHelpers');
 
 describe('regression bug fixes', function () {
   describe('Bug 1: getFontFaceDeclarationText should preserve relation.hrefType', function () {
-    if (!getFontFaceDeclarationText) {
-      it('should be extractable from subsetFonts.js', function () {
-        throw new Error(
-          'Could not extract getFontFaceDeclarationText from subsetFonts.js'
-        );
-      });
-      return;
-    }
-
     it('should restore hrefType on all relations after generating text', function () {
       const node = {
         toString() {
@@ -148,10 +126,7 @@ describe('regression bug fixes', function () {
   describe('Bug 5: FontTracerPool should reject pending tasks when all workers crash', function () {
     it('should reject the promise when a worker crashes', async function () {
       // Create a minimal worker that exits immediately with code 1
-      const crashWorkerPath = pathModule.resolve(
-        __dirname,
-        '_crashWorker.js'
-      );
+      const crashWorkerPath = pathModule.resolve(__dirname, '_crashWorker.js');
       fs.writeFileSync(
         crashWorkerPath,
         `
@@ -166,28 +141,6 @@ parentPort.on('message', (msg) => {
 });
 `
       );
-
-      // Extract FontTracerPool and patch its worker path
-      const FontTracerPoolMatch = moduleSource.match(
-        /class FontTracerPool \{[\s\S]*?\n\}/
-      );
-
-      // Instead of extracting the class, test via the module's behavior
-      // by creating a minimal pool-like setup
-      const { FontTracerPool } = (() => {
-        // We'll use a simpler approach: directly test the _onWorkerExit logic
-        // by creating a mock pool
-        class MockPool {
-          constructor() {
-            this._workers = [];
-            this._idle = [];
-            this._pendingTasks = [];
-            this._taskCallbacks = new Map();
-            this._taskByWorker = new Map();
-          }
-        }
-        return { FontTracerPool: MockPool };
-      })();
 
       // Test using actual workers
       const worker = new Worker(crashWorkerPath);

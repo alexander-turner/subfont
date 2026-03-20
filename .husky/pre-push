@@ -1,0 +1,4 @@
+npx prettier --write '**/*.{js,md}' && git diff --quiet || {
+  git add -u
+  git commit --no-verify -m "style: auto-fix prettier formatting"
+}

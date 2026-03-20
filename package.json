@@ -3,14 +3,15 @@
   "version": "7.2.1",
   "description": "Speeds up your pages initial paint by automatically subsetting local or Google fonts and loading them optimally",
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "lint": "eslint . && prettier --check '**/*.{js,md}'",
     "test": "mocha && npm run lint",
     "travis": "npm run coverage && npm run lint",
     "coverage": "nyc --reporter=lcov --reporter=text -- mocha",
-    "preversion": "offline-github-changelog --next=${npm_new_version} > CHANGELOG.md && git add CHANGELOG.md"
+    "preversion": "offline-github-changelog --next=${npm_new_version} > CHANGELOG.md && git add CHANGELOG.md",
+    "prepare": "husky"
   },
   "bin": {
     "subfont": "lib/cli.js"
@@ -64,7 +65,7 @@
     "postcss": "^8.3.11",
     "postcss-value-parser": "^4.0.2",
     "pretty-bytes": "^5.1.0",
-    "puppeteer-core": "^19.8.5",
+    "puppeteer-core": "^24.39.1",
     "specificity": "^0.4.1",
     "subset-font": "^2.3.0",
     "urltools": "^0.4.1",
@@ -84,13 +85,15 @@
     "eslint-plugin-standard": "^4.0.0",
     "html-generators": "^1.0.3",
     "httpception": "^3.0.0",
+    "canvas": "^2.9.0",
+    "husky": "^9.1.7",
     "magicpen-prism": "^3.0.2",
     "mocha": "^8.0.1",
     "nyc": "^15.1.0",
     "offline-github-changelog": "^1.6.1",
     "prettier": "~2.3.0",
     "proxyquire": "^2.1.1",
-    "puppeteer": "^19.8.5",
+    "puppeteer": "^24.39.1",
     "sinon": "^9.0.2",
     "unexpected": "^11.8.1",
     "unexpected-check": "^2.3.1",

@@ -1,6 +1,4 @@
-const expect = require('unexpected')
-  .clone()
-  .use(require('unexpected-sinon'));
+const expect = require('unexpected').clone().use(require('unexpected-sinon'));
 
 const AssetGraph = require('assetgraph');
 const pathModule = require('path');
@@ -28,7 +26,8 @@ describe('debug timing output', function () {
     });
 
     const timingCalls = mockConsole.log.args.filter(
-      (args) => typeof args[0] === 'string' && args[0].includes('[subfont timing]')
+      (args) =>
+        typeof args[0] === 'string' && args[0].includes('[subfont timing]')
     );
     expect(timingCalls.length, 'to be greater than', 0);
   });
@@ -51,7 +50,8 @@ describe('debug timing output', function () {
     });
 
     const timingCalls = mockConsole.log.args.filter(
-      (args) => typeof args[0] === 'string' && args[0].includes('[subfont timing]')
+      (args) =>
+        typeof args[0] === 'string' && args[0].includes('[subfont timing]')
     );
     expect(timingCalls.length, 'to be', 0);
   });

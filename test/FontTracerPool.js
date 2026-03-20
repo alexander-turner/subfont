@@ -1,8 +1,25 @@
 const expect = require('unexpected');
 const FontTracerPool = require('../lib/FontTracerPool');
+const canvasWorksInWorkerThread = require('./canvasAvailable');
+
+// FontTracerPool spawns worker threads that load jsdom via fontTracerWorker.js.
+// jsdom requires the native `canvas` module, which may not be available in all
+// environments or may fail specifically in worker threads (e.g. "Module did not
+// self-register" on mismatched Node/binary versions).
 
 describe('FontTracerPool', function () {
   this.timeout(30000);
+
+  let canvasAvailable;
+  before(async function () {
+    canvasAvailable = await canvasWorksInWorkerThread();
+  });
+
+  beforeEach(function () {
+    if (!canvasAvailable) {
+      this.skip();
+    }
+  });
 
   it('should initialize workers and process trace requests', async function () {
     const pool = new FontTracerPool(1);
@@ -52,6 +69,69 @@ describe('FontTracerPool', function () {
 
     const result = await pool.trace('', []);
     expect(result, 'to be an', 'array');
+
+    await pool.destroy();
+  });
+
+  it('should queue tasks when all workers are busy', async function () {
+    const pool = new FontTracerPool(1);
+    await pool.init();
+
+    // Submit 3 tasks to a single worker — they must be queued
+    const promises = [
+      pool.trace('<html><body>A</body></html>', []),
+      pool.trace('<html><body>B</body></html>', []),
+      pool.trace('<html><body>C</body></html>', []),
+    ];
+
+    const results = await Promise.all(promises);
+    expect(results, 'to have length', 3);
+    for (const result of results) {
+      expect(result, 'to be an', 'array');
+    }
+
+    await pool.destroy();
+  });
+
+  it('should reject pending tasks when all workers crash', async function () {
+    const pool = new FontTracerPool(1);
+    await pool.init();
+
+    // Manually simulate: kill the worker and verify pending tasks are rejected
+    const worker = pool._workers[0];
+
+    // Queue a task that won't be dispatched because the worker is about to die
+    const taskPromise = pool.trace('<html><body>test</body></html>', []);
+
+    // Force-terminate the worker with a non-zero exit to simulate a crash
+    await worker.terminate();
+
+    try {
+      await taskPromise;
+      expect.fail('Expected task to be rejected');
+    } catch (err) {
+      expect(err.message, 'to match', /Worker exited|All workers have crashed/);
+    }
+
+    // Pool should have no workers left
+    expect(pool._workers, 'to have length', 0);
+  });
+
+  it('should return traced results with text and props', async function () {
+    const pool = new FontTracerPool(1);
+    await pool.init();
+
+    const result = await pool.trace(
+      '<html><body><p style="font-family: serif; font-weight: bold">Hello World</p></body></html>',
+      []
+    );
+
+    expect(result, 'to be an', 'array');
+    for (const entry of result) {
+      expect(entry, 'to have keys', ['text', 'props']);
+      expect(entry.text, 'to be a', 'string');
+      expect(entry.props, 'to be an', 'object');
+    }
 
     await pool.destroy();
   });
