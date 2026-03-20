@@ -61,7 +61,7 @@ async function screenshot(browser, assetGraph, fileName, bannedUrls) {
     request.continue();
   });
   await page.goto(`https://example.com/${fileName}`, {
-    waitUntil: 'networkidle0',
+    waitUntil: 'load',
   });
   await page.evaluate(async () => {
     await document.fonts.ready;
