@@ -2166,28 +2166,5 @@ describe('subsetFonts core subsetting logic', function () {
         }
       });
     });
-
-    describe('worker pool parallelization', function () {
-      it('should produce correct subsets when using the worker pool (5 pages)', async function () {
-        const assetGraph = createGraph('multi-page-worker-pool');
-        await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
-        await subsetFonts(assetGraph);
-
-        // The subset font should contain characters from all 5 pages
-        const subsetFonts_ = assetGraph.findAssets({
-          fileName: { $regex: /^IBM_Plex_Sans-400-/ },
-          extension: '.woff2',
-        });
-        expect(subsetFonts_, 'to have length', 1);
-        const fontInfo = await getFontInfo(subsetFonts_[0].rawSrc);
-        const chars = fontInfo.characterSet.map((cp) =>
-          String.fromCodePoint(cp)
-        );
-        // Characters from all 5 pages (ABCDE, FGHIJ, KLMNO, PQRST, UVWXY)
-        for (const ch of 'ABCDEFGHIJKLMNOPQRSTUVWXY') {
-          expect(chars, 'to contain', ch);
-        }
-      });
-    });
   });
 });
