@@ -7,6 +7,13 @@ const AssetGraph = require('assetgraph');
 const proxyquire = require('proxyquire');
 const pathModule = require('path');
 
+const canvasWorksInWorkerThread = require('./canvasAvailable');
+
+// Some tests require a working canvas module in worker threads for font
+// tracing via jsdom.  Resolved once in the `before` hook of the top-level
+// suite so async probing can complete before any `it`/`it.skip` decision.
+let canvasAvailable = false;
+
 const openSansBold = require('fs').readFileSync(
   pathModule.resolve(
     __dirname,
@@ -17,6 +24,12 @@ const openSansBold = require('fs').readFileSync(
 );
 
 describe('subfont', function () {
+  this.timeout(30000);
+
+  before(async function () {
+    canvasAvailable = await canvasWorksInWorkerThread();
+  });
+
   let mockConsole;
   beforeEach(async function () {
     mockConsole = {
@@ -153,6 +166,7 @@ describe('subfont', function () {
 
   describe('with --no-fallbacks', function () {
     it('should leave out the fallbacks', async function () {
+      if (!canvasAvailable) return this.skip();
       httpception([
         {
           request: 'GET https://example.com/',
@@ -221,25 +235,24 @@ describe('subfont', function () {
   });
 
   describe('when fetching an entry point results in an HTTP redirect', function () {
-    describe('with a single entry point', function () {
-      beforeEach(function () {
-        httpception([
-          {
-            request: 'GET http://example.com/',
-            response: {
-              statusCode: 301,
-              headers: {
-                Location: 'https://somewhereelse.com/',
-              },
+    function setupSingleEntryPointMocks() {
+      httpception([
+        {
+          request: 'GET http://example.com/',
+          response: {
+            statusCode: 301,
+            headers: {
+              Location: 'https://somewhereelse.com/',
             },
           },
-          {
-            request: 'GET https://somewhereelse.com/',
-            response: {
-              headers: {
-                'Content-Type': 'text/html; charset=utf-8',
-              },
-              body: `<!DOCTYPE html>
+        },
+        {
+          request: 'GET https://somewhereelse.com/',
+          response: {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+            },
+            body: `<!DOCTYPE html>
               <html>
 
               <head>
@@ -259,21 +272,24 @@ describe('subfont', function () {
               </body>
               </html>
             `,
-            },
           },
-          {
-            request: 'GET https://somewhereelse.com/OpenSans.woff',
-            response: {
-              headers: {
-                'Content-Type': 'font/woff',
-              },
-              body: openSansBold,
+        },
+        {
+          request: 'GET https://somewhereelse.com/OpenSans.woff',
+          response: {
+            headers: {
+              'Content-Type': 'font/woff',
             },
+            body: openSansBold,
           },
-        ]);
-      });
+        },
+      ]);
+    }
 
+    describe('with a single entry point', function () {
       it('should issue a warning', async function () {
+        if (!canvasAvailable) return this.skip();
+        setupSingleEntryPointMocks();
         const root = 'http://example.com/';
         sinon.stub(AssetGraph.prototype, 'info');
 
@@ -307,6 +323,8 @@ describe('subfont', function () {
       });
 
       it('should change the root of the graph so that files get written to disc', async function () {
+        if (!canvasAvailable) return this.skip();
+        setupSingleEntryPointMocks();
         const root = 'http://example.com/';
 
         sinon.stub(AssetGraph.prototype, 'info');
@@ -333,7 +351,8 @@ describe('subfont', function () {
     });
 
     describe('but other entry points do not get redirected', function () {
-      beforeEach(function () {
+      it('should not change the root', async function () {
+        if (!canvasAvailable) return this.skip();
         httpception([
           {
             request: 'GET http://example.com/',
@@ -390,9 +409,6 @@ describe('subfont', function () {
             },
           },
         ]);
-      });
-
-      it('should not change the root', async function () {
         const root = 'http://example.com/';
 
         const assetGraph = await subfont(
@@ -432,6 +448,7 @@ describe('subfont', function () {
   });
 
   it('should report how many codepoints are used on the page as well as globally', async function () {
+    if (!canvasAvailable) return this.skip();
     const root = encodeURI(
       `file://${pathModule.resolve(
         __dirname,
@@ -462,6 +479,7 @@ describe('subfont', function () {
 
   // Regression test for https://gitter.im/assetgraph/assetgraph?at=5f1ddc1afe6ecd2888764496
   it('should not crash in the reporting code when a font has no text on a given page', async function () {
+    if (!canvasAvailable) return this.skip();
     const root = encodeURI(
       `file://${pathModule.resolve(
         __dirname,
