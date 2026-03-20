@@ -13,7 +13,16 @@ let browser;
 async function getBrowser() {
   if (!browser) {
     browser = await require('puppeteer').launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-lcd-text',
+        '--disable-font-subpixel-positioning',
+        '--font-render-hinting=none',
+        '--force-color-profile=srgb',
+        '--disable-gpu',
+        '--disable-skia-runtime-opts',
+      ],
     });
 
     after(async function () {
@@ -25,6 +34,7 @@ async function getBrowser() {
 
 async function screenshot(browser, assetGraph, fileName, bannedUrls) {
   const page = await browser.newPage();
+  await page.setViewport({ width: 800, height: 600, deviceScaleFactor: 1 });
   await page.setRequestInterception(true);
   const loadedUrls = [];
   page.on('request', (request) => {
@@ -50,8 +60,16 @@ async function screenshot(browser, assetGraph, fileName, bannedUrls) {
     }
     request.continue();
   });
-  await page.goto(`https://example.com/${fileName}`);
-  await page.evaluate(() => document.fonts.ready);
+  await page.goto(`https://example.com/${fileName}`, {
+    waitUntil: 'networkidle0',
+  });
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    // Wait for a paint cycle to ensure fonts are rendered and layout is stable
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+  });
   if (bannedUrls) {
     const loadedBannedUrls = loadedUrls.filter((url) =>
       bannedUrls.includes(url)
