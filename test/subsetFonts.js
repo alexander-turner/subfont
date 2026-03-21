@@ -2451,8 +2451,6 @@ describe('subsetFonts', function () {
   });
 
   it('should handle HTML <link rel=stylesheet> with Google Fonts', async function () {
-    httpception(defaultLocalSubsetMock);
-
     const assetGraph = new AssetGraph({
       root: pathModule.resolve(__dirname, '../testdata/subsetFonts/html-link/'),
     });
