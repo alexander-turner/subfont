@@ -15,6 +15,8 @@ jobs:
           - '22'
           - '24'
     steps:
+      - name: Disable AppArmor on the GitHub runner
+        uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1.0.0
       - uses: actions/checkout@v2
       - name: Setup node
         uses: actions/setup-node@v1
@@ -40,6 +42,8 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: '24'
+      - name: Disable AppArmor on the GitHub runner
+        uses: cisagov/action-disable-apparmor@437d94f26a2e4bf8c03acfb500a6afc688b497db # v1.0.0
       - run: npm install
       - run: npm run ${{ matrix.targets.target }}
       - name: Upload coverage
