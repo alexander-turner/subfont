@@ -97,5 +97,8 @@
     "unexpected-resemble": "^5.0.1",
     "unexpected-set": "^2.0.1",
     "unexpected-sinon": "^10.11.2"
+  },
+  "overrides": {
+    "canvas": "latest"
   }
 }
