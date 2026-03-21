@@ -54,12 +54,10 @@ describe('reference images', function () {
         );
       });
 
-      // Skip: HarfBuzz correctly prunes the ccmp (Composition/Decomposition)
-      // GSUB feature and most mark-to-base GPOS lookups during subsetting
-      // because the combining mark codepoints (U+0300-U+0308) are not in
-      // the subset text (it uses precomposed characters instead). This
-      // causes a ~1.15% rendering difference for diacritical characters.
-      // This is an inherent limitation of font subsetting, not a subfont bug.
+      // Skip: subsetting loses kerning pairs for alternate glyphs.
+      // When features like aalt/ss01 substitute glyphs (a → a.alt01),
+      // HarfBuzz's GPOS closure doesn't preserve kerning for those
+      // alternates (3642 pairs → 133), causing ~1px shifts (1.15% mismatch).
       it.skip('should render font-variant-*', async function () {
         await expect(
           getPathToTestCase('fontVariant'),
