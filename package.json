@@ -90,12 +90,15 @@
     "offline-github-changelog": "^1.6.1",
     "prettier": "~2.3.0",
     "proxyquire": "^2.1.1",
-    "puppeteer": "^19.8.5",
+    "puppeteer": "^24.40.0",
     "sinon": "^9.0.2",
     "unexpected": "^11.8.1",
     "unexpected-check": "^2.3.1",
     "unexpected-resemble": "^5.0.1",
     "unexpected-set": "^2.0.1",
     "unexpected-sinon": "^10.11.2"
+  },
+  "overrides": {
+    "canvas": "latest"
   }
 }
