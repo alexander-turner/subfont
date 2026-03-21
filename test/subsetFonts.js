@@ -14,42 +14,6 @@ const fs = require('fs');
 const subsetFonts = require('../lib/subsetFonts');
 const getFontInfo = require('../lib/getFontInfo');
 
-const defaultLocalSubsetMock = [
-  {
-    request: {
-      url: 'GET https://fonts.googleapis.com/css?family=Open+Sans',
-    },
-    response: {
-      headers: {
-        'Content-Type': 'text/css',
-      },
-      body: [
-        '@font-face {',
-        "  font-family: 'Open Sans';",
-        '  font-style: normal;',
-        '  font-weight: 400;',
-        "  src: local('Open Sans Regular'), local('OpenSans-Regular'), url(https://fonts.gstatic.com/s/opensans/v15/cJZKeOuBrn4kERxqtaUH3aCWcynf_cDxXwCLxiixG1c.ttf) format('truetype');",
-        '}',
-      ].join('\n'),
-    },
-  },
-  {
-    request:
-      'GET https://fonts.gstatic.com/s/opensans/v15/cJZKeOuBrn4kERxqtaUH3aCWcynf_cDxXwCLxiixG1c.ttf',
-    response: {
-      headers: {
-        'Content-Type': 'font/ttf',
-      },
-      body: fs.readFileSync(
-        pathModule.resolve(
-          __dirname,
-          '../testdata/subsetFonts/OpenSans-400.ttf'
-        )
-      ),
-    },
-  },
-];
-
 describe('subsetFonts', function () {
   it('should not break when there is an existing preload hint pointing to a font file', async function () {
     httpception();
