@@ -1,3 +1,7 @@
+### v7.2.3 (2026-03-21)
+
+- [Bump assetgraph to ^7.13.0](https://github.com/Munter/subfont/commit/2963cc38663d00bc115dffcac4942a0e0f94db58) ([Andreas Lind](mailto:andreas.lind@workday.com))
+
 ### v7.2.2 (2026-03-21)
 
 - [Drive-by: Add test for unicodeRange generation](https://github.com/Munter/subfont/commit/ae58ca03f846d5e95942875bf163f66d4c6cdb1c) ([Andreas Lind](mailto:andreas.lind@workday.com))
