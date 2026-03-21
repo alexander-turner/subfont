@@ -2621,8 +2621,6 @@ describe('subsetFonts', function () {
   });
 
   it('should handle mixed local fonts and Google fonts', async function () {
-    httpception(defaultLocalSubsetMock);
-
     const assetGraph = new AssetGraph({
       root: pathModule.resolve(
         __dirname,
