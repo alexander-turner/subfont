@@ -58,7 +58,7 @@
     "font-tracer": "^3.7.0",
     "fontverter": "^2.0.0",
     "gettemporaryfilepath": "^1.0.1",
-    "harfbuzzjs": "^0.3.3",
+    "harfbuzzjs": "^0.10.1",
     "lines-and-columns": "^1.1.6",
     "lodash": "^4.17.15",
     "memoizesync": "^1.1.1",
@@ -72,6 +72,7 @@
     "yargs": "^15.4.0"
   },
   "devDependencies": {
+    "canvas": "npm:@napi-rs/canvas@^0.1.97",
     "combos": "^0.2.0",
     "coveralls": "^3.0.9",
     "css-generators": "^0.2.0",
@@ -85,7 +86,6 @@
     "eslint-plugin-standard": "^4.0.0",
     "html-generators": "^1.0.3",
     "httpception": "^3.0.0",
-    "canvas": "npm:@napi-rs/canvas@^0.1.97",
     "husky": "^9.1.7",
     "magicpen-prism": "^3.0.2",
     "mocha": "^8.0.1",
@@ -102,6 +102,7 @@
     "unexpected-sinon": "^10.11.2"
   },
   "overrides": {
-    "canvas": "npm:@napi-rs/canvas@^0.1.97"
+    "canvas": "npm:@napi-rs/canvas@^0.1.97",
+    "harfbuzzjs": "^0.10.1"
   }
 }
