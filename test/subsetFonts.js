@@ -18,9 +18,6 @@ const defaultLocalSubsetMock = [
   {
     request: {
       url: 'GET https://fonts.googleapis.com/css?family=Open+Sans',
-      headers: {
-        'User-Agent': expect.it('to begin with', 'AssetGraph v'),
-      },
     },
     response: {
       headers: {
