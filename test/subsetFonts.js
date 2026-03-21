@@ -10,7 +10,6 @@ const LinesAndColumns = require('lines-and-columns').default;
 
 const httpception = require('httpception');
 const sinon = require('sinon');
-const fs = require('fs');
 const subsetFonts = require('../lib/subsetFonts');
 const getFontInfo = require('../lib/getFontInfo');
 
