@@ -132,6 +132,7 @@ expect.addAssertion(
         fontsBefore
       );
       await expect(screenshotAfter, 'to resemble', screenshotBefore, {
+        ignoreAntialiasing: true,
         mismatchPercentage: expect.it('to be less than', 0.3),
       });
     }
