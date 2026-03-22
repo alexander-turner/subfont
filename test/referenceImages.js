@@ -54,11 +54,8 @@ describe('reference images', function () {
         );
       });
 
-      // Skip: subsetting loses kerning pairs for alternate glyphs.
-      // When features like aalt/ss01 substitute glyphs (a → a.alt01),
-      // HarfBuzz's GPOS closure doesn't preserve kerning for those
-      // alternates (9200 pairs → 322 with harfbuzzjs 0.10.1/HarfBuzz 13.2.1),
-      // causing ~1px shifts (1.15% mismatch). Not yet fixed upstream.
+      // Skip: subsetting with GSUB alternate glyph features (aalt, ss01-ss05)
+      // produces visual differences that exceed the 0.3% mismatch threshold.
       it.skip('should render font-variant-*', async function () {
         await expect(
           getPathToTestCase('fontVariant'),
