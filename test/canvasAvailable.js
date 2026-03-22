@@ -1,8 +1,8 @@
-// Detect whether the `canvas` native module works in worker threads.
+// Detect whether the `canvas` module works in worker threads.
 // FontTracerPool and subfont spawn worker threads that load jsdom,
-// which requires canvas.  On some CI environments the module loads
+// which requires canvas. On some CI environments the module loads
 // fine in the main thread but fails in workers ("Module did not
-// self-register").  This helper does a quick probe so test files can
+// self-register"). This helper does a quick probe so test files can
 // skip tests that depend on worker-thread canvas support.
 
 const { Worker } = require('worker_threads');
@@ -11,12 +11,20 @@ let _result;
 
 /**
  * Returns a promise that resolves to `true` when canvas can be loaded
- * inside a worker thread, `false` otherwise.  The result is cached.
+ * inside a worker thread, `false` otherwise. The result is cached.
  */
 function canvasWorksInWorkerThread() {
   if (_result !== undefined) return _result;
 
   _result = new Promise((resolve) => {
+    let resolved = false;
+    function settle(value) {
+      if (!resolved) {
+        resolved = true;
+        resolve(value);
+      }
+    }
+
     try {
       const worker = new Worker(
         `
@@ -25,7 +33,7 @@ function canvasWorksInWorkerThread() {
           const { createCanvas } = require('canvas');
           createCanvas(1, 1);
           parentPort.postMessage(true);
-        } catch {
+        } catch (e) {
           parentPort.postMessage(false);
         }
         `,
@@ -33,22 +41,23 @@ function canvasWorksInWorkerThread() {
       );
 
       worker.on('message', (ok) => {
-        worker.terminate().then(() => resolve(ok));
+        settle(ok);
+        worker.terminate();
       });
       worker.on('error', () => {
-        resolve(false);
+        settle(false);
       });
       worker.on('exit', (code) => {
-        // If the worker exits without sending a message, canvas failed.
-        if (code !== 0) resolve(false);
+        if (code !== 0) settle(false);
       });
 
       // Safety timeout — don't hang forever.
       setTimeout(() => {
-        worker.terminate().then(() => resolve(false));
+        settle(false);
+        worker.terminate();
       }, 5000);
-    } catch {
-      resolve(false);
+    } catch (e) {
+      settle(false);
     }
   });
 
