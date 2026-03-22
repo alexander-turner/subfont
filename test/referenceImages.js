@@ -54,9 +54,7 @@ describe('reference images', function () {
         );
       });
 
-      // Skip: subsetting with GSUB alternate glyph features (aalt, ss01-ss05)
-      // produces visual differences that exceed the 0.3% mismatch threshold.
-      it.skip('should render font-variant-*', async function () {
+      it('should render font-variant-*', async function () {
         await expect(
           getPathToTestCase('fontVariant'),
           'to render the same after subsetting',

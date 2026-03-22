@@ -58,7 +58,7 @@
     "font-tracer": "^3.7.0",
     "fontverter": "^2.0.0",
     "gettemporaryfilepath": "^1.0.1",
-    "harfbuzzjs": "^0.10.1",
+    "harfbuzzjs": "^0.3.5",
     "lines-and-columns": "^1.1.6",
     "lodash": "^4.17.15",
     "memoizesync": "^1.1.1",
@@ -67,7 +67,7 @@
     "pretty-bytes": "^5.1.0",
     "puppeteer-core": "^24.39.1",
     "specificity": "^0.4.1",
-    "subset-font": "^2.3.0",
+    "subset-font": "~2.3.0",
     "urltools": "^0.4.1",
     "yargs": "^15.4.0"
   },
@@ -102,7 +102,6 @@
     "unexpected-sinon": "^10.11.2"
   },
   "overrides": {
-    "canvas": "npm:@napi-rs/canvas@^0.1.97",
-    "harfbuzzjs": "^0.10.1"
+    "canvas": "npm:@napi-rs/canvas@^0.1.97"
   }
 }
