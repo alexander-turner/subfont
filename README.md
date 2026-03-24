@@ -1,8 +1,6 @@
 # subfont
 
-[![Build Status](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml)
-
-A fork of [Munter/subfont](https://github.com/Munter/subfont) with performance improvements and modernized tooling. Requires **Node.js >= 22**.
+[![Build Status](https://github.com/Munter/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/Munter/subfont/actions/workflows/ci.yml)
 
 A command line tool to statically analyse your page in order to generate the most optimal web font subsets, then inject them into your page.
 
