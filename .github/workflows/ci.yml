@@ -15,7 +15,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - run: npm install
       - name: Install Chrome for puppeteer
         run: npx puppeteer browsers install chrome
@@ -41,7 +41,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - run: npm install
       - run: npm run lint
 
@@ -53,7 +53,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - run: npm install
       - name: Install Chrome for puppeteer
         run: npx puppeteer browsers install chrome
