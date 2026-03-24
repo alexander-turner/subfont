@@ -54,9 +54,7 @@ describe('reference images', function () {
         );
       });
 
-      // Known issue: the subset font loses some GSUB coverage needed
-      // for font-variant-*, causing a ~1.15% rendering mismatch.
-      it.skip('should render font-variant-*', async function () {
+      it('should render font-variant-*', async function () {
         await expect(
           getPathToTestCase('fontVariant'),
           'to render the same after subsetting',
