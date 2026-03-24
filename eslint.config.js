@@ -26,6 +26,12 @@ module.exports = [
     },
   },
   {
-    ignores: ['testdata/', 'node_modules/', 'coverage/', 'vendor/', 'puppeteer-browsers/'],
+    ignores: [
+      'testdata/',
+      'node_modules/',
+      'coverage/',
+      'vendor/',
+      'puppeteer-browsers/',
+    ],
   },
 ];
