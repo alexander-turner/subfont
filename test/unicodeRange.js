@@ -54,4 +54,12 @@ describe('unicode range', function () {
   it('should handle all isolated code points with no consecutive ranges', function () {
     expect(unicodeRange([0x41, 0x43, 0x45]), 'to equal', 'U+41,U+43,U+45');
   });
+
+  it('should handle emojis', function () {
+    expect(
+      unicodeRange(['📋', '🔑', '🫆'].map((c) => c.codePointAt(0))),
+      'to equal',
+      'U+1F4CB,U+1F511,U+1FAC6'
+    );
+  });
 });
