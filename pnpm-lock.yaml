@@ -49,9 +49,6 @@ importers:
       lines-and-columns:
         specifier: ^1.1.6
         version: 1.2.4
-      lodash:
-        specifier: ^4.17.15
-        version: 4.17.23
       memoizesync:
         specifier: ^1.1.1
         version: 1.1.1
