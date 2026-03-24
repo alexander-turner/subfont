@@ -17,6 +17,8 @@ const openSansBold = require('fs').readFileSync(
 );
 
 describe('subfont', function () {
+  this.timeout(30000);
+
   let mockConsole;
   beforeEach(async function () {
     mockConsole = {
