@@ -1,6 +1,7 @@
 const neostandard = require('neostandard');
 const eslintConfigPrettier = require('eslint-config-prettier');
 const mochaPlugin = require('eslint-plugin-mocha');
+const globals = require('globals');
 
 module.exports = [
   ...neostandard(),
@@ -20,9 +21,7 @@ module.exports = [
   {
     files: ['test/**/*.js'],
     languageOptions: {
-      globals: {
-        mocha: true,
-      },
+      globals: globals.mocha,
     },
   },
   {
