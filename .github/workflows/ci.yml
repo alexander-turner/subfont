@@ -12,18 +12,20 @@ jobs:
     name: Test
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install
+          cache: pnpm
+      - run: pnpm install
       - name: Install Chrome for puppeteer
-        run: npx puppeteer browsers install chrome
+        run: pnpm exec puppeteer browsers install chrome
       - name: Set PUPPETEER_EXECUTABLE_PATH
         run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require("puppeteer").executablePath())')" >> $GITHUB_ENV
       - name: Run tests
         run: |
-          npx mocha --reporter spec 2>&1 | tee test-output.txt
+          pnpm exec mocha --reporter spec 2>&1 | tee test-output.txt
           exit ${PIPESTATUS[0]}
       - name: Save test results
         if: always()
@@ -38,28 +40,32 @@ jobs:
     name: Lint
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install
-      - run: npm run lint
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm run lint
 
   coverage:
     runs-on: ubuntu-latest
     name: Coverage
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - name: Setup node
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install
+          cache: pnpm
+      - run: pnpm install
       - name: Install Chrome for puppeteer
-        run: npx puppeteer browsers install chrome
+        run: pnpm exec puppeteer browsers install chrome
       - name: Set PUPPETEER_EXECUTABLE_PATH
         run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require("puppeteer").executablePath())')" >> $GITHUB_ENV
-      - run: npm run coverage
+      - run: pnpm run coverage
       - name: Upload coverage
         uses: coverallsapp/github-action@master
         with:
