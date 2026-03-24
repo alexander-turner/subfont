@@ -58,7 +58,7 @@
     "font-tracer": "^3.7.0",
     "fontverter": "^2.0.0",
     "gettemporaryfilepath": "^1.0.1",
-    "harfbuzzjs": "^0.3.3",
+    "harfbuzzjs": "^0.5.0",
     "lines-and-columns": "^1.1.6",
     "lodash": "^4.17.15",
     "memoizesync": "^1.1.1",
@@ -67,11 +67,12 @@
     "pretty-bytes": "^5.1.0",
     "puppeteer-core": "^24.39.1",
     "specificity": "^0.4.1",
-    "subset-font": "^2.3.0",
+    "subset-font": "~2.3.0",
     "urltools": "^0.4.1",
     "yargs": "^15.4.0"
   },
   "devDependencies": {
+    "canvas": "npm:@napi-rs/canvas@^0.1.97",
     "combos": "^0.2.0",
     "coveralls": "^3.0.9",
     "css-generators": "^0.2.0",
@@ -85,7 +86,6 @@
     "eslint-plugin-standard": "^4.0.0",
     "html-generators": "^1.0.3",
     "httpception": "^3.0.0",
-    "canvas": "^2.9.0",
     "husky": "^9.1.7",
     "magicpen-prism": "^3.0.2",
     "mocha": "^8.0.1",
@@ -100,5 +100,8 @@
     "unexpected-resemble": "^5.0.1",
     "unexpected-set": "^2.0.1",
     "unexpected-sinon": "^10.11.2"
+  },
+  "overrides": {
+    "canvas": "npm:@napi-rs/canvas@^0.1.97"
   }
 }
