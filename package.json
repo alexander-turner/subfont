@@ -102,7 +102,9 @@
     "unexpected-set": "^2.0.1",
     "unexpected-sinon": "^10.11.2"
   },
-  "overrides": {
-    "canvas": "npm:@napi-rs/canvas@^0.1.97"
+  "pnpm": {
+    "overrides": {
+      "canvas": "npm:@napi-rs/canvas@^0.1.97"
+    }
   }
 }
