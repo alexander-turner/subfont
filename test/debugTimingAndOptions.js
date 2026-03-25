@@ -57,10 +57,10 @@ describe('debug timing output', function () {
   });
 });
 
-describe('skipSourceMapProcessing option', function () {
+describe('sourceMaps option', function () {
   this.timeout(60000);
 
-  it('should skip source map processing when skipSourceMapProcessing is true', async function () {
+  it('should skip source map processing when sourceMaps is false (default)', async function () {
     const assetGraph = new AssetGraph({
       root: pathModule.resolve(
         __dirname,
@@ -77,7 +77,7 @@ describe('skipSourceMapProcessing option', function () {
     const mockConsole = { log: sinon.spy(), warn: sinon.spy() };
     await subsetFonts(assetGraph, {
       console: mockConsole,
-      skipSourceMapProcessing: true,
+      sourceMaps: false,
     });
 
     expect(applySourceMapsSpy, 'was not called');
