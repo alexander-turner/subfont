@@ -102,6 +102,12 @@
   "pnpm": {
     "overrides": {
       "canvas": "npm:@napi-rs/canvas@^0.1.97"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "core-js",
+      "es5-ext",
+      "puppeteer",
+      "unrs-resolver"
+    ]
   }
 }

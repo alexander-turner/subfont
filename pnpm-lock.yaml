@@ -16,6 +16,9 @@ importers:
       '@hookun/parse-animation-shorthand':
         specifier: ^0.1.5
         version: 0.1.5
+      '@puppeteer/browsers':
+        specifier: ^2.0.0
+        version: 2.13.0
       assetgraph:
         specifier: 7.13.0
         version: 7.13.0(@napi-rs/canvas@0.1.97)
@@ -52,6 +55,12 @@ importers:
       memoizesync:
         specifier: ^1.1.1
         version: 1.1.1
+      p-limit:
+        specifier: ^3.0.0
+        version: 3.1.0
+      parse5:
+        specifier: ^7.0.0
+        version: 7.3.0
       postcss:
         specifier: ^8.3.11
         version: 8.5.8
@@ -2452,6 +2461,13 @@ packages:
       {
         integrity: sha512-p92if5Nz619I0w+akJrLZH0MX0Pb5DX39XOwQTtXSdQQOaYH03S1uIQp4mhOZtAXrxq4ViO67YTiLBo2638o9A==,
       }
+
+  entities@6.0.1:
+    resolution:
+      {
+        integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==,
+      }
+    engines: { node: '>=0.12' }
 
   env-paths@2.2.1:
     resolution:
@@ -5192,6 +5208,12 @@ packages:
     resolution:
       {
         integrity: sha512-Ofn/CTFzRGTTxwpNEs9PP93gXShHcTq255nzRYSKe8AkVpZY7e1fpmTfOyoIvjP5HG7Z2ZM7VS9PPhQGW2pOpw==,
+      }
+
+  parse5@7.3.0:
+    resolution:
+      {
+        integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==,
       }
 
   passerror@1.1.1:
@@ -8929,6 +8951,8 @@ snapshots:
 
   entities@2.2.0: {}
 
+  entities@6.0.1: {}
+
   env-paths@2.2.1: {}
 
   error-ex@1.3.4:
@@ -10878,6 +10902,10 @@ snapshots:
       lines-and-columns: 1.2.4
 
   parse5@6.0.1: {}
+
+  parse5@7.3.0:
+    dependencies:
+      entities: 6.0.1
 
   passerror@1.1.1: {}
 
