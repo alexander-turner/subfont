@@ -1,0 +1,2 @@
+npx prettier --write --ignore-unknown $(git diff --cached --name-only --diff-filter=ACM)
+git update-index --again
