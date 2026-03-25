@@ -1,5 +1,5 @@
-var expect = require('unexpected');
-var getRules = require('../lib/getCssRulesByProperty');
+const expect = require('unexpected');
+const getRules = require('../lib/getCssRulesByProperty');
 
 describe('getCssRulesByProperty', function () {
   it('should throw when not passing an array of properties as first argument', function () {
@@ -122,7 +122,7 @@ describe('getCssRulesByProperty', function () {
 
   describe('shorthand font-property', function () {
     it('register the longhand value from a valid shorthand', function () {
-      var result = getRules(
+      const result = getRules(
         ['font-family', 'font-size'],
         'h1 { font: 15px serif; }',
         []
@@ -157,7 +157,7 @@ describe('getCssRulesByProperty', function () {
     });
 
     it('should set initial values for requested properties which are not defined in shorthand', function () {
-      var result = getRules(
+      const result = getRules(
         ['font-family', 'font-size', 'font-style', 'font-weight'],
         'h1 { font: 15px serif; }',
         []
@@ -214,7 +214,7 @@ describe('getCssRulesByProperty', function () {
     });
 
     it('register the longhand value from a shorthand', function () {
-      var result = getRules(
+      const result = getRules(
         ['font-family', 'font-size'],
         'h1 { font-size: 10px; font: 15px serif; font-size: 20px }',
         []

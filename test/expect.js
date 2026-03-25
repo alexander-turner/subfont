@@ -66,9 +66,9 @@ async function screenshot(browser, assetGraph, fileName, bannedUrls) {
   await page.evaluate(async () => {
     await document.fonts.ready;
     // Wait for a paint cycle to ensure fonts are rendered and layout is stable
-    // eslint-disable-next-line no-undef
     await new Promise(
-      (resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)) // eslint-disable-line no-undef
+      // eslint-disable-next-line no-undef
+      (resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))
     );
   });
   if (bannedUrls) {

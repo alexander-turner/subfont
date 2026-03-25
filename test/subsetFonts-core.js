@@ -1507,7 +1507,7 @@ describe('subsetFonts core subsetting logic', function () {
             );
           }
           checkSourceMap();
-          await subsetFonts(assetGraph, { skipSourceMapProcessing: false });
+          await subsetFonts(assetGraph, { sourceMaps: true });
           checkSourceMap();
         });
       });
