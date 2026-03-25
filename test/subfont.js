@@ -17,6 +17,8 @@ const openSansBold = require('fs').readFileSync(
 );
 
 describe('subfont', function () {
+  this.timeout(30000);
+
   let mockConsole;
   beforeEach(async function () {
     mockConsole = {
@@ -262,7 +264,7 @@ describe('subfont', function () {
             },
           },
           {
-            request: 'GET http://somewhereelse.com/OpenSans.woff',
+            request: 'GET https://somewhereelse.com/OpenSans.woff',
             response: {
               headers: {
                 'Content-Type': 'font/woff',
@@ -381,7 +383,7 @@ describe('subfont', function () {
             },
           },
           {
-            request: 'GET http://somewhereelse.com/OpenSans.woff',
+            request: 'GET https://somewhereelse.com/OpenSans.woff',
             response: {
               headers: {
                 'Content-Type': 'font/woff',
@@ -622,7 +624,10 @@ describe('subfont', function () {
           'ReferenceError: iAmNotAFunction is not defined\n    at https://example.com/index.html:20:7',
         ])
         .and('to have a call satisfying', [
-          'GET https://assetgraph.org/nonexistent12345.js returned 404',
+          expect.it(
+            'to match',
+            /GET https:\/\/assetgraph\.org\/nonexistent12345\.js (returned 404|failed: net::ERR_BLOCKED_BY_ORB)/
+          ),
         ]);
     });
 

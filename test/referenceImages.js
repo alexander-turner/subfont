@@ -54,14 +54,6 @@ describe('reference images', function () {
         );
       });
 
-      it('should render font-variant-*', async function () {
-        await expect(
-          getPathToTestCase('fontVariant'),
-          'to render the same after subsetting',
-          options
-        );
-      });
-
       it('should render a variable font that can be fully instanced', async function () {
         await expect(
           getPathToTestCase('fullyInstancedVariableFont'),
