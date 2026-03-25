@@ -19,7 +19,7 @@ Subfont will:
 
 ### Changes from upstream (v8.0.0)
 
-- **Node.js >= 22 required** (upstream supports >= 10)
+- **Node.js >= 18 required** (upstream supports >= 10)
 - **Worker thread pool** for parallel font tracing across pages
 - **HarfBuzz-based OpenType feature glyph collection** — subsets include glyphs needed by `font-feature-settings` and `font-variant-*` properties
 - **Faster populate** via CSS-only relation allowlist (skips JavaScript, images, and other unneeded assets)
@@ -29,7 +29,7 @@ Subfont will:
 - **Robust CSS parsing** — `list-style` shorthand parsed via PostCSS AST instead of regex
 - **WASM serialization** — prevents corrupt results from concurrent HarfBuzz calls
 - **Modernized tooling** — pnpm, ESLint 9 flat config, Prettier 3, Husky hooks
-- **lodash partially removed** — replaced with native JS where possible
+- **lodash removed** — replaced with native JS where possible
 
 ![A site before and after running subfont](https://raw.githubusercontent.com/Munter/subfont/master/images/before-after.png)
 
