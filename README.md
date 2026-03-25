@@ -17,20 +17,6 @@ Subfont will:
 - Give the subsetted fonts new names and prepend them in front of the original fonts in your `font-family` definitions (enables missing glyph fallback)
 - Async load your original `@font-face` declaring CSS at the bottom of your page, moving it off the critical path
 
-### Changes from upstream (v8.0.0)
-
-- **Node.js >= 18 required** (upstream supports >= 10)
-- **Worker thread pool** for parallel font tracing across pages
-- **HarfBuzz-based OpenType feature glyph collection** — subsets include glyphs needed by `font-feature-settings` and `font-variant-*` properties
-- **Faster populate** via CSS-only relation allowlist (skips JavaScript, images, and other unneeded assets)
-- **`--skip-source-map-processing`** option (default: true) to skip CSS source map overhead
-- **Debug timing** — `--debug` now prints phase-level timing for performance profiling
-- **Puppeteer 24** with `PUPPETEER_EXECUTABLE_PATH` environment variable support
-- **Robust CSS parsing** — `list-style` shorthand parsed via PostCSS AST instead of regex
-- **WASM serialization** — prevents corrupt results from concurrent HarfBuzz calls
-- **Modernized tooling** — pnpm, ESLint 9 flat config, Prettier 3, Husky hooks
-- **lodash removed** — replaced with native JS where possible
-
 ![A site before and after running subfont](https://raw.githubusercontent.com/Munter/subfont/master/images/before-after.png)
 
 Currently supported font services:
