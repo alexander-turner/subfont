@@ -1,8 +1,6 @@
 # subfont
 
-[![NPM version](https://badge.fury.io/js/subfont.svg)](http://badge.fury.io/js/subfont)
-[![Build Status](https://travis-ci.org/Munter/subfont.svg?branch=master)](https://travis-ci.org/Munter/subfont)
-[![Coverage Status](https://img.shields.io/coveralls/Munter/subfont.svg)](https://coveralls.io/r/Munter/subfont?branch=master)
+[![Build Status](https://github.com/Munter/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/Munter/subfont/actions/workflows/ci.yml)
 
 A command line tool to statically analyse your page in order to generate the most optimal web font subsets, then inject them into your page.
 
@@ -113,6 +111,8 @@ Options:
   --debug, -d                        Verbose insights into font glyph detection
                                                                         [boolean] [default: false]
   --dry-run, --dry, --dryrun         Don't write anything to disk       [boolean] [default: false]
+  --skip-source-map-processing       Skip CSS source map processing for faster execution when
+                                     source maps are not needed          [boolean] [default: true]
 ```
 
 ## Other great font tools
@@ -121,4 +121,4 @@ https://meowni.ca/font-style-matcher/
 
 ## License
 
-MIT
+MIT — Original work by [Peter Müller (Munter)](https://github.com/Munter/subfont)
