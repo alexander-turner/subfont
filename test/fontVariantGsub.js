@@ -1,5 +1,4 @@
 const assert = require('assert');
-const fs = require('fs');
 const pathModule = require('path');
 const parse5 = require('parse5');
 const subsetFonts = require('../lib/subsetFonts');
@@ -24,6 +23,7 @@ describe('font-variant GSUB preservation', function () {
   let orig; // { blob, face, font }
   let sub; // { blob, face, font }
   let origFeatures; // string[] — deduplicated GSUB tags from the original
+  let htmlSource; // raw HTML text from the test fixture
 
   async function loadFont(buf) {
     const sfnt = await fontverter.convert(buf, 'sfnt');
@@ -58,6 +58,9 @@ describe('font-variant GSUB preservation', function () {
     await assetGraph.loadAssets('index.html');
     await assetGraph.populate();
 
+    const htmlAsset = assetGraph.findAssets({ type: 'Html' })[0];
+    htmlSource = htmlAsset.text;
+
     const origAsset = assetGraph.findAssets({ type: 'Woff' })[0];
     assert(origAsset, 'Expected the test case to contain a .woff font');
     orig = await loadFont(origAsset.rawSrc);
@@ -90,17 +93,11 @@ describe('font-variant GSUB preservation', function () {
     );
   });
 
-  // Derive the test characters from the actual HTML rather than hardcoding.
-  // This way the test stays in sync if the test fixture changes.
   it('should produce identical shaping metrics for every character and feature', function () {
-    const html = fs.readFileSync(
-      pathModule.join(TEST_DIR, 'index.html'),
-      'utf8'
+    const chars = [...new Set(extractVisibleText(htmlSource))].filter(
+      (c) => c.trim() !== ''
     );
-    const visibleText = extractVisibleText(html);
-    const chars = [...new Set(visibleText)].filter((c) => c.trim() !== '');
 
-    // Test with no explicit features, plus every non-default GSUB feature
     const featureStrings = [
       '',
       ...origFeatures
@@ -129,17 +126,17 @@ describe('font-variant GSUB preservation', function () {
         }
       }
     }
-    assert.deepStrictEqual(failures, [], `Shaping mismatches:\n${failures.join('\n')}`);
+    assert.deepStrictEqual(
+      failures,
+      [],
+      `Shaping mismatches:\n${failures.join('\n')}`
+    );
   });
 
   it('should actively substitute glyphs for each feature used in the test case', function () {
-    // Walk the parse5 tree to discover which feature is tested with which
-    // characters, by finding <code class="ibm-plex-sans-FEAT"> elements.
-    const html = fs.readFileSync(
-      pathModule.join(TEST_DIR, 'index.html'),
-      'utf8'
-    );
-    const document = parse5.parse(html);
+    // Walk the parse5 tree to find <code class="ibm-plex-sans-FEAT">
+    // elements and extract feature→character mappings.
+    const document = parse5.parse(htmlSource);
 
     function collectText(node) {
       if (node.nodeName === '#text') return node.value || '';
@@ -150,29 +147,27 @@ describe('font-variant GSUB preservation', function () {
       return text;
     }
 
-    function findCodeBlocks(node) {
-      const blocks = [];
-      if (
-        node.nodeName === 'code' &&
-        node.attrs &&
-        node.attrs.some(
-          (a) =>
-            a.name === 'class' && a.value.startsWith('ibm-plex-sans-')
-        )
-      ) {
-        const cls = node.attrs.find((a) => a.name === 'class').value;
-        const feat = cls.replace('ibm-plex-sans-', '');
-        blocks.push({ feat, text: collectText(node) });
-      }
-      if (node.childNodes) {
-        for (const child of node.childNodes) {
-          blocks.push(...findCodeBlocks(child));
+    function walk(node, blocks) {
+      if (node.nodeName === 'code' && node.attrs) {
+        const cls = (node.attrs.find((a) => a.name === 'class') || {}).value;
+        if (cls && cls.startsWith('ibm-plex-sans-')) {
+          blocks.push({
+            feat: cls.slice('ibm-plex-sans-'.length),
+            text: collectText(node),
+          });
         }
       }
-      return blocks;
+      if (node.childNodes) {
+        for (const child of node.childNodes) walk(child, blocks);
+      }
     }
 
-    for (const { feat, text } of findCodeBlocks(document)) {
+    const blocks = [];
+    walk(document, blocks);
+
+    assert(blocks.length > 0, 'Expected to find feature code blocks in HTML');
+
+    for (const { feat, text } of blocks) {
       const ch = [...text].find((c) => c.trim() !== '');
       if (!ch) continue;
 
