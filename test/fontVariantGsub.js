@@ -1,8 +1,10 @@
 const assert = require('assert');
 const fs = require('fs');
 const pathModule = require('path');
+const parse5 = require('parse5');
 const subsetFonts = require('../lib/subsetFonts');
 const AssetGraph = require('assetgraph');
+const extractVisibleText = require('../lib/extractVisibleText');
 const fontverter = require('fontverter');
 
 const TEST_DIR = pathModule.resolve(
@@ -95,14 +97,8 @@ describe('font-variant GSUB preservation', function () {
       pathModule.join(TEST_DIR, 'index.html'),
       'utf8'
     );
-    // Extract only the visible text from <code> elements (not CSS/markup)
-    const codeBlockRe = /<code[^>]*>([\s\S]*?)<\/code>/g;
-    let textContent = '';
-    let m;
-    while ((m = codeBlockRe.exec(html)) !== null) {
-      textContent += m[1];
-    }
-    const chars = [...new Set(textContent)].filter((c) => c.trim() !== '');
+    const visibleText = extractVisibleText(html);
+    const chars = [...new Set(visibleText)].filter((c) => c.trim() !== '');
 
     // Test with no explicit features, plus every non-default GSUB feature
     const featureStrings = [
@@ -137,20 +133,47 @@ describe('font-variant GSUB preservation', function () {
   });
 
   it('should actively substitute glyphs for each feature used in the test case', function () {
-    // Parse the HTML to discover which feature is tested with which characters,
-    // by reading <code class="ibm-plex-sans-FEAT">...text...</code> blocks.
+    // Walk the parse5 tree to discover which feature is tested with which
+    // characters, by finding <code class="ibm-plex-sans-FEAT"> elements.
     const html = fs.readFileSync(
       pathModule.join(TEST_DIR, 'index.html'),
       'utf8'
     );
-    const blockRe =
-      /<code\s+class="ibm-plex-sans-(\w+)">\s*([\s\S]*?)\s*<\/code>/g;
-    let match;
-    while ((match = blockRe.exec(html)) !== null) {
-      const feat = match[1];
-      const blockText = match[2].replace(/\s+/g, ' ').trim();
-      // Pick the first non-space character as the representative test char
-      const ch = [...blockText].find((c) => c.trim() !== '');
+    const document = parse5.parse(html);
+
+    function collectText(node) {
+      if (node.nodeName === '#text') return node.value || '';
+      let text = '';
+      if (node.childNodes) {
+        for (const child of node.childNodes) text += collectText(child);
+      }
+      return text;
+    }
+
+    function findCodeBlocks(node) {
+      const blocks = [];
+      if (
+        node.nodeName === 'code' &&
+        node.attrs &&
+        node.attrs.some(
+          (a) =>
+            a.name === 'class' && a.value.startsWith('ibm-plex-sans-')
+        )
+      ) {
+        const cls = node.attrs.find((a) => a.name === 'class').value;
+        const feat = cls.replace('ibm-plex-sans-', '');
+        blocks.push({ feat, text: collectText(node) });
+      }
+      if (node.childNodes) {
+        for (const child of node.childNodes) {
+          blocks.push(...findCodeBlocks(child));
+        }
+      }
+      return blocks;
+    }
+
+    for (const { feat, text } of findCodeBlocks(document)) {
+      const ch = [...text].find((c) => c.trim() !== '');
       if (!ch) continue;
 
       const baseGids = shape(sub.font, ch, '').map((g) => g.g);

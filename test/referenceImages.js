@@ -54,17 +54,6 @@ describe('reference images', function () {
         );
       });
 
-      // Rendering fidelity of font-variant-* is not verified here because
-      // the pixel comparison is sensitive to browser hinting/rendering.
-      // GSUB feature preservation is verified in test/fontVariantGsub.js.
-      it.skip('should render font-variant-*', async function () {
-        await expect(
-          getPathToTestCase('fontVariant'),
-          'to render the same after subsetting',
-          options
-        );
-      });
-
       it('should render a variable font that can be fully instanced', async function () {
         await expect(
           getPathToTestCase('fullyInstancedVariableFont'),
