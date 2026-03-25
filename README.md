@@ -1,8 +1,6 @@
 # subfont
 
-[![NPM version](https://badge.fury.io/js/subfont.svg)](http://badge.fury.io/js/subfont)
-[![Build Status](https://travis-ci.org/Munter/subfont.svg?branch=master)](https://travis-ci.org/Munter/subfont)
-[![Coverage Status](https://img.shields.io/coveralls/Munter/subfont.svg)](https://coveralls.io/r/Munter/subfont?branch=master)
+[![Build Status](https://github.com/Munter/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/Munter/subfont/actions/workflows/ci.yml)
 
 A command line tool to statically analyse your page in order to generate the most optimal web font subsets, then inject them into your page.
 
@@ -113,7 +111,17 @@ Options:
   --debug, -d                        Verbose insights into font glyph detection
                                                                         [boolean] [default: false]
   --dry-run, --dry, --dryrun         Don't write anything to disk       [boolean] [default: false]
+  --source-maps                      Preserve CSS source maps through subfont processing
+                                                                        [boolean] [default: false]
 ```
+
+### Migrating from v7
+
+- **Node.js >=18.0.0** is now required (was >=10.0.0), needed for Puppeteer v24
+- **`--skip-source-map-processing`** has been renamed to **`--source-maps`**
+  (inverted logic). The old flag is still accepted with a deprecation warning.
+- `puppeteer-core` upgraded to v24 (uses Chrome instead of Chromium)
+- `assetgraph` pinned to 7.13.0, `subset-font` constrained to ~2.3.0
 
 ## Other great font tools
 
@@ -121,4 +129,4 @@ https://meowni.ca/font-style-matcher/
 
 ## License
 
-MIT
+MIT — Original work by [Peter Müller (Munter)](https://github.com/Munter/subfont)
