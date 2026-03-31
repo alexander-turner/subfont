@@ -54,13 +54,13 @@ describe('subsetFonts --fast mode', function () {
         extension: '.woff2',
       })[0];
 
-      const normalInfo = await getFontInfo(normalFont.rawSrc);
-      const fastInfo = await getFontInfo(fastFont.rawSrc);
-
+      // Font subset files should be byte-for-byte identical.
+      // Subsetting uses fontUsage.text (global char union), not pageText,
+      // so fast-path over-reporting in pageText has zero effect on output.
       expect(
-        fastInfo.characterSet.sort(),
+        Buffer.compare(fastFont.rawSrc, normalFont.rawSrc),
         'to equal',
-        normalInfo.characterSet.sort()
+        0
       );
     });
   });
