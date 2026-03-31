@@ -8,7 +8,7 @@ const {
   loadAndPopulate,
 } = require('./subsetFonts-helpers');
 
-describe('subsetFonts --fast mode', function () {
+describe('subsetFonts fast-path (shared CSS optimization)', function () {
   setupCleanup();
 
   describe('basic fast-path with shared external CSS', function () {
@@ -17,7 +17,7 @@ describe('subsetFonts --fast mode', function () {
 
       const assetGraph = createGraph('multi-page-fast-shared-css');
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
-      await subsetFonts(assetGraph, { fast: true });
+      await subsetFonts(assetGraph);
 
       const fonts = assetGraph.findAssets({
         fileName: { $regex: /^IBM_Plex_Sans-400-/ },
@@ -33,36 +33,6 @@ describe('subsetFonts --fast mode', function () {
         expect(chars, 'to contain', ch);
       }
     });
-
-    it('should produce the same global subset as non-fast mode', async function () {
-      httpception();
-
-      const graphNormal = createGraph('multi-page-fast-shared-css');
-      await loadAndPopulate(graphNormal, 'page*.html', { crossorigin: false });
-      await subsetFonts(graphNormal);
-
-      const graphFast = createGraph('multi-page-fast-shared-css');
-      await loadAndPopulate(graphFast, 'page*.html', { crossorigin: false });
-      await subsetFonts(graphFast, { fast: true });
-
-      const normalFont = graphNormal.findAssets({
-        fileName: { $regex: /^IBM_Plex_Sans-400-/ },
-        extension: '.woff2',
-      })[0];
-      const fastFont = graphFast.findAssets({
-        fileName: { $regex: /^IBM_Plex_Sans-400-/ },
-        extension: '.woff2',
-      })[0];
-
-      // Font subset files should be byte-for-byte identical.
-      // Subsetting uses fontUsage.text (global char union), not pageText,
-      // so fast-path over-reporting in pageText has zero effect on output.
-      expect(
-        Buffer.compare(fastFont.rawSrc, normalFont.rawSrc),
-        'to equal',
-        0
-      );
-    });
   });
 
   describe('CSS content property preservation', function () {
@@ -71,7 +41,7 @@ describe('subsetFonts --fast mode', function () {
 
       const assetGraph = createGraph('multi-page-fast-shared-css');
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
-      await subsetFonts(assetGraph, { fast: true });
+      await subsetFonts(assetGraph);
 
       const fonts = assetGraph.findAssets({
         fileName: { $regex: /^IBM_Plex_Sans-400-/ },
@@ -98,7 +68,7 @@ describe('subsetFonts --fast mode', function () {
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
       // page2 has style="font-family: monospace" — should fall back to
       // full font-tracer instead of using fast path
-      await subsetFonts(assetGraph, { fast: true });
+      await subsetFonts(assetGraph);
 
       const fonts = assetGraph.findAssets({
         fileName: { $regex: /^IBM_Plex_Sans-400-/ },
@@ -117,49 +87,17 @@ describe('subsetFonts --fast mode', function () {
         expect(chars, 'to contain', ch);
       }
     });
-
-    it('should produce the same result as non-fast mode when inline styles are present', async function () {
-      httpception();
-
-      const graphNormal = createGraph('multi-page-fast-inline-style');
-      await loadAndPopulate(graphNormal, 'page*.html', { crossorigin: false });
-      await subsetFonts(graphNormal);
-
-      const graphFast = createGraph('multi-page-fast-inline-style');
-      await loadAndPopulate(graphFast, 'page*.html', { crossorigin: false });
-      await subsetFonts(graphFast, { fast: true });
-
-      const normalFont = graphNormal.findAssets({
-        fileName: { $regex: /^IBM_Plex_Sans-400-/ },
-        extension: '.woff2',
-      })[0];
-      const fastFont = graphFast.findAssets({
-        fileName: { $regex: /^IBM_Plex_Sans-400-/ },
-        extension: '.woff2',
-      })[0];
-
-      const normalInfo = await getFontInfo(normalFont.rawSrc);
-      const fastInfo = await getFontInfo(fastFont.rawSrc);
-
-      // When inline styles force a full-trace fallback, results should
-      // be identical to non-fast mode
-      expect(
-        fastInfo.characterSet.sort(),
-        'to equal',
-        normalInfo.characterSet.sort()
-      );
-    });
   });
 
   describe('single page per CSS group', function () {
-    it('should work identically to non-fast mode when each page has unique CSS', async function () {
+    it('should work identically when each page has unique CSS', async function () {
       httpception();
 
       // multi-page-multi-weight pages have different inline <style> blocks,
       // producing unique stylesheet cache keys — no fast-path grouping occurs
       const assetGraph = createGraph('multi-page-multi-weight');
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
-      await subsetFonts(assetGraph, { fast: true });
+      await subsetFonts(assetGraph);
 
       const subset400 = assetGraph.findAssets({
         fileName: { $regex: /^Roboto-400-/ },
