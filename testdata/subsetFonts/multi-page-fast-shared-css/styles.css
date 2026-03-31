@@ -1,0 +1,13 @@
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: url('IBMPlexSans-Regular.woff') format('woff');
+}
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 400;
+}
+.icon::before {
+  content: '@';
+}
