@@ -94,6 +94,8 @@ jobs:
       - name: Set PUPPETEER_EXECUTABLE_PATH
         run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require("puppeteer").executablePath())')" >> $GITHUB_ENV
       - run: pnpm run coverage
+      - name: Check coverage thresholds
+        run: pnpm run check-coverage
       - name: Upload coverage
         uses: coverallsapp/github-action@v2
         with:
