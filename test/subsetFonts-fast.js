@@ -25,9 +25,7 @@ describe('subsetFonts fast-path (shared CSS optimization)', function () {
       });
       expect(fonts, 'to have length', 1);
       const fontInfo = await getFontInfo(fonts[0].rawSrc);
-      const chars = fontInfo.characterSet.map((cp) =>
-        String.fromCodePoint(cp)
-      );
+      const chars = fontInfo.characterSet.map((cp) => String.fromCodePoint(cp));
       // page1: ABCDEF, page2: GHIJKL, page3: MNOPQR
       for (const ch of 'ABCDEFGHIJKLMNOPQR') {
         expect(chars, 'to contain', ch);
@@ -49,9 +47,7 @@ describe('subsetFonts fast-path (shared CSS optimization)', function () {
       });
       expect(fonts, 'to have length', 1);
       const fontInfo = await getFontInfo(fonts[0].rawSrc);
-      const chars = fontInfo.characterSet.map((cp) =>
-        String.fromCodePoint(cp)
-      );
+      const chars = fontInfo.characterSet.map((cp) => String.fromCodePoint(cp));
 
       // The '@' comes from CSS content: '@' on .icon::before
       // This is only traceable via font-tracer (not extractVisibleText),
@@ -76,9 +72,7 @@ describe('subsetFonts fast-path (shared CSS optimization)', function () {
       });
       expect(fonts, 'to have length', 1);
       const fontInfo = await getFontInfo(fonts[0].rawSrc);
-      const chars = fontInfo.characterSet.map((cp) =>
-        String.fromCodePoint(cp)
-      );
+      const chars = fontInfo.characterSet.map((cp) => String.fromCodePoint(cp));
       // Both pages' text should be in the global subset
       for (const ch of 'ABCDEF') {
         expect(chars, 'to contain', ch);

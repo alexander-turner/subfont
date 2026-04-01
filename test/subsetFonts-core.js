@@ -1512,11 +1512,15 @@ describe('subsetFonts core subsetting logic', function () {
       expect(fontInfo, 'to satisfy', [
         {
           assetFileName: /\/index1.html$/,
-          fontUsages: [{ text: expect.it('to contain', 'f').and('to contain', 'o') }],
+          fontUsages: [
+            { text: expect.it('to contain', 'f').and('to contain', 'o') },
+          ],
         },
         {
           assetFileName: /\/index2.html$/,
-          fontUsages: [{ text: expect.it('to contain', 'f').and('to contain', 'o') }],
+          fontUsages: [
+            { text: expect.it('to contain', 'f').and('to contain', 'o') },
+          ],
         },
       ]);
     });
