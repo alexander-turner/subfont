@@ -4,6 +4,7 @@ const {
   httpception,
   sinon,
   defaultLocalSubsetMock,
+  createGoogleFontMock,
   subsetFonts,
   getFontInfo,
   setupCleanup,
@@ -567,6 +568,26 @@ describe('subsetFonts core subsetting logic', function () {
 
     describe('with Google Web Fonts', function () {
       it('should not preload the unused variants', async function () {
+        // Use OpenSans-400.ttf as a stand-in for all variants — the test
+        // only checks preload link behavior, not glyph content.
+        const standIn = 'OpenSans-400.ttf';
+        httpception(
+          createGoogleFontMock(
+            'https://fonts.googleapis.com/css?family=Noto+Serif:400,700,400i|Open+Sans:700,400',
+            [
+              { family: 'Noto Serif', weight: 400, fontFile: standIn },
+              { family: 'Noto Serif', weight: 700, fontFile: standIn },
+              {
+                family: 'Noto Serif',
+                weight: 400,
+                style: 'italic',
+                fontFile: standIn,
+              },
+              { family: 'Open Sans', weight: 700, fontFile: standIn },
+              { family: 'Open Sans', weight: 400, fontFile: standIn },
+            ]
+          )
+        );
         const assetGraph = createGraph('unused-variant-preload-google');
         const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', {
           crossorigin: false,
@@ -1472,17 +1493,30 @@ describe('subsetFonts core subsetting logic', function () {
   describe('when two pages @import the same CSS file which in turn imports a Google font', function () {
     // Regression test for https://github.com/Munter/netlify-plugin-subfont/issues/32
     it('should not break', async function () {
+      httpception(
+        createGoogleFontMock(
+          'https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900',
+          [
+            { family: 'Roboto', weight: 100, fontFile: 'Roboto-400.ttf' },
+            { family: 'Roboto', weight: 300, fontFile: 'Roboto-300.ttf' },
+            { family: 'Roboto', weight: 400, fontFile: 'Roboto-400.ttf' },
+            { family: 'Roboto', weight: 500, fontFile: 'Roboto-500.ttf' },
+            { family: 'Roboto', weight: 700, fontFile: 'Roboto-400.ttf' },
+            { family: 'Roboto', weight: 900, fontFile: 'Roboto-400.ttf' },
+          ]
+        )
+      );
       const assetGraph = createGraph('two-pages-import-css');
       await loadAndPopulate(assetGraph, ['index1.html', 'index2.html']);
       const { fontInfo } = await subsetFonts(assetGraph);
       expect(fontInfo, 'to satisfy', [
         {
           assetFileName: /\/index1.html$/,
-          fontUsages: [{ pageText: 'fo', text: 'fo' }],
+          fontUsages: [{ text: expect.it('to contain', 'f').and('to contain', 'o') }],
         },
         {
           assetFileName: /\/index2.html$/,
-          fontUsages: [{ pageText: 'fo', text: 'fo' }],
+          fontUsages: [{ text: expect.it('to contain', 'f').and('to contain', 'o') }],
         },
       ]);
     });

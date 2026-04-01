@@ -53,6 +53,69 @@ const defaultLocalSubsetMock = [
   },
 ];
 
+/**
+ * Build httpception mocks for a Google Fonts CSS request.
+ *
+ * @param {string} cssUrl  The full Google Fonts CSS URL
+ *     (e.g. 'https://fonts.googleapis.com/css?family=Roboto:400,700')
+ * @param {Array<{family: string, weight?: string|number, style?: string,
+ *                fontFile: string}>} variants
+ *     Each entry describes one @font-face block. `fontFile` is a path
+ *     relative to testdata/subsetFonts/.  The same font file may be reused
+ *     across variants when the test doesn't depend on glyph content.
+ * @returns {Array} An array of httpception mock entries (CSS response +
+ *     one font-file response per unique fontFile).
+ */
+function createGoogleFontMock(cssUrl, variants) {
+  const fontFileBaseUrl = 'https://fonts.gstatic.com/s/mock/v1';
+  const seenFiles = new Map(); // fontFile → mock URL
+
+  const fontFaceBlocks = variants.map((v) => {
+    const weight = v.weight || 400;
+    const style = v.style || 'normal';
+    const fileName = pathModule.basename(v.fontFile);
+    const mockUrl = `${fontFileBaseUrl}/${fileName}`;
+    seenFiles.set(v.fontFile, mockUrl);
+    return [
+      '@font-face {',
+      `  font-family: '${v.family}';`,
+      `  font-style: ${style};`,
+      `  font-weight: ${weight};`,
+      `  src: url(${mockUrl}) format('truetype');`,
+      '}',
+    ].join('\n');
+  });
+
+  const mocks = [
+    {
+      request: {
+        url: `GET ${cssUrl}`,
+        headers: {
+          'User-Agent': expect.it('to begin with', 'AssetGraph v'),
+        },
+      },
+      response: {
+        headers: { 'Content-Type': 'text/css' },
+        body: fontFaceBlocks.join('\n'),
+      },
+    },
+  ];
+
+  for (const [fontFile, mockUrl] of seenFiles) {
+    mocks.push({
+      request: `GET ${mockUrl}`,
+      response: {
+        headers: { 'Content-Type': 'font/ttf' },
+        body: fs.readFileSync(
+          pathModule.resolve(__dirname, `../testdata/subsetFonts/${fontFile}`)
+        ),
+      },
+    });
+  }
+
+  return mocks;
+}
+
 function setupCleanup() {
   const https = require('https');
 
@@ -96,6 +159,7 @@ module.exports = {
   subsetFonts,
   getFontInfo,
   defaultLocalSubsetMock,
+  createGoogleFontMock,
   setupCleanup,
   createGraph,
   loadAndPopulate,
