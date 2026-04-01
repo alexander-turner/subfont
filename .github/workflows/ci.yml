@@ -76,15 +76,34 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  install-check:
+    runs-on: ubuntu-latest
+    name: Install Check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Pack and install as consumer
+        run: |
+          pnpm pack
+          mkdir /tmp/test-install
+          cd /tmp/test-install
+          npm init -y
+          npm install $GITHUB_WORKSPACE/subfont-*.tgz
+
   ci-gate:
     name: CI Gate
     runs-on: ubuntu-latest
-    needs: [test, lint, coverage]
+    needs: [test, lint, coverage, install-check]
     if: always()
     steps:
       - name: Check results
         run: |
-          if [[ "${{ needs.test.result }}" != "success" || "${{ needs.lint.result }}" != "success" || "${{ needs.coverage.result }}" != "success" ]]; then
+          if [[ "${{ needs.test.result }}" != "success" || "${{ needs.lint.result }}" != "success" || "${{ needs.coverage.result }}" != "success" || "${{ needs.install-check.result }}" != "success" ]]; then
             echo "One or more required jobs failed"
             exit 1
           fi
