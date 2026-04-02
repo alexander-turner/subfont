@@ -1304,7 +1304,7 @@ describe('subsetFonts core subsetting logic', function () {
       [
         'with a variable font that can be partially instanced',
         'variable-font-that-can-be-partially-instanced',
-        { wght: { min: 100, default: 400, max: 405 } },
+        { wght: { min: 400, default: 400, max: 405 } },
       ],
     ]) {
       describe(desc, function () {

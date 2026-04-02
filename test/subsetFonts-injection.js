@@ -158,6 +158,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
           ],
         },
       ],
+      timings: expect.it('to be an object'),
     });
   });
 
