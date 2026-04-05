@@ -186,18 +186,18 @@ describe('getFontInfo', function () {
       const good1 = Buffer.from('good1');
       const good2 = Buffer.from('good2');
 
-      // Launch all three concurrently — the first fails, the rest should succeed
-      const results = await Promise.allSettled([
-        getFontInfo(bad),
-        getFontInfo(good1),
-        getFontInfo(good2),
-      ]);
+      // Queue all three concurrently — the first fails, the rest should succeed
+      const p1 = getFontInfo(bad);
+      const p2 = getFontInfo(good1);
+      const p3 = getFontInfo(good2);
 
-      expect(results[0].status, 'to equal', 'rejected');
-      expect(results[1].status, 'to equal', 'fulfilled');
-      expect(results[1].value.characterSet, 'to equal', [0x41, 0x42, 0x43]);
-      expect(results[2].status, 'to equal', 'fulfilled');
-      expect(results[2].value.characterSet, 'to equal', [0x41, 0x42, 0x43]);
+      await expect(p1, 'to be rejected with', 'boom');
+
+      const r2 = await p2;
+      expect(r2.characterSet, 'to equal', [0x41, 0x42, 0x43]);
+
+      const r3 = await p3;
+      expect(r3.characterSet, 'to equal', [0x41, 0x42, 0x43]);
     });
   });
 });
