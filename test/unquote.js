@@ -64,6 +64,32 @@ describe('unquote', function () {
         expect(unquote("'foo \\263a bar \\263a'"), 'to equal', 'foo ☺bar ☺');
       });
     });
+
+    describe('with astral Unicode codepoints (above U+FFFF)', function () {
+      it('should decode a 5-digit hex escape for emoji', function () {
+        // U+1F600 = 😀
+        expect(unquote("'\\1f600'"), 'to equal', '😀');
+      });
+
+      it('should decode a 6-digit zero-padded hex escape for emoji', function () {
+        // U+01F600 = 😀
+        expect(unquote("'\\01f600'"), 'to equal', '😀');
+      });
+
+      it('should decode a CJK Extension B character', function () {
+        // U+20000 = 𠀀 (CJK Unified Ideographs Extension B)
+        expect(unquote("'\\20000'"), 'to equal', '𠀀');
+      });
+
+      it('should decode a musical symbol', function () {
+        // U+1D11E = 𝄞 (Musical Symbol G Clef)
+        expect(unquote("'\\1d11e'"), 'to equal', '𝄞');
+      });
+
+      it('should handle astral codepoint followed by text', function () {
+        expect(unquote("'hi \\1f600 bye'"), 'to equal', 'hi 😀bye');
+      });
+    });
   });
 
   describe('with a doublequoted string', function () {

@@ -93,6 +93,53 @@ describe('HeadlessBrowser', function () {
     });
   });
 
+  describe('tracePage', function () {
+    it('should close the page after tracing', async function () {
+      mockPage.close = sinon.stub().resolves();
+      const hb = new HeadlessBrowser({
+        console: { log: sinon.stub(), error: sinon.stub() },
+      });
+      const mockAssetGraph = {
+        canonicalRoot: 'https://example.com/',
+        root: 'file:///test/',
+        findAssets: sinon.stub().returns([]),
+      };
+      const mockHtmlAsset = {
+        assetGraph: mockAssetGraph,
+        url: 'file:///test/index.html',
+      };
+
+      await hb.tracePage(mockHtmlAsset);
+      expect(mockPage.close, 'was called once');
+    });
+
+    it('should close the page even if transferResults throws', async function () {
+      mockPage.close = sinon.stub().resolves();
+      mockPage.evaluateHandle = sinon.stub().resolves({
+        jsonValue: sinon.stub().rejects(new Error('evaluation failed')),
+      });
+      const hb = new HeadlessBrowser({
+        console: { log: sinon.stub(), error: sinon.stub() },
+      });
+      const mockAssetGraph = {
+        canonicalRoot: 'https://example.com/',
+        root: 'file:///test/',
+        findAssets: sinon.stub().returns([]),
+      };
+      const mockHtmlAsset = {
+        assetGraph: mockAssetGraph,
+        url: 'file:///test/index.html',
+      };
+
+      await expect(
+        hb.tracePage(mockHtmlAsset),
+        'to be rejected with',
+        'evaluation failed'
+      );
+      expect(mockPage.close, 'was called once');
+    });
+  });
+
   describe('browser launch failure', function () {
     it('should propagate the error when puppeteer.launch fails', async function () {
       const launchError = new Error('Chrome not found');
