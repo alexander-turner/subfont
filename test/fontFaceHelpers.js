@@ -9,7 +9,6 @@ const {
   uniqueChars,
   uniqueCharsFromArray,
   hashHexPrefix,
-  md5HexPrefix,
   cssAssetIsEmpty,
   getFontFaceForFontUsage,
   getFontUsageStylesheet,
@@ -240,10 +239,6 @@ describe('fontFaceHelpers', function () {
         .digest('hex')
         .slice(0, 10);
       expect(hashHexPrefix('test'), 'to equal', expected);
-    });
-
-    it('should be aliased as md5HexPrefix for backwards compatibility', function () {
-      expect(md5HexPrefix('test'), 'to equal', hashHexPrefix('test'));
     });
   });
 
