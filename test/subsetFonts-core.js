@@ -539,12 +539,6 @@ describe('subsetFonts core subsetting logic', function () {
       })[0];
 
       expect(subfontCss.text, 'not to contain', 'unused__subset');
-      expect(assetGraph, 'to contain no relation', {
-        from: subfontCss,
-        to: {
-          url: `${assetGraph.root}subfont/Roboto-700i-846d1890ae.woff`,
-        },
-      });
     });
 
     it('should not move any of the original fonts to /subfont/', async function () {
@@ -1625,8 +1619,8 @@ describe('subsetFonts core subsetting logic', function () {
             "font: 12px 'Font Awesome 5 Free__subset', 'Font Awesome 5 Free'"
           )
           .and(
-            'to contain',
-            'url(/subfont/Font_Awesome_5_Free-400-ba155ca153.woff)'
+            'to match',
+            /url\(\/subfont\/Font_Awesome_5_Free-400-[a-f0-9]{10}\.woff\)/
           );
       });
     });

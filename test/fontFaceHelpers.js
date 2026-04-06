@@ -1,14 +1,14 @@
 const expect = require('unexpected');
 const {
   stringifyFontFamily,
-  cssQuoteIfNecessary,
+  maybeCssQuote,
   getPreferredFontUrl,
   getCodepoints,
   parseFontWeightRange,
   parseFontStretchRange,
   uniqueChars,
   uniqueCharsFromArray,
-  md5HexPrefix,
+  hashHexPrefix,
   cssAssetIsEmpty,
   getFontFaceForFontUsage,
   getFontUsageStylesheet,
@@ -22,15 +22,24 @@ describe('fontFaceHelpers', function () {
       { input: 'Open-Sans', expected: 'Open-Sans', desc: 'hyphenated name' },
       {
         input: 'font\\name',
-        expected: 'font\\\\name',
+        expected: '"font\\\\name"',
         desc: 'name with backslash',
       },
       {
         input: 'font"name',
-        expected: 'font\\"name',
+        expected: '"font\\"name"',
         desc: 'name with double quote',
       },
-      { input: 'Open Sans', expected: 'Open Sans', desc: 'name with space' },
+      {
+        input: 'Open Sans',
+        expected: '"Open Sans"',
+        desc: 'name with space',
+      },
+      {
+        input: 'Noto Sans JP',
+        expected: '"Noto Sans JP"',
+        desc: 'multi-word CJK font name',
+      },
     ].forEach(({ input, expected, desc }) => {
       it(`should handle ${desc}: ${JSON.stringify(input)}`, function () {
         expect(stringifyFontFamily(input), 'to equal', expected);
@@ -38,7 +47,7 @@ describe('fontFaceHelpers', function () {
     });
   });
 
-  describe('cssQuoteIfNecessary', function () {
+  describe('maybeCssQuote', function () {
     [
       { input: 'normal', expected: 'normal', desc: 'simple word' },
       { input: 'Open Sans', expected: "'Open Sans'", desc: 'value with space' },
@@ -50,7 +59,7 @@ describe('fontFaceHelpers', function () {
       { input: "it's", expected: "'it\\'s'", desc: 'value with single quote' },
     ].forEach(({ input, expected, desc }) => {
       it(`should handle ${desc}: ${JSON.stringify(input)}`, function () {
-        expect(cssQuoteIfNecessary(input), 'to equal', expected);
+        expect(maybeCssQuote(input), 'to equal', expected);
       });
     });
   });
@@ -201,25 +210,35 @@ describe('fontFaceHelpers', function () {
     });
   });
 
-  describe('md5HexPrefix', function () {
+  describe('hashHexPrefix', function () {
     ['hello', 'test', 'subfont'].forEach((input) => {
       it(`should return a 10-char hex string for ${JSON.stringify(
         input
       )}`, function () {
-        expect(md5HexPrefix(input), 'to match', /^[a-f0-9]{10}$/);
+        expect(hashHexPrefix(input), 'to match', /^[a-f0-9]{10}$/);
       });
     });
 
     it('should produce consistent results for the same input', function () {
-      expect(md5HexPrefix('test'), 'to equal', md5HexPrefix('test'));
+      expect(hashHexPrefix('test'), 'to equal', hashHexPrefix('test'));
     });
 
     it('should produce different results for different inputs', function () {
-      expect(md5HexPrefix('a'), 'not to equal', md5HexPrefix('b'));
+      expect(hashHexPrefix('a'), 'not to equal', hashHexPrefix('b'));
     });
 
     it('should accept a Buffer', function () {
-      expect(md5HexPrefix(Buffer.from('hello')), 'to match', /^[a-f0-9]{10}$/);
+      expect(hashHexPrefix(Buffer.from('hello')), 'to match', /^[a-f0-9]{10}$/);
+    });
+
+    it('should use SHA-256 (not MD5)', function () {
+      const crypto = require('crypto');
+      const expected = crypto
+        .createHash('sha256')
+        .update('test')
+        .digest('hex')
+        .slice(0, 10);
+      expect(hashHexPrefix('test'), 'to equal', expected);
     });
   });
 
@@ -421,6 +440,15 @@ describe('fontFaceHelpers', function () {
         [makeDeclaration('Arial', 'normal', '400')]
       );
       expect(result, 'to equal', '');
+    });
+
+    it('should quote font-family names with spaces in CSS output', function () {
+      const result = getUnusedVariantsStylesheet(
+        [makeFontUsage('Open Sans', 'normal', '400')],
+        [makeDeclaration('Open Sans', 'italic', '700')]
+      );
+      // The font-family value must be quoted in CSS when it contains spaces
+      expect(result, 'to contain', "'Open Sans__subset'");
     });
   });
 });
