@@ -8,11 +8,16 @@ describe('HeadlessBrowser', function () {
   let mockPage;
   let puppeteerStub;
   let browsersStub;
+  let fakeConsole;
+  let mockAssetGraph;
 
   beforeEach(function () {
+    fakeConsole = { log: sinon.stub(), error: sinon.stub() };
+
     mockPage = {
       setRequestInterception: sinon.stub().resolves(),
       on: sinon.stub(),
+      close: sinon.stub().resolves(),
       setBypassCSP: sinon.stub().resolves(),
       goto: sinon.stub().resolves(),
       addScriptTag: sinon.stub().resolves(),
@@ -44,6 +49,12 @@ describe('HeadlessBrowser', function () {
       }),
     };
 
+    mockAssetGraph = {
+      canonicalRoot: 'https://example.com/',
+      root: 'file:///test/',
+      findAssets: sinon.stub().returns([]),
+    };
+
     HeadlessBrowser = proxyquire('../lib/HeadlessBrowser', {
       'puppeteer-core': puppeteerStub,
       '@puppeteer/browsers': browsersStub,
@@ -52,7 +63,6 @@ describe('HeadlessBrowser', function () {
 
   describe('constructor', function () {
     it('should store the console reference', function () {
-      const fakeConsole = { log: sinon.stub(), error: sinon.stub() };
       const hb = new HeadlessBrowser({ console: fakeConsole });
       expect(hb.console, 'to be', fakeConsole);
     });
@@ -72,7 +82,6 @@ describe('HeadlessBrowser', function () {
   describe('close', function () {
     it('should close the browser if one was launched', async function () {
       const hb = new HeadlessBrowser({ console });
-      // Launch a browser first
       await hb._launchBrowserMemoized();
       await hb.close();
       expect(mockBrowser.close, 'was called once');
@@ -80,7 +89,6 @@ describe('HeadlessBrowser', function () {
 
     it('should be a no-op if no browser was launched', async function () {
       const hb = new HeadlessBrowser({ console });
-      // Should not throw
       await hb.close();
       expect(mockBrowser.close, 'was not called');
     });
@@ -95,15 +103,7 @@ describe('HeadlessBrowser', function () {
 
   describe('tracePage', function () {
     it('should close the page after tracing', async function () {
-      mockPage.close = sinon.stub().resolves();
-      const hb = new HeadlessBrowser({
-        console: { log: sinon.stub(), error: sinon.stub() },
-      });
-      const mockAssetGraph = {
-        canonicalRoot: 'https://example.com/',
-        root: 'file:///test/',
-        findAssets: sinon.stub().returns([]),
-      };
+      const hb = new HeadlessBrowser({ console: fakeConsole });
       const mockHtmlAsset = {
         assetGraph: mockAssetGraph,
         url: 'file:///test/index.html',
@@ -114,18 +114,10 @@ describe('HeadlessBrowser', function () {
     });
 
     it('should close the page even if transferResults throws', async function () {
-      mockPage.close = sinon.stub().resolves();
       mockPage.evaluateHandle = sinon.stub().resolves({
         jsonValue: sinon.stub().rejects(new Error('evaluation failed')),
       });
-      const hb = new HeadlessBrowser({
-        console: { log: sinon.stub(), error: sinon.stub() },
-      });
-      const mockAssetGraph = {
-        canonicalRoot: 'https://example.com/',
-        root: 'file:///test/',
-        findAssets: sinon.stub().returns([]),
-      };
+      const hb = new HeadlessBrowser({ console: fakeConsole });
       const mockHtmlAsset = {
         assetGraph: mockAssetGraph,
         url: 'file:///test/index.html',

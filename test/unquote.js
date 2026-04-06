@@ -66,28 +66,28 @@ describe('unquote', function () {
     });
 
     describe('with astral Unicode codepoints (above U+FFFF)', function () {
-      it('should decode a 5-digit hex escape for emoji', function () {
-        // U+1F600 = 😀
-        expect(unquote("'\\1f600'"), 'to equal', '😀');
-      });
-
-      it('should decode a 6-digit zero-padded hex escape for emoji', function () {
-        // U+01F600 = 😀
-        expect(unquote("'\\01f600'"), 'to equal', '😀');
-      });
-
-      it('should decode a CJK Extension B character', function () {
-        // U+20000 = 𠀀 (CJK Unified Ideographs Extension B)
-        expect(unquote("'\\20000'"), 'to equal', '𠀀');
-      });
-
-      it('should decode a musical symbol', function () {
-        // U+1D11E = 𝄞 (Musical Symbol G Clef)
-        expect(unquote("'\\1d11e'"), 'to equal', '𝄞');
-      });
-
-      it('should handle astral codepoint followed by text', function () {
-        expect(unquote("'hi \\1f600 bye'"), 'to equal', 'hi 😀bye');
+      [
+        { desc: '5-digit emoji', input: "'\\1f600'", expected: '😀' },
+        {
+          desc: '6-digit zero-padded emoji',
+          input: "'\\01f600'",
+          expected: '😀',
+        },
+        {
+          desc: 'CJK Extension B (U+20000)',
+          input: "'\\20000'",
+          expected: '𠀀',
+        },
+        { desc: 'musical symbol (U+1D11E)', input: "'\\1d11e'", expected: '𝄞' },
+        {
+          desc: 'astral codepoint with surrounding text',
+          input: "'hi \\1f600 bye'",
+          expected: 'hi 😀bye',
+        },
+      ].forEach(({ desc, input, expected }) => {
+        it(`should decode ${desc}`, function () {
+          expect(unquote(input), 'to equal', expected);
+        });
       });
     });
   });
