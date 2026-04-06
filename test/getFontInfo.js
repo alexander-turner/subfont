@@ -143,7 +143,9 @@ describe('getFontInfo', function () {
     });
 
     it('should reject with a useful error for a zero-length buffer', async function () {
-      fontverterStub.convert.rejects(new Error('Empty buffer is not a supported font format'));
+      fontverterStub.convert.rejects(
+        new Error('Empty buffer is not a supported font format')
+      );
 
       const emptyBuffer = Buffer.alloc(0);
       await expect(
@@ -168,7 +170,9 @@ describe('getFontInfo', function () {
       const buf = Buffer.from('retry-font');
 
       // First attempt fails
-      fontverterStub.convert.onFirstCall().rejects(new Error('transient error'));
+      fontverterStub.convert
+        .onFirstCall()
+        .rejects(new Error('transient error'));
       await expect(getFontInfo(buf), 'to be rejected with', 'transient error');
 
       // Second attempt with the same buffer should work (not return cached rejection)
