@@ -70,7 +70,7 @@ describe('HeadlessBrowser', function () {
 
   describe('_launchBrowserMemoized', function () {
     it('should launch a browser and return the same promise on subsequent calls', async function () {
-      const hb = new HeadlessBrowser({ console });
+      const hb = new HeadlessBrowser({ console: fakeConsole });
       const promise1 = hb._launchBrowserMemoized();
       const promise2 = hb._launchBrowserMemoized();
       expect(promise1, 'to be', promise2);
@@ -81,20 +81,20 @@ describe('HeadlessBrowser', function () {
 
   describe('close', function () {
     it('should close the browser if one was launched', async function () {
-      const hb = new HeadlessBrowser({ console });
+      const hb = new HeadlessBrowser({ console: fakeConsole });
       await hb._launchBrowserMemoized();
       await hb.close();
       expect(mockBrowser.close, 'was called once');
     });
 
     it('should be a no-op if no browser was launched', async function () {
-      const hb = new HeadlessBrowser({ console });
+      const hb = new HeadlessBrowser({ console: fakeConsole });
       await hb.close();
       expect(mockBrowser.close, 'was not called');
     });
 
     it('should clear the launch promise so a new browser can be launched', async function () {
-      const hb = new HeadlessBrowser({ console });
+      const hb = new HeadlessBrowser({ console: fakeConsole });
       await hb._launchBrowserMemoized();
       await hb.close();
       expect(hb._launchPromise, 'to be undefined');
@@ -110,6 +110,22 @@ describe('HeadlessBrowser', function () {
       };
 
       await hb.tracePage(mockHtmlAsset);
+      expect(mockPage.close, 'was called once');
+    });
+
+    it('should close the page even if goto throws', async function () {
+      mockPage.goto = sinon.stub().rejects(new Error('navigation failed'));
+      const hb = new HeadlessBrowser({ console: fakeConsole });
+      const mockHtmlAsset = {
+        assetGraph: mockAssetGraph,
+        url: 'file:///test/index.html',
+      };
+
+      await expect(
+        hb.tracePage(mockHtmlAsset),
+        'to be rejected with',
+        'navigation failed'
+      );
       expect(mockPage.close, 'was called once');
     });
 
@@ -137,7 +153,7 @@ describe('HeadlessBrowser', function () {
       const launchError = new Error('Chrome not found');
       puppeteerStub.launch.rejects(launchError);
 
-      const hb = new HeadlessBrowser({ console });
+      const hb = new HeadlessBrowser({ console: fakeConsole });
       await expect(
         hb._launchBrowserMemoized(),
         'to be rejected with',
