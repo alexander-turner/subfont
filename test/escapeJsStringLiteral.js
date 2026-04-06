@@ -58,7 +58,7 @@ describe('escapeJsStringLiteral', function () {
   });
 
   it('should handle combined special characters', function () {
-    const input = "a'b\"c\\d\ne\rf";
+    const input = 'a\'b"c\\d\ne\rf';
     const escaped = escapeJsStringLiteral(input);
     // Verify the escaped string can be safely embedded in a single-quoted JS literal
     // by checking none of the dangerous raw characters remain

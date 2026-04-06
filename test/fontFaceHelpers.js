@@ -229,11 +229,7 @@ describe('fontFaceHelpers', function () {
     });
 
     it('should accept a Buffer', function () {
-      expect(
-        hashHexPrefix(Buffer.from('hello')),
-        'to match',
-        /^[a-f0-9]{10}$/
-      );
+      expect(hashHexPrefix(Buffer.from('hello')), 'to match', /^[a-f0-9]{10}$/);
     });
 
     it('should use SHA-256 (not MD5)', function () {
