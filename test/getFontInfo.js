@@ -141,5 +141,67 @@ describe('getFontInfo', function () {
       const result = await getFontInfo(buf2);
       expect(result.characterSet, 'to equal', [0x41, 0x42, 0x43]);
     });
+
+    it('should reject with a useful error for a zero-length buffer', async function () {
+      fontverterStub.convert.rejects(
+        new Error('Empty buffer is not a supported font format')
+      );
+
+      const emptyBuffer = Buffer.alloc(0);
+      await expect(
+        getFontInfo(emptyBuffer),
+        'to be rejected with',
+        'Empty buffer is not a supported font format'
+      );
+    });
+
+    it('should reject with a useful error for random garbage input', async function () {
+      fontverterStub.convert.rejects(new Error('Not a supported font format'));
+
+      const garbage = Buffer.from([0xde, 0xad, 0xbe, 0xef, 0x00, 0xff]);
+      await expect(
+        getFontInfo(garbage),
+        'to be rejected with',
+        'Not a supported font format'
+      );
+    });
+
+    it('should allow retrying the same buffer after a failure (cache eviction)', async function () {
+      const buf = Buffer.from('retry-font');
+
+      // First attempt fails
+      fontverterStub.convert
+        .onFirstCall()
+        .rejects(new Error('transient error'));
+      await expect(getFontInfo(buf), 'to be rejected with', 'transient error');
+
+      // Second attempt with the same buffer should work (not return cached rejection)
+      fontverterStub.convert.onSecondCall().resolves(Buffer.from('ok'));
+      const result = await getFontInfo(buf);
+      expect(result.characterSet, 'to equal', [0x41, 0x42, 0x43]);
+    });
+
+    it('should not block the queue after a failure', async function () {
+      fontverterStub.convert.onFirstCall().rejects(new Error('boom'));
+      fontverterStub.convert.onSecondCall().resolves(Buffer.from('ok'));
+      fontverterStub.convert.onThirdCall().resolves(Buffer.from('ok2'));
+
+      const bad = Buffer.from('bad');
+      const good1 = Buffer.from('good1');
+      const good2 = Buffer.from('good2');
+
+      // Queue all three concurrently — the first fails, the rest should succeed
+      const p1 = getFontInfo(bad);
+      const p2 = getFontInfo(good1);
+      const p3 = getFontInfo(good2);
+
+      await expect(p1, 'to be rejected with', 'boom');
+
+      const r2 = await p2;
+      expect(r2.characterSet, 'to equal', [0x41, 0x42, 0x43]);
+
+      const r3 = await p3;
+      expect(r3.characterSet, 'to equal', [0x41, 0x42, 0x43]);
+    });
   });
 });
