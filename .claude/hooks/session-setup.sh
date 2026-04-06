@@ -124,6 +124,41 @@ if [ -n "${GH_REPO:-}" ] && command -v gh &>/dev/null; then
 fi
 
 #######################################
+# Puppeteer / Chrome setup
+#######################################
+
+# If PUPPETEER_EXECUTABLE_PATH is not already set, look for a usable
+# Chrome/Chromium binary on the system.  This avoids the need to download
+# Chrome during `pnpm install` (which fails in sandboxed environments).
+
+if [ -z "${PUPPETEER_EXECUTABLE_PATH:-}" ]; then
+	for candidate in \
+		/opt/pw-browsers/chromium-*/chrome-linux/chrome \
+		/usr/bin/google-chrome-stable \
+		/usr/bin/google-chrome \
+		/usr/bin/chromium-browser \
+		/usr/bin/chromium; do
+		if [ -x "$candidate" ]; then
+			export PUPPETEER_EXECUTABLE_PATH="$candidate"
+			break
+		fi
+	done
+
+	if [ -n "${PUPPETEER_EXECUTABLE_PATH:-}" ]; then
+		if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+			echo "export PUPPETEER_EXECUTABLE_PATH=\"$PUPPETEER_EXECUTABLE_PATH\"" >>"$CLAUDE_ENV_FILE"
+		fi
+	fi
+fi
+
+# Skip the Chrome download during install — we either found a system binary
+# above or the project's own puppeteer-browsers/ cache will be used.
+export PUPPETEER_SKIP_DOWNLOAD=true
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+	echo "export PUPPETEER_SKIP_DOWNLOAD=true" >>"$CLAUDE_ENV_FILE"
+fi
+
+#######################################
 # Project dependencies
 #######################################
 
