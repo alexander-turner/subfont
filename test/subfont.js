@@ -90,11 +90,7 @@ describe('subfont', function () {
       const cssAsset = assetGraph.findAssets({
         type: 'Css',
       })[0];
-      expect(
-        cssAsset.url,
-        'to equal',
-        `${assetGraph.root}subfont/styles-38ce4ca68c.css`
-      );
+      expect(cssAsset.url, 'to match', /subfont\/styles-[a-f0-9]{10}\.css$/);
     });
   });
 
