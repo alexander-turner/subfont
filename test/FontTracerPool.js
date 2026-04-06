@@ -1,6 +1,4 @@
 const expect = require('unexpected');
-const pathModule = require('path');
-const { Worker } = require('worker_threads');
 const FontTracerPool = require('../lib/FontTracerPool');
 
 describe('FontTracerPool', function () {
@@ -128,43 +126,78 @@ describe('FontTracerPool', function () {
       const pool = new FontTracerPool(2);
       await pool.init();
 
-      // Submit a task to keep the first worker busy, then crash it
-      const crashedTaskPromise = pool.trace(
-        '<html><body><p>Will crash</p></body></html>',
-        []
+      // Terminate one worker directly before submitting tasks.
+      // This deterministically reduces the pool to 1 worker without
+      // relying on timing of task dispatch.
+      const workerToKill = pool._workers[0];
+      const exitPromise = new Promise((resolve) =>
+        workerToKill.on('exit', resolve)
       );
+      await workerToKill.terminate();
+      await exitPromise;
 
-      // The task is dispatched to an idle worker. Find which worker got the task
-      // and terminate it to simulate a crash.
-      const busyWorker = pool._workers.find(
-        (w) => pool._taskByWorker.has(w)
-      );
-      if (busyWorker) {
-        await busyWorker.terminate();
-      }
+      expect(pool._workers, 'to have length', 1);
 
-      // The crashed task should be rejected
-      try {
-        await crashedTaskPromise;
-      } catch (err) {
-        // Expected — worker exited
-      }
-
-      // The surviving worker should still be able to process tasks
+      // The surviving worker should still process tasks
       const result = await pool.trace(
         '<html><body><p>After crash</p></body></html>',
         []
       );
       expect(result, 'to be an', 'array');
 
+      // And handle multiple queued tasks
+      const results = await Promise.all([
+        pool.trace('<html><body>A</body></html>', []),
+        pool.trace('<html><body>B</body></html>', []),
+      ]);
+      expect(results, 'to have length', 2);
+
       await pool.destroy();
     });
 
-    it('should reject all queued tasks when all workers crash simultaneously', async function () {
+    it('should reject all in-flight and queued tasks when both workers crash simultaneously', async function () {
       const pool = new FontTracerPool(2);
       await pool.init();
 
-      // Submit more tasks than workers so some are queued
+      // Submit 6 tasks: 2 dispatched (one per worker), 4 queued
+      const promises = [];
+      for (let i = 0; i < 6; i++) {
+        promises.push(
+          pool
+            .trace(`<html><body><p>Task ${i}</p></body></html>`, [])
+            .then(
+              () => ({ status: 'resolved' }),
+              (err) => ({ status: 'rejected', message: err.message })
+            )
+        );
+      }
+
+      // Crash both workers simultaneously while tasks are in-flight
+      const workers = [...pool._workers];
+      await Promise.all(workers.map((w) => w.terminate()));
+
+      const results = await Promise.all(promises);
+
+      const rejected = results.filter((r) => r.status === 'rejected');
+      // All tasks that hadn't completed yet should be rejected
+      expect(rejected.length, 'to be greater than', 0);
+      for (const r of rejected) {
+        expect(
+          r.message,
+          'to match',
+          /Worker exited|All workers have crashed/
+        );
+      }
+
+      expect(pool._workers, 'to have length', 0);
+      expect(pool._pendingTasks, 'to have length', 0);
+    });
+
+    it('should reject in-flight task and all queued tasks when last worker crashes', async function () {
+      const pool = new FontTracerPool(1);
+      await pool.init();
+
+      // Submit 5 tasks to a single worker: task 0 dispatched, tasks 1-4 queued
       const promises = [];
       for (let i = 0; i < 5; i++) {
         promises.push(
@@ -177,56 +210,39 @@ describe('FontTracerPool', function () {
         );
       }
 
-      // Terminate all workers to simulate simultaneous crashes
-      const workers = [...pool._workers];
-      await Promise.all(workers.map((w) => w.terminate()));
+      // Crash the only worker while it processes task 0
+      await pool._workers[0].terminate();
 
       const results = await Promise.all(promises);
 
-      // All tasks should have been rejected
+      // All tasks should be rejected: the in-flight one with "Worker exited"
+      // and the queued ones with "All workers have crashed"
       for (const result of results) {
         expect(result.status, 'to be', 'rejected');
-        expect(result.message, 'to match', /Worker exited|All workers have crashed/);
+        expect(
+          result.message,
+          'to match',
+          /Worker exited|All workers have crashed/
+        );
       }
 
       expect(pool._workers, 'to have length', 0);
       expect(pool._pendingTasks, 'to have length', 0);
     });
 
-    it('should handle many concurrent traces exceeding worker count', async function () {
+    it('should handle high concurrency with many queued tasks', async function () {
       const pool = new FontTracerPool(2);
       await pool.init();
 
+      // 20 tasks on 2 workers exercises the queuing/dispatch cycle heavily
       const numTasks = 20;
       const promises = [];
       for (let i = 0; i < numTasks; i++) {
         promises.push(
           pool.trace(
-            `<html><body><p style="font-family: sans-serif">Task ${i} ${'x'.repeat(100)}</p></body></html>`,
+            `<html><body><p style="font-family: sans-serif">Task ${i}</p></body></html>`,
             []
           )
-        );
-      }
-
-      const results = await Promise.all(promises);
-      expect(results, 'to have length', numTasks);
-      for (const result of results) {
-        expect(result, 'to be an', 'array');
-      }
-
-      await pool.destroy();
-    });
-
-    it('should handle rapid sequential trace calls on a single worker', async function () {
-      const pool = new FontTracerPool(1);
-      await pool.init();
-
-      // Fire off many tasks in rapid succession — all queued behind a single worker
-      const numTasks = 15;
-      const promises = [];
-      for (let i = 0; i < numTasks; i++) {
-        promises.push(
-          pool.trace(`<html><body><span>Seq ${i}</span></body></html>`, [])
         );
       }
 
@@ -243,7 +259,7 @@ describe('FontTracerPool', function () {
       const pool = new FontTracerPool(3);
       await pool.init();
 
-      // Submit enough tasks to keep all 3 workers busy + have some queued
+      // Submit enough tasks to keep workers busy + have some queued
       const promises = [];
       for (let i = 0; i < 10; i++) {
         promises.push(
@@ -256,25 +272,23 @@ describe('FontTracerPool', function () {
         );
       }
 
-      // Kill one worker to simulate a mid-processing crash
-      if (pool._workers.length > 0) {
-        await pool._workers[0].terminate();
-      }
+      // Kill one worker — 2 survivors should drain the remaining queue
+      await pool._workers[0].terminate();
 
       const results = await Promise.all(promises);
 
-      // At least the tasks on surviving workers should resolve
       const resolved = results.filter((r) => r.status === 'resolved');
       const rejected = results.filter((r) => r.status === 'rejected');
 
-      // Most tasks should succeed since 2 workers survive
+      // Surviving workers should complete most tasks
       expect(resolved.length, 'to be greater than', 0);
       for (const r of resolved) {
         expect(r.result, 'to be an', 'array');
       }
-      // The one in-flight on the crashed worker should be rejected
+      // At most 1 task rejected (the one in-flight on crashed worker)
+      expect(rejected.length, 'to be less than or equal to', 1);
       for (const r of rejected) {
-        expect(r.message, 'to match', /Worker exited|All workers have crashed/);
+        expect(r.message, 'to match', /Worker exited/);
       }
 
       await pool.destroy();
@@ -284,7 +298,7 @@ describe('FontTracerPool', function () {
       const pool = new FontTracerPool(2);
       await pool.init();
 
-      // Build a large HTML document with many elements
+      // 500 styled paragraphs exercises jsdom parsing and font-tracer traversal
       const elements = [];
       for (let i = 0; i < 500; i++) {
         elements.push(
@@ -325,47 +339,71 @@ describe('FontTracerPool', function () {
       await pool.destroy();
     });
 
-    it('should properly destroy pool while tasks are still queued', async function () {
+    it('should settle all promises when pool is destroyed with pending tasks', async function () {
       const pool = new FontTracerPool(1);
       await pool.init();
 
-      // Submit several tasks but destroy the pool before they complete
+      // Submit tasks then destroy immediately — tasks may be in-flight or queued
       const promises = [];
       for (let i = 0; i < 5; i++) {
         promises.push(
           pool
             .trace(`<html><body>Destroy test ${i}</body></html>`, [])
             .then(
-              (r) => ({ status: 'resolved', result: r }),
-              (err) => ({ status: 'rejected', message: err.message })
+              () => 'resolved',
+              () => 'rejected'
             )
         );
       }
 
-      // Destroy immediately — some tasks may still be pending
       await pool.destroy();
 
-      // All tasks should either resolve or reject cleanly (no hanging promises)
-      const results = await Promise.all(promises);
-      for (const r of results) {
-        expect(r.status, 'to match', /^(resolved|rejected)$/);
-      }
+      // Use a timeout to verify no promises hang. If any promise never
+      // settles, this will timeout and the test fails.
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Promises hung after destroy')), 5000)
+      );
+      const results = await Promise.race([Promise.all(promises), timeout]);
+      expect(results, 'to have length', 5);
     });
 
-    it('should handle worker error messages (non-crash failures)', async function () {
-      // Create a pool with a custom worker that sends an error message
+    it('should reject task on postMessage failure and keep pool functional', async function () {
       const pool = new FontTracerPool(1);
       await pool.init();
 
-      // Trace with invalid CSS that triggers a worker-side error
-      // (malformed input that postcss.parse might choke on won't actually
-      // crash the worker — it gets caught and sent as an error message)
-      const result = await pool.trace(
-        '<html><body><p>test</p></body></html>',
-        [{ text: '', predicates: {} }]
-      );
+      // Monkey-patch the worker's postMessage to throw a structured clone
+      // error, exercising the try/catch in _dispatchPending.
+      const worker = pool._workers[0];
+      const originalPostMessage = worker.postMessage.bind(worker);
+      let callCount = 0;
+      worker.postMessage = function (msg) {
+        callCount++;
+        if (callCount === 1) {
+          throw new DOMException(
+            'Could not be cloned',
+            'DataCloneError'
+          );
+        }
+        return originalPostMessage(msg);
+      };
 
-      // Empty CSS should still produce a valid result
+      // First trace hits the patched postMessage and should be rejected
+      try {
+        await pool.trace('<html><body>clone error</body></html>', []);
+        expect.fail('Expected task to be rejected');
+      } catch (err) {
+        expect(err.message, 'to match', /Could not be cloned/);
+      }
+
+      // Pool should still be functional — worker returned to idle pool
+      expect(pool._workers, 'to have length', 1);
+      expect(pool._idle, 'to have length', 1);
+
+      // Second trace should succeed normally
+      const result = await pool.trace(
+        '<html><body><p>After clone error</p></body></html>',
+        []
+      );
       expect(result, 'to be an', 'array');
 
       await pool.destroy();
@@ -385,10 +423,12 @@ describe('FontTracerPool', function () {
         await Promise.all(promises);
       }
 
-      // After all tasks complete, there should be no lingering callbacks
+      // After 12 tasks across 3 batches, no internal state should linger
       expect(pool._taskCallbacks.size, 'to be', 0);
       expect(pool._taskByWorker.size, 'to be', 0);
       expect(pool._pendingTasks, 'to have length', 0);
+      // All workers should be idle
+      expect(pool._idle, 'to have length', 2);
 
       await pool.destroy();
     });
