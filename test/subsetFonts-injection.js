@@ -145,7 +145,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
               hasOutOfBoundsAnimationTimingFunction: false,
               codepoints: {
                 original: expect.it('to be an array'),
-                used: [32, 72, 101, 108, 111],
+                used: [72, 101, 108, 111, 32],
                 unused: expect.it('to be an array'),
                 page: [72, 101, 108, 111, 32],
               },
