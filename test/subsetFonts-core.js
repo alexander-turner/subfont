@@ -15,16 +15,15 @@ const {
 describe('subsetFonts core subsetting logic', function () {
   setupCleanup();
 
-  it('should error out on multiple @font-face declarations with the same family/weight/style/stretch', async function () {
+  it('should handle multiple @font-face declarations with the same family/weight/style/stretch but different unicode-range', async function () {
     httpception();
 
     const assetGraph = createGraph('woff2-original');
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await expect(
-      subsetFonts(assetGraph),
-      'to be rejected with',
-      'Multiple @font-face with the same font-family/font-style/font-weight (maybe with different unicode-range?) is not supported yet: Roboto Slab/normal/300'
-    );
+    const { fontInfo } = await subsetFonts(assetGraph);
+    // Should succeed and produce font info for the unicode-range split fonts
+    expect(fontInfo, 'to be an array');
+    expect(fontInfo, 'to have length', 1);
   });
 
   it('should emit a warning when subsetting invalid fonts', async function () {
