@@ -40,7 +40,15 @@ describe('subsetFonts core subsetting logic', function () {
     await subsetFonts(assetGraph, {
       inlineCss: true,
     });
+    // Expect 3 warnings: 1 from getFontInfo (codepoint extraction) +
+    // 2 from subsetting (one per output format: woff2, woff)
     expect(warnings, 'to satisfy', [
+      expect
+        .it('to be an', Error)
+        .and('to have message', 'Unrecognized font signature: 0000')
+        .and('to satisfy', {
+          asset: expect.it('to be an', 'AssetGraph.asset'),
+        }),
       expect
         .it('to be an', Error)
         .and('to have message', 'Unrecognized font signature: 0000')
