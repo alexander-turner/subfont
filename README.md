@@ -55,16 +55,17 @@ Or globally via `--text '0123456789'`.
 
 ## Key options
 
-| Flag              | Default | Description                                 |
-| ----------------- | ------- | ------------------------------------------- |
-| `-i, --in-place`  | off     | Modify files in-place                       |
-| `-o, --output`    |         | Output directory                            |
-| `-r, --recursive` | off     | Crawl linked pages                          |
-| `--dynamic`       | off     | Trace with headless browser                 |
-| `--dry-run`       | off     | Preview without writing                     |
-| `--font-display`  | `swap`  | `auto`/`block`/`swap`/`fallback`/`optional` |
-| `--formats`       | auto    | `woff2`, `woff`, `truetype`                 |
-| `--text`          |         | Extra characters for every subset           |
+| Flag              | Default | Description                                        |
+| ----------------- | ------- | -------------------------------------------------- |
+| `-i, --in-place`  | off     | Modify files in-place                              |
+| `-o, --output`    |         | Output directory                                   |
+| `-r, --recursive` | off     | Crawl linked pages                                 |
+| `--dynamic`       | off     | Trace with headless browser                        |
+| `--dry-run`       | off     | Preview without writing                            |
+| `--fallbacks`     | on      | Async-load original fonts. `--no-fallbacks` = skip |
+| `--font-display`  | `swap`  | `auto`/`block`/`swap`/`fallback`/`optional`        |
+| `--text`          |         | Extra characters for every subset                  |
+| `--source-maps`   | off     | Preserve CSS source maps (slower)                  |
 
 Run `subfont --help` for the full list.
 
