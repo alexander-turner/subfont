@@ -2,49 +2,116 @@
 
 [![Build Status](https://github.com/Munter/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/Munter/subfont/actions/workflows/ci.yml)
 
-A command line tool to statically analyse your page in order to generate the most optimal web font subsets, then inject them into your page.
+A command line tool and Node.js library that optimizes web font loading by automatically subsetting fonts to include only the characters actually used on your pages.
 
-Speed up your time to first meaningful paint by reducing the web font payload and critical path to the font files.
+Subfont reduces time to first meaningful paint by shrinking font payloads and shortening the critical path to font files.
 
-Subfont will:
+## What it does
 
-- Automatically figure out what characters are used from each font
-- Warn you about usage of characters that don't exist as glyphs in your webfonts
-- Create an exact subset of used characters of each font
-- Reduce the variation space of variable fonts based on the actual usage (when the `--instance` switch is used)
-- Generate web fonts in both `woff2` and `woff` formats
-- Add preload hints for the subsets to reduce time to first meaningful paint
-- Give the subsetted fonts new names and prepend them in front of the original fonts in your `font-family` definitions (enables missing glyph fallback)
-- Async load your original `@font-face` declaring CSS at the bottom of your page, moving it off the critical path
+- Analyzes your pages to detect exactly which characters are used from each font
+- Creates minimal subsets containing only those characters
+- Reduces variable font variation space based on actual usage (`--instance`)
+- Generates subsets in `woff2` and `woff` formats (configurable)
+- Adds `<link rel="preload">` hints for subset fonts
+- Renames subsetted fonts and prepends them in `font-family` declarations, preserving missing-glyph fallback to the original font
+- Moves original `@font-face` CSS off the critical path via async loading with `<noscript>` fallback
+- Warns about characters used on your pages that don't exist in the applied font
+- Supports OpenType features (`font-feature-settings`, `font-variant-*`) by preserving GSUB alternate glyphs in subsets
 
 ![A site before and after running subfont](https://raw.githubusercontent.com/Munter/subfont/master/images/before-after.png)
 
-Currently supported font services:
+## Supported font sources
 
-- Google fonts
-- Local fonts
-
-**If you know of font services with liberal font usage licenses, open an issue and we'll add support for them**
+- Google Fonts
+- Self-hosted / local fonts
 
 ## Installation
-
-Get the basic CLI tool, which supports subsetting Google Fonts and optimizing all local fonts with preloading instructions:
 
 ```
 npm install -g subfont
 ```
 
-## Recommended usage
+Requires Node.js >= 18.
 
-Run subfont on the files you are ready to deploy to a static file hosting service. If these are build artifacts from another build system, and not the original files, run `subfont path/to/artifacts/index.html -i` to have `subfont` clobber the dist files in their original location.
+## Quick start
 
-If you want to run directly against your raw original files, it is recommended to create a recursive copy of your files which you run `subfont` on. This keeps your original authoring abstraction unchanged.
+Run on your build output before deploying:
 
-## Including additional characters in the subsets
+```bash
+subfont path/to/dist/index.html -i
+```
 
-If you have a use case where the automatic tracing doesn't find all the characters you need, you can tell subfont to include specific characters in the subsets by adding a custom `-subfont-text` property to the respective `@font-face` declarations.
+This modifies the HTML files in place (`-i`). For a preview without writing changes:
 
-Example where all numerical digits are added to the bold italic Roboto variant:
+```bash
+subfont path/to/dist/index.html --dry-run
+```
+
+## Usage
+
+### On build artifacts (recommended)
+
+Run subfont on the files you are ready to deploy. If these are build artifacts from another build system, use `-i` (in-place) to modify them directly:
+
+```bash
+subfont path/to/artifacts/index.html -i
+```
+
+### Output to a separate directory
+
+Copy processed files to a new directory using `-o`:
+
+```bash
+subfont path/to/index.html -o path/to/output
+```
+
+This uses [Assetgraph](https://github.com/assetgraph/assetgraph) to trace your site's dependency graph and write it to the output directory. Check for warnings that might indicate issues with your markup.
+
+### Multi-page sites
+
+Crawl all linked pages with `--recursive`:
+
+```bash
+subfont path/to/index.html -i --recursive
+```
+
+### Remote URLs
+
+You can point subfont at a live URL (requires `--output`):
+
+```bash
+subfont https://example.com -o path/to/output
+```
+
+This is mainly useful for quick demos. Results may vary since the tool is designed for static file analysis.
+
+### Dynamic content tracing
+
+By default, subfont performs static analysis of your HTML and CSS. If your pages inject content via JavaScript, use `--dynamic` to also trace font usage in a headless browser:
+
+```bash
+subfont path/to/index.html -i --dynamic
+```
+
+This launches a headless Chrome instance and detects fonts applied to dynamically rendered text.
+
+### Variable font instancing
+
+If your variable fonts use only a portion of their variation space (e.g., only weights 400 and 700 out of 100-900), use `--instance` to reduce the axis ranges in the subset:
+
+```bash
+subfont path/to/index.html -i --instance
+```
+
+This can significantly reduce file sizes for variable fonts with broad axis ranges.
+
+## Including additional characters
+
+If automatic tracing misses characters you need (e.g., content loaded at runtime), you can ensure they're included in subsets.
+
+### Per-font via CSS
+
+Add a `-subfont-text` property to specific `@font-face` declarations:
 
 ```css
 @font-face {
@@ -56,13 +123,13 @@ Example where all numerical digits are added to the bold italic Roboto variant:
 }
 ```
 
-An easier, but less fine-grained option is to use the `--text` switch to include a set of characters in all created subsets.
+### Globally via CLI
 
-## Other usages
+Include characters in every subset with `--text`:
 
-You can have subfont output a copy of your input files to a new directory. This uses [Assetgraph](https://github.com/assetgraph/assetgraph) to trace a dependency graph of your website and writes it to your specified output directory. Be aware of any errors or warnings that might indicate Assetgraph having problems with your code, and be sure to double check that the expected files are in the output directory. Run `subfont path/to/index.html -o path/to/outputDir`.
-
-You can also have subfont scrape a website directly using http and write the output to local disk. This use is likely to fail in a number of ways and should mostly considered a demo feature if you just want to give the tool a quick go to see what it will do to your page. Run `subfont https://yourpage.me -o path/to/outputDir`.
+```bash
+subfont index.html -i --text '0123456789!@#$%'
+```
 
 ## Command line options
 
@@ -76,49 +143,83 @@ Options:
   --version                          Show version number                                 [boolean]
   --root                             Path to your web root (will be deduced from your input files
                                      if not specified)                                    [string]
-  --canonical-root, --canonicalroot  URI root where the site will be deployed. Must be either an
+  --canonical-root                   URI root where the site will be deployed. Must be either an
                                      absolute, a protocol-relative, or a root-relative url[string]
   --output, -o                       Directory where results should be written to         [string]
-  --browsers                         Override your projects browserslist configuration to specify
-                                     which browsers to support. Controls font formats and
-                                     polyfill. Defaults to browserslist's default query if your
-                                     project has no browserslist configuration            [string]
-  --formats                          Font formats to use when subsetting. The default is to select
-                                     the formats based on the browser capabilities as specified
-                                     via --browsers or the browserslist configuration.
+  --browsers                         Override your project's browserslist configuration to specify
+                                     which browsers to support. Controls font formats.    [string]
+  --formats                          Font formats to subset into. Defaults based on --browsers.
                                                     [array] [choices: "woff2", "woff", "truetype"]
-  --text                             Additional characters to include in the subset for every
-                                     @font-face found on the page                         [string]
-  --fallbacks                        Include fallbacks so the original font will be loaded when
-                                     dynamic content gets injected at runtime. Disable with
-                                     --no-fallbacks                      [boolean] [default: true]
-  --dynamic                          Also trace the usage of fonts in a headless browser with
-                                     JavaScript enabled                 [boolean] [default: false]
-  --in-place, -i                     Modify HTML-files in-place. Only use on build artifacts
-                                                                        [boolean] [default: false]
-  --inline-css                       Inline CSS that declares the @font-face for the subset fonts
-                                                                        [boolean] [default: false]
-  --font-display                     Injects a font-display value into the @font-face CSS.
+  --text                             Additional characters to include in every subset     [string]
+  --fallbacks                        Load original fonts as fallback for dynamic content.
+                                     Disable with --no-fallbacks            [boolean] [default: true]
+  --dynamic                          Trace font usage in a headless browser with JS enabled
+                                                                            [boolean] [default: false]
+  --in-place, -i                     Modify HTML files in-place. Only use on build artifacts
+                                                                            [boolean] [default: false]
+  --inline-css                       Inline the subset @font-face CSS into HTML
+                                                                            [boolean] [default: false]
+  --font-display                     Inject a font-display value into subset @font-face rules
              [string] [choices: "auto", "block", "swap", "fallback", "optional"] [default: "swap"]
-  --recursive, -r                    Crawl all HTML-pages linked with relative and root relative
-                                     links. This stays inside your domain
-                                                                        [boolean] [default: false]
-  --relative-urls                    Issue relative urls instead of root-relative ones
-                                                                        [boolean] [default: false]
-  --instance                         Experimentally instance variable fonts when the variation
-                                     space isn't fully used             [boolean] [default: false]
-  --silent, -s                       Do not write anything to stdout    [boolean] [default: false]
-  --debug, -d                        Verbose insights into font glyph detection
-                                                                        [boolean] [default: false]
-  --dry-run, --dry, --dryrun         Don't write anything to disk       [boolean] [default: false]
-  --skip-source-map-processing       Skip CSS source map processing for faster execution when
-                                     source maps are not needed          [boolean] [default: true]
+  --recursive, -r                    Crawl all HTML pages linked with relative and root-relative
+                                     links within your domain              [boolean] [default: false]
+  --relative-urls                    Emit relative URLs instead of root-relative
+                                                                            [boolean] [default: false]
+  --instance                         Reduce variable font variation space based on actual usage
+                                                                            [boolean] [default: false]
+  --source-maps                      Preserve CSS source maps (off by default for speed)
+                                                                            [boolean] [default: false]
+  --silent, -s                       Suppress all stdout output             [boolean] [default: false]
+  --debug, -d                        Verbose font glyph detection output    [boolean] [default: false]
+  --dry-run                          Preview changes without writing to disk
+                                                                            [boolean] [default: false]
 ```
 
-## Other great font tools
+## Programmatic API
 
-https://meowni.ca/font-style-matcher/
+```js
+const subfont = require('subfont');
+
+const assetGraph = await subfont(
+  {
+    inputFiles: ['path/to/index.html'],
+    inPlace: true,
+    formats: ['woff2'],
+    fontDisplay: 'swap',
+    instance: false,
+    dynamic: false,
+  },
+  console
+);
+```
+
+The function returns the [Assetgraph](https://github.com/assetgraph/assetgraph) instance after processing.
+
+## How it works
+
+1. **Load & populate**: Parses input HTML and follows CSS relations (stylesheets, `@import`, `@font-face src`) to build an asset graph
+2. **Trace font usage**: For each page, runs [font-tracer](https://github.com/nicolo-ribaudo/font-tracer) to determine which font-family/weight/style combinations are used and which text characters they render. Uses a worker pool for parallel tracing on multi-page sites.
+3. **Generate subsets**: Uses [HarfBuzz](https://github.com/nicolo-ribaudo/harfbuzzjs) (via WASM) to create minimal font subsets. Supports glyph-level subsetting including OpenType feature alternates (ligatures, stylistic sets, etc.)
+4. **Optimize variable fonts** (with `--instance`): Analyzes which axis values are actually used and constrains or pins axes to reduce file size
+5. **Inject into HTML/CSS**: Adds subset `@font-face` declarations with `unicode-range`, prepends subset font names in `font-family` properties, adds preload hints, and async-loads the original font CSS as a fallback
+
+## Performance on large sites
+
+Subfont includes several optimizations for sites with many pages:
+
+- **Fast-path caching**: Pages sharing identical CSS configurations reuse a single font-tracer run; only the HTML text content is re-extracted
+- **Worker pool**: Font tracing runs in parallel across worker threads (up to 8 workers)
+- **Global deduplication**: Font subsets are computed once per unique font URL, then shared across all pages
+- **Pre-indexed relations**: Asset graph lookups use pre-built indices to avoid repeated O(n) scans
+
+Run with `--debug` to see detailed timing breakdowns.
+
+## Related tools
+
+- [Fontsquirrel Webfont Generator](https://www.fontsquirrel.com/tools/webfont-generator)
+- [Font Style Matcher](https://meowni.ca/font-style-matcher/)
+- [Google Fonts](https://fonts.google.com/) (natively supports `text=` parameter for subsetting)
 
 ## License
 
-MIT — Original work by [Peter Müller (Munter)](https://github.com/Munter/subfont)
+MIT -- Original work by [Peter Muller (Munter)](https://github.com/Munter/subfont)
