@@ -6,7 +6,6 @@ const httpception = require('httpception');
 const AssetGraph = require('assetgraph');
 const proxyquire = require('proxyquire');
 const pathModule = require('path');
-const canUsePuppeteer = require('./canUsePuppeteer');
 
 const openSansBold = require('fs').readFileSync(
   pathModule.resolve(
@@ -484,12 +483,6 @@ describe('subfont', function () {
   });
 
   describe('with --dynamic', function () {
-    before(async function () {
-      if (!(await canUsePuppeteer())) {
-        this.skip();
-      }
-    });
-
     it('should find glyphs added to the page via JavaScript', async function () {
       const root = encodeURI(
         `file://${pathModule.resolve(

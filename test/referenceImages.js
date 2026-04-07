@@ -1,7 +1,6 @@
 const expect = require('./expect');
 const combos = require('combos');
 const pathModule = require('path');
-const canUsePuppeteer = require('./canUsePuppeteer');
 
 function getPathToTestCase(name) {
   return pathModule.resolve(
@@ -23,14 +22,6 @@ describe('reference images', function () {
     describe(`with ${Object.keys(options)
       .map((key) => `${key}: ${options[key]}`)
       .join(', ')}`, function () {
-      if (options.dynamic) {
-        before(async function () {
-          if (!(await canUsePuppeteer())) {
-            this.skip();
-          }
-        });
-      }
-
       it('should render a simple test case without ligatures', async function () {
         await expect(
           getPathToTestCase('withoutLigatures'),
