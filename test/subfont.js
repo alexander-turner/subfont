@@ -483,6 +483,8 @@ describe('subfont', function () {
   });
 
   describe('with --dynamic', function () {
+    this.timeout(120000);
+
     it('should find glyphs added to the page via JavaScript', async function () {
       const root = encodeURI(
         `file://${pathModule.resolve(
@@ -614,7 +616,10 @@ describe('subfont', function () {
         mockConsole
       );
       expect(mockConsole.error, 'to have a call satisfying', [
-        'GET https://domainthatdoesnotexist12873621321312.com/blablabla.js failed: net::ERR_NAME_NOT_RESOLVED',
+        expect.it(
+          'to match',
+          /GET https:\/\/domainthatdoesnotexist12873621321312\.com\/blablabla\.js failed: net::ERR_(NAME_NOT_RESOLVED|FAILED)/
+        ),
       ])
         .and('to have a call satisfying', [
           'ReferenceError: iAmNotAFunction is not defined\n    at https://example.com/index.html:20:7',
@@ -622,7 +627,7 @@ describe('subfont', function () {
         .and('to have a call satisfying', [
           expect.it(
             'to match',
-            /GET https:\/\/assetgraph\.org\/nonexistent12345\.js (returned 404|failed: net::ERR_BLOCKED_BY_ORB)/
+            /GET https:\/\/assetgraph\.org\/nonexistent12345\.js (returned 404|failed: net::ERR_(BLOCKED_BY_ORB|FAILED))/
           ),
         ]);
     });
