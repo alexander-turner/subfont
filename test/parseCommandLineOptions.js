@@ -28,39 +28,37 @@ describe('parseCommandLineOptions', function () {
     expect(
       parseCommandLineOptions(['--formats', 'truetype', '--formats', 'woff2']),
       'to satisfy',
-      {
-        formats: ['truetype', 'woff2'],
-      }
+      { formats: ['truetype', 'woff2'] }
     );
   });
 
   it('should allow passing a comma-separated list of formats', function () {
-    const options = parseCommandLineOptions(['--formats', 'truetype,woff2']);
-
-    expect(options, 'to satisfy', {
-      formats: ['truetype', 'woff2'],
-    });
-  });
-
-  it('should parse --concurrency as a number', function () {
-    expect(parseCommandLineOptions(['--concurrency', '4']), 'to satisfy', {
-      concurrency: 4,
-    });
-  });
-
-  it('should parse --chrome-flags as a comma-separated array', function () {
     expect(
-      parseCommandLineOptions(['--chrome-flags=--no-sandbox,--disable-gpu']),
+      parseCommandLineOptions(['--formats', 'truetype,woff2']),
       'to satisfy',
-      { chromeFlags: ['--no-sandbox', '--disable-gpu'] }
+      { formats: ['truetype', 'woff2'] }
     );
   });
 
-  it('should parse --cache with a path', function () {
-    expect(
-      parseCommandLineOptions(['--cache', '/tmp/my-cache']),
-      'to satisfy',
-      { cache: '/tmp/my-cache' }
-    );
+  [
+    {
+      desc: '--concurrency',
+      argv: ['--concurrency', '4'],
+      expected: { concurrency: 4 },
+    },
+    {
+      desc: '--chrome-flags (comma-separated)',
+      argv: ['--chrome-flags=--no-sandbox,--disable-gpu'],
+      expected: { chromeFlags: ['--no-sandbox', '--disable-gpu'] },
+    },
+    {
+      desc: '--cache with a path',
+      argv: ['--cache', '/tmp/my-cache'],
+      expected: { cache: '/tmp/my-cache' },
+    },
+  ].forEach(({ desc, argv, expected }) => {
+    it(`should parse ${desc}`, function () {
+      expect(parseCommandLineOptions(argv), 'to satisfy', expected);
+    });
   });
 });
