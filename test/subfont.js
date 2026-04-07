@@ -759,18 +759,14 @@ describe('subfont', function () {
 
   describe('--root validation', function () {
     it('should throw when --root points to a nonexistent path', async function () {
-      try {
-        await subfont(
-          {
-            root: '/nonexistent/path/that/does/not/exist',
-            inputFiles: ['index.html'],
-          },
+      await expect(
+        subfont(
+          { root: '/nonexistent/path', inputFiles: ['index.html'] },
           mockConsole
-        );
-        expect.fail('should have thrown');
-      } catch (err) {
-        expect(err.message, 'to contain', 'does not exist');
-      }
+        ),
+        'to be rejected with',
+        /does not exist/
+      );
     });
   });
 });
