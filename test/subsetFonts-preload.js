@@ -1,7 +1,7 @@
 const {
   expect,
   httpception,
-  subsetFonts,
+  subsetFontsWithTestDefaults,
   setupCleanup,
   createGraph,
   loadAndPopulate,
@@ -18,7 +18,7 @@ describe('subsetFonts preload/prefetch handling', function () {
       expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
 
     expect(assetGraph, 'to contain relation', 'HtmlPreloadLink');
   });
@@ -34,7 +34,7 @@ describe('subsetFonts preload/prefetch handling', function () {
     });
 
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
 
     expect(assetGraph, 'to contain no relation', 'HtmlPrefetchLink');
 
@@ -58,7 +58,7 @@ describe('subsetFonts preload/prefetch handling', function () {
       const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', {
         crossorigin: false,
       });
-      await subsetFonts(assetGraph, {
+      await subsetFontsWithTestDefaults(assetGraph, {
         jsPreload: false,
       });
 

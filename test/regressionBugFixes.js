@@ -4,7 +4,7 @@ const expect = require('unexpected')
 
 const AssetGraph = require('assetgraph');
 const pathModule = require('path');
-const subsetFonts = require('../lib/subsetFonts');
+const { subsetFontsWithTestDefaults } = require('./subsetFonts-helpers');
 const { Worker } = require('worker_threads');
 
 const fs = require('fs');
@@ -58,7 +58,7 @@ describe('regression bug fixes', function () {
       await assetGraph.populate();
 
       // Should not throw -- instancing pins the ital axis automatically
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
     });
 
     it('should handle oblique-only variable fonts without crashing', async function () {
@@ -72,7 +72,7 @@ describe('regression bug fixes', function () {
       await assetGraph.populate();
 
       // Should not throw -- instancing pins the slnt axis automatically
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
     });
   });
 
@@ -88,7 +88,7 @@ describe('regression bug fixes', function () {
       await assetGraph.populate();
 
       // Should not throw -- instancing handles unused axes automatically
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
     });
   });
 

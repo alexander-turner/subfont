@@ -1,7 +1,7 @@
 const {
   expect,
   httpception,
-  subsetFonts,
+  subsetFontsWithTestDefaults,
   setupCleanup,
   createGraph,
   loadAndPopulate,
@@ -16,7 +16,7 @@ describe('subsetFonts fallback CSS generation', function () {
       expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph, {
+    await subsetFontsWithTestDefaults(assetGraph, {
       inlineFonts: false,
     });
 
@@ -35,7 +35,7 @@ describe('subsetFonts fallback CSS generation', function () {
     const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', {
       crossorigin: false,
     });
-    await subsetFonts(assetGraph, {
+    await subsetFontsWithTestDefaults(assetGraph, {
       inlineCss: true,
       omitFallbacks: true,
     });
@@ -52,7 +52,7 @@ describe('subsetFonts fallback CSS generation', function () {
 
       const assetGraph = createGraph('no-fallbacks');
       const [htmlAsset] = await loadAndPopulate(assetGraph);
-      await subsetFonts(assetGraph, {
+      await subsetFontsWithTestDefaults(assetGraph, {
         omitFallbacks: true,
       });
 
