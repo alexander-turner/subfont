@@ -23,4 +23,26 @@ describe('parseCommandLineOptions', function () {
       }
     );
   });
+
+  [
+    {
+      desc: '--concurrency',
+      argv: ['--concurrency', '4'],
+      expected: { concurrency: 4 },
+    },
+    {
+      desc: '--chrome-flags (comma-separated)',
+      argv: ['--chrome-flags=--no-sandbox,--disable-gpu'],
+      expected: { chromeFlags: ['--no-sandbox', '--disable-gpu'] },
+    },
+    {
+      desc: '--cache with a path',
+      argv: ['--cache', '/tmp/my-cache'],
+      expected: { cache: '/tmp/my-cache' },
+    },
+  ].forEach(({ desc, argv, expected }) => {
+    it(`should parse ${desc}`, function () {
+      expect(parseCommandLineOptions(argv), 'to satisfy', expected);
+    });
+  });
 });

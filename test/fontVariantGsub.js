@@ -1,7 +1,7 @@
 const assert = require('assert');
 const pathModule = require('path');
 const parse5 = require('parse5');
-const subsetFonts = require('../lib/subsetFonts');
+const { subsetFontsWithTestDefaults } = require('./subsetFonts-helpers');
 const AssetGraph = require('assetgraph');
 const extractVisibleText = require('../lib/extractVisibleText');
 const fontverter = require('fontverter');
@@ -65,7 +65,7 @@ describe('font-variant GSUB preservation', function () {
     assert(origAsset, 'Expected the test case to contain a .woff font');
     orig = await loadFont(origAsset.rawSrc);
 
-    await subsetFonts(assetGraph, { inlineCss: false });
+    await subsetFontsWithTestDefaults(assetGraph, { inlineCss: false });
 
     const subsetAsset = assetGraph
       .findAssets({ type: { $in: ['Woff', 'Woff2'] }, isLoaded: true })

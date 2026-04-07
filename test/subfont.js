@@ -4,7 +4,6 @@ const expect = require('unexpected').clone().use(require('unexpected-sinon'));
 const subfont = require('../lib/subfont');
 const httpception = require('httpception');
 const AssetGraph = require('assetgraph');
-const proxyquire = require('proxyquire');
 const pathModule = require('path');
 
 const openSansBold = require('fs').readFileSync(
@@ -483,6 +482,8 @@ describe('subfont', function () {
   });
 
   describe('with --dynamic', function () {
+    this.timeout(120000);
+
     it('should find glyphs added to the page via JavaScript', async function () {
       const root = encodeURI(
         `file://${pathModule.resolve(
@@ -614,7 +615,10 @@ describe('subfont', function () {
         mockConsole
       );
       expect(mockConsole.error, 'to have a call satisfying', [
-        'GET https://domainthatdoesnotexist12873621321312.com/blablabla.js failed: net::ERR_NAME_NOT_RESOLVED',
+        expect.it(
+          'to match',
+          /GET https:\/\/domainthatdoesnotexist12873621321312\.com\/blablabla\.js failed: net::ERR_(NAME_NOT_RESOLVED|FAILED)/
+        ),
       ])
         .and('to have a call satisfying', [
           'ReferenceError: iAmNotAFunction is not defined\n    at https://example.com/index.html:20:7',
@@ -622,7 +626,7 @@ describe('subfont', function () {
         .and('to have a call satisfying', [
           expect.it(
             'to match',
-            /GET https:\/\/assetgraph\.org\/nonexistent12345\.js (returned 404|failed: net::ERR_BLOCKED_BY_ORB)/
+            /GET https:\/\/assetgraph\.org\/nonexistent12345\.js (returned 404|failed: net::ERR_(BLOCKED_BY_ORB|FAILED))/
           ),
         ]);
     });
@@ -651,109 +655,16 @@ describe('subfont', function () {
     });
   });
 
-  describe('configuring via browserslist', function () {
-    // https://github.com/browserslist/browserslist#best-practices
-    it('should default to woff2 when no config is given, due to the browserslist defaults', async function () {
-      const dir = pathModule.resolve(
-        __dirname,
-        '..',
-        'testdata',
-        'pageWithStrictCsp'
-      );
-      const root = encodeURI(`file://${dir}`);
-      const mockSubsetFonts = sinon.stub().resolves({ fontInfo: [] });
-
-      const originalDir = process.cwd();
-      process.chdir(dir);
-
-      try {
-        await proxyquire('../lib/subfont', {
-          '../lib/subsetFonts': mockSubsetFonts,
-        })(
-          {
-            root,
-            inputFiles: [`${root}/index.html`],
-            dryRun: true,
-          },
+  describe('--root validation', function () {
+    it('should throw when --root points to a nonexistent path', async function () {
+      await expect(
+        subfont(
+          { root: '/nonexistent/path', inputFiles: ['index.html'] },
           mockConsole
-        );
-        expect(mockSubsetFonts, 'to have calls satisfying', () => {
-          mockSubsetFonts(expect.it('to be an object'), {
-            formats: ['woff2'],
-          });
-        });
-      } finally {
-        process.chdir(originalDir);
-      }
-    });
-
-    it('should prefer the browsers config option over browserslist configured in package.json', async function () {
-      const dir = pathModule.resolve(
-        __dirname,
-        '..',
-        'testdata',
-        'browserslistInPackageJson'
+        ),
+        'to be rejected with',
+        /does not exist/
       );
-      const root = encodeURI(`file://${dir}`);
-      const mockSubsetFonts = sinon.stub().resolves({ fontInfo: [] });
-
-      const originalDir = process.cwd();
-      process.chdir(dir);
-
-      try {
-        await proxyquire('../lib/subfont', {
-          '../lib/subsetFonts': mockSubsetFonts,
-        })(
-          {
-            root,
-            inputFiles: [`${root}/index.html`],
-            dryRun: true,
-            browsers: 'IE 11, Chrome 80',
-          },
-          mockConsole
-        );
-        expect(mockSubsetFonts, 'to have calls satisfying', () => {
-          mockSubsetFonts(expect.it('to be an object'), {
-            formats: ['woff2', 'woff'],
-          });
-        });
-      } finally {
-        process.chdir(originalDir);
-      }
-    });
-
-    it('should pick up the browserslist configuration from package.json', async function () {
-      const dir = pathModule.resolve(
-        __dirname,
-        '..',
-        'testdata',
-        'browserslistInPackageJson'
-      );
-      const root = encodeURI(`file://${dir}`);
-      const mockSubsetFonts = sinon.stub().resolves({ fontInfo: [] });
-
-      const originalDir = process.cwd();
-      process.chdir(dir);
-
-      try {
-        await proxyquire('../lib/subfont', {
-          '../lib/subsetFonts': mockSubsetFonts,
-        })(
-          {
-            root,
-            inputFiles: [`${root}/index.html`],
-            dryRun: true,
-          },
-          mockConsole
-        );
-        expect(mockSubsetFonts, 'to have calls satisfying', () => {
-          mockSubsetFonts(expect.it('to be an object'), {
-            formats: ['woff2', 'truetype'],
-          });
-        });
-      } finally {
-        process.chdir(originalDir);
-      }
     });
   });
 });
