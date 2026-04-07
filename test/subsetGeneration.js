@@ -1,6 +1,13 @@
 const expect = require('unexpected');
 const proxyquire = require('proxyquire').noCallThru();
-const { getSubsetPromiseId } = require('../lib/subsetGeneration');
+const fs = require('fs');
+const pathModule = require('path');
+const os = require('os');
+const {
+  getSubsetPromiseId,
+  _subsetCacheKey: subsetCacheKey,
+  _SubsetDiskCache: SubsetDiskCache,
+} = require('../lib/subsetGeneration');
 
 describe('subsetGeneration', function () {
   describe('getSubsetPromiseId', function () {
@@ -127,6 +134,87 @@ describe('subsetGeneration', function () {
       expect(fontUsage.smallestSubsetSize, 'to equal', 100);
       // Both formats should be present in subsets
       expect(fontUsage.subsets, 'to have keys', ['woff', 'woff2']);
+    });
+  });
+
+  describe('subsetCacheKey', function () {
+    it('should produce a deterministic hex string', function () {
+      const key = subsetCacheKey(
+        Buffer.from('font'),
+        'abc',
+        'woff2',
+        null,
+        null
+      );
+      expect(key, 'to be a string');
+      expect(key, 'to match', /^[0-9a-f]{64}$/);
+      expect(
+        key,
+        'to equal',
+        subsetCacheKey(Buffer.from('font'), 'abc', 'woff2', null, null)
+      );
+    });
+
+    it('should produce different keys for different inputs', function () {
+      const base = [Buffer.from('font'), 'abc', 'woff2', null, null];
+      const withAxes = [
+        Buffer.from('font'),
+        'abc',
+        'woff2',
+        { wght: 400 },
+        null,
+      ];
+      const withGlyphs = [Buffer.from('font'), 'abc', 'woff2', null, [1, 2]];
+      expect(
+        subsetCacheKey(...base),
+        'not to equal',
+        subsetCacheKey(...withAxes)
+      );
+      expect(
+        subsetCacheKey(...base),
+        'not to equal',
+        subsetCacheKey(...withGlyphs)
+      );
+    });
+  });
+
+  describe('SubsetDiskCache', function () {
+    let tmpDir;
+
+    beforeEach(function () {
+      tmpDir = fs.mkdtempSync(pathModule.join(os.tmpdir(), 'subfont-test-'));
+    });
+
+    afterEach(function () {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('should return undefined for a cache miss', function () {
+      const cache = new SubsetDiskCache(tmpDir);
+      expect(cache.get('nonexistent'), 'to be undefined');
+    });
+
+    it('should store and retrieve a buffer', function () {
+      const cache = new SubsetDiskCache(tmpDir);
+      const buf = Buffer.from('hello');
+      cache.set('mykey', buf);
+      const result = cache.get('mykey');
+      expect(result, 'to equal', buf);
+    });
+
+    it('should create the cache directory if it does not exist', function () {
+      const nested = pathModule.join(tmpDir, 'sub', 'dir');
+      const cache = new SubsetDiskCache(nested);
+      cache.set('key', Buffer.from('data'));
+      expect(fs.existsSync(nested), 'to be true');
+    });
+
+    it('should not throw on write errors', function () {
+      // Use a path that cannot be written (file as directory)
+      const filePath = pathModule.join(tmpDir, 'afile');
+      fs.writeFileSync(filePath, 'x');
+      const cache = new SubsetDiskCache(filePath);
+      expect(() => cache.set('key', Buffer.from('data')), 'not to throw');
     });
   });
 });

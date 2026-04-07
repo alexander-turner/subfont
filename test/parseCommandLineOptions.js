@@ -41,4 +41,26 @@ describe('parseCommandLineOptions', function () {
       formats: ['truetype', 'woff2'],
     });
   });
+
+  it('should parse --concurrency as a number', function () {
+    expect(parseCommandLineOptions(['--concurrency', '4']), 'to satisfy', {
+      concurrency: 4,
+    });
+  });
+
+  it('should parse --chrome-flags as a comma-separated array', function () {
+    expect(
+      parseCommandLineOptions(['--chrome-flags=--no-sandbox,--disable-gpu']),
+      'to satisfy',
+      { chromeFlags: ['--no-sandbox', '--disable-gpu'] }
+    );
+  });
+
+  it('should parse --cache with a path', function () {
+    expect(
+      parseCommandLineOptions(['--cache', '/tmp/my-cache']),
+      'to satisfy',
+      { cache: '/tmp/my-cache' }
+    );
+  });
 });
