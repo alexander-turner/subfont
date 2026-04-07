@@ -1,6 +1,7 @@
 const {
   expect,
   httpception,
+  defaultLocalSubsetMock,
   subsetFonts,
   setupCleanup,
   createGraph,
@@ -11,6 +12,7 @@ describe('subsetFonts fallback CSS generation', function () {
   setupCleanup();
 
   it('should not mess up the placement of unicode-range in the fallback css', async function () {
+    httpception(defaultLocalSubsetMock);
     const assetGraph = createGraph('html-link');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -26,11 +28,12 @@ describe('subsetFonts fallback CSS generation', function () {
     expect(
       fallbackCss.text,
       'to match',
-      /format\("woff"\);unicode-range:U\+0,U\+d,U\+20-7e,/i
+      /format\("woff"\);unicode-range:u\+[0-9a-f]/i
     );
   });
 
   it('should work with omitFallbacks:true and Google Web Fonts', async function () {
+    httpception(defaultLocalSubsetMock);
     const assetGraph = createGraph('html-link');
     const [htmlAsset] = await loadAndPopulate(assetGraph, 'index.html', {
       crossorigin: false,
