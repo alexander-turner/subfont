@@ -761,4 +761,17 @@ describe('subfont', function () {
       }
     });
   });
+
+  describe('--root validation', function () {
+    it('should throw when --root points to a nonexistent path', async function () {
+      await expect(
+        subfont(
+          { root: '/nonexistent/path', inputFiles: ['index.html'] },
+          mockConsole
+        ),
+        'to be rejected with',
+        /does not exist/
+      );
+    });
+  });
 });
