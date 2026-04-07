@@ -1,15 +1,46 @@
 const {
   expect,
+  httpception,
+  defaultLocalSubsetMock,
+  createGoogleFontMock,
   subsetFonts,
   setupCleanup,
   createGraph,
   loadAndPopulate,
 } = require('./subsetFonts-helpers');
 
+const multiFamilyMock = createGoogleFontMock(
+  'https://fonts.googleapis.com/css?family=Jim+Nightshade|Montserrat|Space+Mono',
+  [
+    {
+      family: 'Jim Nightshade',
+      weight: 400,
+      fontFile: 'JimNightshade-400.ttf',
+    },
+    { family: 'Montserrat', weight: 400, fontFile: 'Montserrat-400.ttf' },
+    { family: 'Space Mono', weight: 400, fontFile: 'SpaceMono-400.ttf' },
+  ]
+);
+
+const multiWeightMock = createGoogleFontMock(
+  'https://fonts.googleapis.com/css?family=Roboto:300i,400,500',
+  [
+    {
+      family: 'Roboto',
+      weight: 300,
+      style: 'italic',
+      fontFile: 'Roboto-300i.ttf',
+    },
+    { family: 'Roboto', weight: 400, fontFile: 'Roboto-400.ttf' },
+    { family: 'Roboto', weight: 500, fontFile: 'Roboto-500.ttf' },
+  ]
+);
+
 describe('subsetFonts CSS injection and rewriting', function () {
   setupCleanup();
 
   it('should handle HTML <link rel=stylesheet>', async function () {
+    httpception(defaultLocalSubsetMock);
     const assetGraph = createGraph('html-link');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -106,6 +137,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   it('should return relevant font subsetting information', async function () {
+    httpception(defaultLocalSubsetMock);
     const assetGraph = createGraph('html-link');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -164,6 +196,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
 
   describe('with `inlineCss: true`', function () {
     it('should inline the font Css and change outgoing relations to rootRelative', async function () {
+      httpception(defaultLocalSubsetMock);
       const assetGraph = createGraph('html-link');
       assetGraph.on('warn', (warn) =>
         expect(warn, 'to satisfy', /Cannot find module/)
@@ -256,6 +289,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   it('should handle CSS @import', async function () {
+    httpception(defaultLocalSubsetMock);
     const assetGraph = createGraph('css-import');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -351,6 +385,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   it('should add the __subset font name to the font shorthand property', async function () {
+    httpception(defaultLocalSubsetMock);
     const assetGraph = createGraph('font-shorthand');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -379,6 +414,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   it('should add the __subset font name to a custom property that contributes to the font-family property', async function () {
+    httpception(defaultLocalSubsetMock);
     const assetGraph = createGraph('font-shorthand-with-custom-property');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -621,6 +657,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       },
     ]) {
       it(description, async function () {
+        httpception(defaultLocalSubsetMock);
         const assetGraph = createGraph(testDir);
         await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
         await subsetFonts(assetGraph);
@@ -632,6 +669,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   it('should handle multiple font-families', async function () {
+    httpception(multiFamilyMock);
     const assetGraph = createGraph('multi-family');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -788,6 +826,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
   });
 
   it('should handle multiple font-weights and font-style', async function () {
+    httpception(multiWeightMock);
     const assetGraph = createGraph('multi-weight');
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /Cannot find module/)
@@ -940,6 +979,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
 
   describe('when running on multiple pages', function () {
     it('should share a common subset across pages', async function () {
+      httpception(defaultLocalSubsetMock);
       const assetGraph = createGraph('multi-page');
       assetGraph.on('warn', (warn) =>
         // FIXME: The mocked out woff and woff2 fonts from Google don't contain space.
@@ -1211,6 +1251,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       },
     ]) {
       it(description, async function () {
+        httpception(defaultLocalSubsetMock);
         const assetGraph = createGraph('html-link');
         assetGraph.on('warn', (warn) =>
           expect(warn, 'to satisfy', /Cannot find module/)
