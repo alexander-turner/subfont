@@ -1111,187 +1111,12 @@ describe('subsetFonts core subsetting logic', function () {
   });
 
   describe('with a variable font that has unused axis ranges', function () {
-    it('should emit an info event', async function () {
+    it('should automatically instance unused axes without crashing', async function () {
       const assetGraph = createGraph('variable-font-unused-axes');
       await loadAndPopulate(assetGraph);
-      const infoSpy = sinon.spy().named('info');
-      assetGraph.on('info', infoSpy);
 
+      // Instancing is always on -- unused axes get constrained automatically
       await subsetFonts(assetGraph);
-
-      expect(infoSpy, 'to have calls satisfying', function () {
-        infoSpy({
-          message: expect.it(
-            'to contain',
-            'RobotoFlex-VariableFont_GRAD,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf:\n  Unused axes: wght, wdth, GRAD, slnt, XOPQ, YOPQ, YTLC, YTUC, YTDE, YTFI\n  Underutilized axes:\n    YTAS: 649-750 used (649-854 available)'
-          ),
-        });
-      });
-    });
-
-    describe('for the wght axis', function () {
-      it('should emit an info event', async function () {
-        const assetGraph = createGraph('variable-font-unused-wght-axis');
-        await loadAndPopulate(assetGraph);
-        const infoSpy = sinon.spy().named('info');
-        assetGraph.on('info', infoSpy);
-
-        await subsetFonts(assetGraph);
-
-        expect(infoSpy, 'to have calls satisfying', function () {
-          infoSpy({
-            message: expect.it(
-              'to contain',
-              'Underutilized axes:\n    wght: 350-820 used (100-1000 available)'
-            ),
-          });
-        });
-      });
-    });
-
-    describe('for the wdth axis', function () {
-      it('should emit an info event', async function () {
-        const assetGraph = createGraph('variable-font-unused-wdth-axis');
-        await loadAndPopulate(assetGraph);
-        const infoSpy = sinon.spy().named('info');
-        assetGraph.on('info', infoSpy);
-
-        await subsetFonts(assetGraph);
-
-        expect(infoSpy, 'to have calls satisfying', function () {
-          infoSpy({
-            message: expect.it(
-              'to contain',
-              'wdth: 87.5-147 used (25-151 available)'
-            ),
-          });
-        });
-      });
-    });
-
-    describe('for the ital axis', function () {
-      for (const [axisDesc, htmlFile, expectedMessage, shouldBeCalled] of [
-        [
-          'when only font-style: normal is used',
-          'normal.html',
-          'Unused axes: ital',
-          true,
-        ],
-        [
-          'when only font-style: italic is used',
-          'italic.html',
-          'Underutilized axes:\n    ital: 1 used (0-1 available)',
-          true,
-        ],
-        [
-          'when both font-style: normal and font-style: italic are used',
-          'normal_and_italic.html',
-          null,
-          false,
-        ],
-      ]) {
-        describe(axisDesc, function () {
-          it(
-            shouldBeCalled
-              ? 'should emit an info event'
-              : 'should not emit an info event',
-            async function () {
-              const assetGraph = createGraph('variable-font-unused-ital-axis');
-              await loadAndPopulate(assetGraph, htmlFile);
-              const infoSpy = sinon.spy().named('info');
-              assetGraph.on('info', infoSpy);
-
-              await subsetFonts(assetGraph);
-
-              if (shouldBeCalled) {
-                expect(infoSpy, 'to have calls satisfying', function () {
-                  infoSpy({
-                    message: expect.it('to contain', expectedMessage),
-                  });
-                });
-              } else {
-                expect(infoSpy, 'was not called');
-              }
-            }
-          );
-        });
-      }
-    });
-
-    describe('for the slnt axis', function () {
-      for (const [axisDesc, htmlFile, expectedMessage] of [
-        [
-          'when only font-style: normal is used',
-          'normal.html',
-          'Unused axes: slnt, TRAK, wght',
-        ],
-        [
-          'when only font-style: oblique is used',
-          'oblique.html',
-          'Underutilized axes:\n    slnt: -14 used (-20-20 available)',
-        ],
-        [
-          'when both font-style: normal and font-style: oblique are used',
-          'normal_and_oblique.html',
-          'Underutilized axes:\n    slnt: -14-0 used (-20-20 available)',
-        ],
-      ]) {
-        describe(axisDesc, function () {
-          it('should emit an info event', async function () {
-            const assetGraph = createGraph('variable-font-unused-slnt-axis');
-            await loadAndPopulate(assetGraph, htmlFile);
-            const infoSpy = sinon.spy().named('info');
-            assetGraph.on('info', infoSpy);
-
-            await subsetFonts(assetGraph);
-
-            expect(infoSpy, 'to have calls satisfying', function () {
-              infoSpy({
-                message: expect.it('to contain', expectedMessage),
-              });
-            });
-          });
-        });
-      }
-    });
-
-    describe('being animated with a cubic-bezier timing function', function () {
-      for (const [desc, testDir, itDesc, assertion] of [
-        [
-          'that stays within bounds',
-          'variable-font-underutilized-axis-with-bezier',
-          'should inform about the axis being underutilized',
-          'to contain',
-        ],
-        [
-          'that goes out of bounds',
-          'variable-font-underutilized-axis-with-bezier-out-of-bounds',
-          'should not inform about the axis being underutilized',
-          'not to contain',
-        ],
-      ]) {
-        describe(desc, function () {
-          it(itDesc, async function () {
-            const assetGraph = createGraph(testDir);
-            await loadAndPopulate(assetGraph);
-            const infoSpy = sinon.spy().named('info');
-            assetGraph.on('info', infoSpy);
-
-            await subsetFonts(assetGraph);
-
-            expect(infoSpy, 'to have calls satisfying', function () {
-              infoSpy({
-                message: expect.it(
-                  assertion,
-                  assertion === 'to contain'
-                    ? 'Underutilized axes:\n    YTAS: 649-750 used (649-854 available)'
-                    : 'YTAS:'
-                ),
-              });
-            });
-          });
-        });
-      }
     });
   });
 
@@ -1319,7 +1144,7 @@ describe('subsetFonts core subsetting logic', function () {
             const infoSpy = sinon.spy().named('info');
             assetGraph.on('info', infoSpy);
 
-            await subsetFonts(assetGraph, { instance: true });
+            await subsetFonts(assetGraph);
 
             const subsetFontAssets = assetGraph.findAssets({ type: 'Woff2' });
             expect(subsetFontAssets, 'to have length', 1);

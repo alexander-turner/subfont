@@ -61,7 +61,6 @@ describe('variationAxes', function () {
         parseFontStretchRange
       );
       expect(result.seenAxisValuesByFontUrlAndAxisName.size, 'to equal', 0);
-      expect(result.outOfBoundsAxesByFontUrl.size, 'to equal', 0);
     });
 
     describe('font-style to ital/slnt axis mapping', function () {
@@ -174,29 +173,6 @@ describe('variationAxes', function () {
         }),
       ]);
       expect(getAxes(result).get('wght').has(600), 'to be true');
-    });
-
-    describe('out-of-bounds animation tracking', function () {
-      [true, false].forEach((hasOutOfBounds) => {
-        it(`should ${
-          hasOutOfBounds ? '' : 'not '
-        }track out-of-bounds axes when flag is ${hasOutOfBounds}`, function () {
-          const result = runUsage([
-            makeFontUsage({
-              fontVariationSettings: new Set(['"CUST" 100']),
-              hasOutOfBoundsAnimationTimingFunction: hasOutOfBounds,
-            }),
-          ]);
-          const outOfBounds = result.outOfBoundsAxesByFontUrl.get(
-            'https://example.com/font.woff2'
-          );
-          if (hasOutOfBounds) {
-            expect(outOfBounds.has('CUST'), 'to be true');
-          } else {
-            expect(outOfBounds, 'to be undefined');
-          }
-        });
-      });
     });
 
     it('should track multiple distinct fontUrls independently', function () {
