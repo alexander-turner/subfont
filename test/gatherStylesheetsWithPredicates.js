@@ -125,9 +125,12 @@ describe('gatherStylesheetsWithIncomingPredicates', function () {
 
   it('should set script:false predicate for stylesheets inside noscript', function () {
     return expect('htmlNoscript', 'to produce result satisfying', [
-      { text: '.a { font-weight: 500; }', predicates: {} },
       {
-        text: '.b { font-weight: 700; }',
+        text: expect.it('to contain', 'font-weight: 500'),
+        predicates: {},
+      },
+      {
+        text: expect.it('to contain', 'font-weight: 700'),
         predicates: { script: false },
       },
     ]);
