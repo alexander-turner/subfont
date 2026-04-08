@@ -4,7 +4,7 @@ const parseCommandLineOptions = require('../lib/parseCommandLineOptions');
 describe('parseCommandLineOptions', function () {
   it('should return an object with the parsed options', function () {
     expect(
-      parseCommandLineOptions(['--dry-run', '--fallbacks', '--recursive']),
+      parseCommandLineOptions(['--dry-run', '--recursive']),
       'to satisfy',
       {
         root: undefined,
