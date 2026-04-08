@@ -2,7 +2,7 @@
 
 ## 1.0.0 -- Hard fork from [Munter/subfont](https://github.com/Munter/subfont)
 
-Published as `@alexander-turner/subfont`. Based on Munter/subfont v7.2.3.
+Published as `@turntrout/subfont`. Based on Munter/subfont v7.2.3.
 
 ### Performance
 

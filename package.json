@@ -1,5 +1,5 @@
 {
-  "name": "@alexander-turner/subfont",
+  "name": "@turntrout/subfont",
   "version": "1.0.0",
   "description": "Automatically subset web fonts to only the characters used on your pages. Fork of Munter/subfont with modern defaults.",
   "packageManager": "pnpm@10.29.3",
