@@ -9,7 +9,7 @@ A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web f
 On [TurnTrout.com](https://github.com/alexander-turner/TurnTrout.com) (382 pages, 20+ font variants), switching to this fork cut font subsetting from **111 minutes to 28 minutes**:
 
 |                                                                                      | Version        | Duration |
-| ------------------------------------------------------------------------------------ | -------------- | -------- |
+| -----------------------------------------------------------------------------------: | :------------: | :------- |
 | [Before](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) | Munter/subfont | 111 min  |
 | [After](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824)  | This fork      | 28 min   |
 
@@ -46,7 +46,7 @@ subfont path/to/index.html -i --cache
 ## Options
 
 | Flag              | Default | Description                                                  |
-| ----------------- | ------- | ------------------------------------------------------------ |
+| ----------------: | :-----: | :----------------------------------------------------------- |
 | `-i, --in-place`  | off     | Modify files in-place                                        |
 | `-o, --output`    |         | Output directory                                             |
 | `-r, --recursive` | off     | Crawl linked pages                                           |
