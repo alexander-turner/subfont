@@ -60,6 +60,46 @@ describe('normalizeFontPropertyValue', function () {
     });
   });
 
+  describe('with undefined value', function () {
+    it('should return the initial value for the property', function () {
+      expect(
+        normalizeFontPropertyValue('font-style', undefined),
+        'to equal',
+        'normal'
+      );
+    });
+  });
+
+  describe('with font-family', function () {
+    it('should unquote a quoted font-family', function () {
+      expect(
+        normalizeFontPropertyValue('font-family', '"Helvetica Neue"'),
+        'to equal',
+        'Helvetica Neue'
+      );
+    });
+  });
+
+  describe('with font-style', function () {
+    it('should lowercase the value', function () {
+      expect(
+        normalizeFontPropertyValue('font-style', 'Italic'),
+        'to equal',
+        'italic'
+      );
+    });
+  });
+
+  describe('with src', function () {
+    it('should not lowercase src values', function () {
+      expect(
+        normalizeFontPropertyValue('src', 'url(MyFont.woff2)'),
+        'to equal',
+        'url(MyFont.woff2)'
+      );
+    });
+  });
+
   describe('with another property', function () {
     it('should return the value', function () {
       expect(

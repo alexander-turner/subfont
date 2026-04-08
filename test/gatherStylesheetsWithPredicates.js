@@ -123,6 +123,19 @@ describe('gatherStylesheetsWithIncomingPredicates', function () {
     ]);
   });
 
+  it('should set script:false predicate for stylesheets inside noscript', function () {
+    return expect('htmlNoscript', 'to produce result satisfying', [
+      {
+        text: expect.it('to contain', 'font-weight: 500'),
+        predicates: {},
+      },
+      {
+        text: expect.it('to contain', 'font-weight: 700'),
+        predicates: { script: false },
+      },
+    ]);
+  });
+
   it('should not break when there are unloaded Css assets', async function () {
     const warnSpy = sinon.spy().named('warn');
     const assetGraph = new AssetGraph({

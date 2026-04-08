@@ -267,6 +267,264 @@ describe('getCssRulesByProperty', function () {
     });
   });
 
+  describe('animation shorthand', function () {
+    it('should extract animation-name from animation shorthand', function () {
+      const result = getRules(
+        ['animation-name'],
+        'h1 { animation: 2s ease slidein; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'animation-name': [
+          {
+            selector: 'h1',
+            prop: 'animation-name',
+            value: 'slidein',
+          },
+        ],
+      });
+    });
+
+    it('should extract animation-timing-function from animation shorthand', function () {
+      const result = getRules(
+        ['animation-timing-function'],
+        'h1 { animation: 2s ease slidein; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'animation-timing-function': [
+          {
+            selector: 'h1',
+            prop: 'animation-timing-function',
+          },
+        ],
+      });
+    });
+  });
+
+  describe('transition shorthand', function () {
+    it('should extract transition-property from transition shorthand', function () {
+      const result = getRules(
+        ['transition-property'],
+        'h1 { transition: opacity 0.5s; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'transition-property': [
+          {
+            selector: 'h1',
+            prop: 'transition-property',
+            value: 'opacity',
+          },
+        ],
+      });
+    });
+
+    it('should extract transition-duration from transition shorthand', function () {
+      const result = getRules(
+        ['transition-duration'],
+        'h1 { transition: opacity 0.5s; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'transition-duration': [
+          {
+            selector: 'h1',
+            prop: 'transition-duration',
+            value: '0.5s',
+          },
+        ],
+      });
+    });
+
+    it('should handle multiple transitions separated by commas', function () {
+      const result = getRules(
+        ['transition-property', 'transition-duration'],
+        'h1 { transition: opacity 0.5s, color 1s; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'transition-property': [
+          {
+            value: 'opacity, color',
+          },
+        ],
+        'transition-duration': [
+          {
+            value: '0.5s, 1s',
+          },
+        ],
+      });
+    });
+  });
+
+  describe('list-style shorthand', function () {
+    it('should extract list-style-type keyword from list-style shorthand', function () {
+      const result = getRules(
+        ['list-style-type'],
+        'ul { list-style: square; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'list-style-type': [
+          {
+            selector: 'ul',
+            prop: 'list-style-type',
+            value: 'square',
+          },
+        ],
+      });
+    });
+
+    it('should extract quoted string from list-style shorthand', function () {
+      const result = getRules(
+        ['list-style-type'],
+        'ul { list-style: ">>"; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'list-style-type': [
+          {
+            value: '>>',
+          },
+        ],
+      });
+    });
+
+    it('should return nothing when list-style-type is not requested', function () {
+      const result = getRules(['color'], 'ul { list-style: square; }', []);
+
+      expect(result, 'to satisfy', {
+        color: [],
+      });
+    });
+  });
+
+  describe('@counter-style', function () {
+    it('should collect counter-style rules', function () {
+      const result = getRules(
+        ['color'],
+        '@counter-style thumbs { system: cyclic; symbols: "\\1F44D"; suffix: " "; } h1 { color: red; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        counterStyles: [
+          {
+            name: 'thumbs',
+            props: {
+              system: 'cyclic',
+              symbols: '"\\1F44D"',
+              suffix: '" "',
+            },
+          },
+        ],
+      });
+    });
+  });
+
+  describe('@keyframes', function () {
+    it('should collect keyframes rules and not recurse into them', function () {
+      const result = getRules(
+        ['color'],
+        '@keyframes slidein { from { color: red; } to { color: blue; } } h1 { color: green; }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        keyframes: [
+          {
+            name: 'slidein',
+          },
+        ],
+        color: [
+          {
+            selector: 'h1',
+            value: 'green',
+          },
+        ],
+      });
+      // color declarations inside @keyframes should NOT appear in rulesByProperty
+      expect(result.color, 'to have length', 1);
+    });
+  });
+
+  describe('@media and @supports predicates', function () {
+    it('should propagate @media predicates to contained rules', function () {
+      const result = getRules(
+        ['color'],
+        '@media (min-width: 768px) { h1 { color: red; } }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        color: [
+          {
+            selector: 'h1',
+            value: 'red',
+            predicates: { 'mediaQuery:(min-width: 768px)': true },
+          },
+        ],
+      });
+    });
+
+    it('should propagate @supports predicates to contained rules', function () {
+      const result = getRules(
+        ['color'],
+        '@supports (display: grid) { h1 { color: red; } }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        color: [
+          {
+            selector: 'h1',
+            value: 'red',
+            predicates: { 'supportsQuery:(display: grid)': true },
+          },
+        ],
+      });
+    });
+
+    it('should merge existing predicates with at-rule predicates', function () {
+      const result = getRules(
+        ['color'],
+        '@media print { h1 { color: black; } }',
+        { 'mediaQuery:screen': true }
+      );
+
+      expect(result, 'to satisfy', {
+        color: [
+          {
+            predicates: {
+              'mediaQuery:screen': true,
+              'mediaQuery:print': true,
+            },
+          },
+        ],
+      });
+    });
+  });
+
+  describe('unwrapNamespace error', function () {
+    it('should throw for namespace that is not a string or url()', function () {
+      expect(
+        function () {
+          getRules(['color'], '@namespace foo; h1 { color: red; }', []);
+        },
+        'to throw',
+        /Cannot parse CSS namespace/
+      );
+    });
+  });
+
   describe('with a different default namespace', function () {
     describe('given as a quoted string', function () {
       it('should annotate the style rules with the default namespace', function () {
