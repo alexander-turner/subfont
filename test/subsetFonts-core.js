@@ -16,6 +16,33 @@ const {
 describe('subsetFonts core subsetting logic', function () {
   setupCleanup();
 
+  it('should produce woff2-only subsets with no fallbacks using default options', async function () {
+    httpception();
+    const assetGraph = createGraph('local-single');
+    await loadAndPopulate(assetGraph);
+
+    // Exercise the new CLI defaults: woff2-only, no fallbacks
+    const { fontInfo } = await subsetFonts(assetGraph, {
+      omitFallbacks: true,
+    });
+
+    expect(fontInfo, 'to have length', 1);
+    expect(fontInfo[0].fontUsages[0].smallestSubsetFormat, 'to equal', 'woff2');
+
+    // No fallback JS/noscript injected (default: omitFallbacks=true)
+    const html = assetGraph.findAssets({ type: 'Html' })[0];
+    expect(
+      html.outgoingRelations.filter(
+        (r) => r.type === 'HtmlScript' && r.to.isInline
+      ),
+      'to be empty'
+    );
+    expect(
+      html.outgoingRelations.filter((r) => r.type === 'HtmlNoscript'),
+      'to be empty'
+    );
+  });
+
   it('should handle multiple @font-face declarations with the same family/weight/style/stretch but different unicode-range', async function () {
     httpception();
 
