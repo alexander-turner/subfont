@@ -2,9 +2,7 @@
 
 [![Build Status](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml)
 
-Automatically subset web fonts to only the characters actually used on your pages. Reduces font payloads and time to first meaningful paint.
-
-> Hard fork of [Munter/subfont](https://github.com/Munter/subfont). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web fonts to only the characters used on your pages. Adds parallel tracing, disk caching, woff2-only output, and always-on variable font instancing.
 
 ## Performance
 
