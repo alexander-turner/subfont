@@ -62,7 +62,17 @@ subfont path/to/index.html -i --cache
 | `--chrome-flags`  |         | Custom Chrome flags for `--dynamic`                          |
 | `--source-maps`   | off     | Preserve CSS source maps (slower)                            |
 
-Run `subfont --help` for the full list. You can also include extra characters per-font by adding `-subfont-text: '0123456789'` to any `@font-face` declaration.
+Run `subfont --help` for the full list.
+
+To include extra characters in a specific font's subset, add `-subfont-text` to its `@font-face`:
+
+```css
+@font-face {
+  font-family: Roboto;
+  src: url(roboto.woff2) format('woff2');
+  -subfont-text: '0123456789';
+}
+```
 
 ## Programmatic API
 
