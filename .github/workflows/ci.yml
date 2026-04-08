@@ -115,11 +115,11 @@ jobs:
           cache: pnpm
       - name: Pack and install as consumer
         run: |
-          pnpm pack
+          TARBALL=$(pnpm pack 2>/dev/null | tail -1)
           mkdir /tmp/test-install
           cd /tmp/test-install
           npm init -y
-          npm install $GITHUB_WORKSPACE/*.tgz
+          npm install "$GITHUB_WORKSPACE/$TARBALL"
 
   ci-gate:
     name: CI Gate
