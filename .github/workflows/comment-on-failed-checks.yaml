@@ -1,0 +1,5 @@
+# Disabled — this workflow was removed.
+# This file overrides any cached version so GitHub stops running it.
+name: Comment on Failed Checks
+on:
+  workflow_dispatch: {}
