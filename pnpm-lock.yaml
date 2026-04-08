@@ -22,9 +22,6 @@ importers:
       assetgraph:
         specifier: 7.13.0
         version: 7.13.0(@napi-rs/canvas@0.1.97)
-      browserslist:
-        specifier: ^4.13.0
-        version: 4.28.1
       css-font-parser:
         specifier: ^2.0.0
         version: 2.0.1

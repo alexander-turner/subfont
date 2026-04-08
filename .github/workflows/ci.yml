@@ -119,7 +119,7 @@ jobs:
           mkdir /tmp/test-install
           cd /tmp/test-install
           npm init -y
-          npm install $GITHUB_WORKSPACE/subfont-*.tgz
+          npm install $GITHUB_WORKSPACE/*.tgz
 
   ci-gate:
     name: CI Gate
