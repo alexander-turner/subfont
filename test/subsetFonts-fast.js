@@ -1,7 +1,7 @@
 const {
   expect,
   httpception,
-  subsetFonts,
+  subsetFontsWithTestDefaults,
   getFontInfo,
   setupCleanup,
   createGraph,
@@ -17,7 +17,7 @@ describe('subsetFonts fast-path (shared CSS optimization)', function () {
 
       const assetGraph = createGraph('multi-page-fast-shared-css');
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
 
       const fonts = assetGraph.findAssets({
         fileName: { $regex: /^IBM_Plex_Sans-400-/ },
@@ -39,7 +39,7 @@ describe('subsetFonts fast-path (shared CSS optimization)', function () {
 
       const assetGraph = createGraph('multi-page-fast-shared-css');
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
 
       const fonts = assetGraph.findAssets({
         fileName: { $regex: /^IBM_Plex_Sans-400-/ },
@@ -64,7 +64,7 @@ describe('subsetFonts fast-path (shared CSS optimization)', function () {
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
       // page2 has style="font-family: monospace" — should fall back to
       // full font-tracer instead of using fast path
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
 
       const fonts = assetGraph.findAssets({
         fileName: { $regex: /^IBM_Plex_Sans-400-/ },
@@ -91,7 +91,7 @@ describe('subsetFonts fast-path (shared CSS optimization)', function () {
       // producing unique stylesheet cache keys — no fast-path grouping occurs
       const assetGraph = createGraph('multi-page-multi-weight');
       await loadAndPopulate(assetGraph, 'page*.html', { crossorigin: false });
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
 
       const subset400 = assetGraph.findAssets({
         fileName: { $regex: /^Roboto-400-/ },

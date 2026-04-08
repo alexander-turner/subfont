@@ -148,6 +148,17 @@ async function loadAndPopulate(assetGraph, assets = 'index.html', opts = {}) {
   return loaded;
 }
 
+// Test-friendly wrapper: uses dual-format + fallbacks to match existing
+// test assertions. Tests that specifically test the new defaults should
+// call subsetFonts directly.
+function subsetFontsWithTestDefaults(assetGraph, options = {}) {
+  return subsetFonts(assetGraph, {
+    formats: ['woff2', 'woff'],
+    omitFallbacks: false,
+    ...options,
+  });
+}
+
 module.exports = {
   expect,
   AssetGraph,
@@ -157,6 +168,7 @@ module.exports = {
   sinon,
   fs,
   subsetFonts,
+  subsetFontsWithTestDefaults,
   getFontInfo,
   defaultLocalSubsetMock,
   createGoogleFontMock,

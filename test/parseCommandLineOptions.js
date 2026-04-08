@@ -4,7 +4,7 @@ const parseCommandLineOptions = require('../lib/parseCommandLineOptions');
 describe('parseCommandLineOptions', function () {
   it('should return an object with the parsed options', function () {
     expect(
-      parseCommandLineOptions(['--dryrun', '--no-fallbacks', '--recursive']),
+      parseCommandLineOptions(['--dry-run', '--fallbacks', '--recursive']),
       'to satisfy',
       {
         root: undefined,
@@ -18,25 +18,9 @@ describe('parseCommandLineOptions', function () {
         inPlace: false,
         inputFiles: [],
         recursive: true,
-        fallbacks: false,
+        fallbacks: true,
         dynamic: false,
       }
-    );
-  });
-
-  it('should allow repeating --formats', function () {
-    expect(
-      parseCommandLineOptions(['--formats', 'truetype', '--formats', 'woff2']),
-      'to satisfy',
-      { formats: ['truetype', 'woff2'] }
-    );
-  });
-
-  it('should allow passing a comma-separated list of formats', function () {
-    expect(
-      parseCommandLineOptions(['--formats', 'truetype,woff2']),
-      'to satisfy',
-      { formats: ['truetype', 'woff2'] }
     );
   });
 

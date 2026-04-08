@@ -4,6 +4,7 @@ const {
   defaultLocalSubsetMock,
   createGoogleFontMock,
   subsetFonts,
+  subsetFontsWithTestDefaults,
   setupCleanup,
   createGraph,
   loadAndPopulate,
@@ -46,7 +47,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
 
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
 
@@ -143,7 +144,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    const result = await subsetFonts(assetGraph);
+    const result = await subsetFontsWithTestDefaults(assetGraph);
 
     expect(result, 'to exhaustively satisfy', {
       fontInfo: [
@@ -174,7 +175,6 @@ describe('subsetFonts CSS injection and rewriting', function () {
               fontWeights: expect.it('to be a', Set),
               fontStretches: expect.it('to be a', Set),
               fontVariationSettings: expect.it('to be a', Set),
-              hasOutOfBoundsAnimationTimingFunction: false,
               codepoints: {
                 original: expect.it('to be an array'),
                 used: [72, 101, 108, 111, 32],
@@ -182,8 +182,8 @@ describe('subsetFonts CSS injection and rewriting', function () {
                 page: [72, 101, 108, 111, 32],
               },
               preload: true,
-              variationAxes: undefined,
-              fullyInstanced: false,
+              variationAxes: {},
+              fullyInstanced: true,
               numAxesPinned: 0,
               numAxesReduced: 0,
             },
@@ -202,7 +202,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
         expect(warn, 'to satisfy', /Cannot find module/)
       );
       await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-      await subsetFonts(assetGraph, {
+      await subsetFontsWithTestDefaults(assetGraph, {
         inlineCss: true,
       });
 
@@ -295,7 +295,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
 
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
 
@@ -392,7 +392,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
 
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
 
     expect(
       assetGraph.findAssets({ fileName: 'index.html' })[0].text,
@@ -430,7 +430,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       },
     });
 
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
 
     expect(
       assetGraph.findAssets({ fileName: 'index.html' })[0].text,
@@ -461,7 +461,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
     const assetGraph = createGraph('google-webfont-ref-in-javascript');
     assetGraph.on('warn', console.log);
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph, {
+    await subsetFontsWithTestDefaults(assetGraph, {
       inlineCss: true,
     });
   });
@@ -660,7 +660,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
         httpception(defaultLocalSubsetMock);
         const assetGraph = createGraph(testDir);
         await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-        await subsetFonts(assetGraph);
+        await subsetFontsWithTestDefaults(assetGraph);
 
         expect(assetGraph, 'to contain relation', 'CssImport');
         expect(assetGraph, 'to contain relations', 'HtmlStyle', htmlStyleCount);
@@ -675,7 +675,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
 
     const index = assetGraph.findAssets({ fileName: 'index.html' })[0];
@@ -832,7 +832,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       expect(warn, 'to satisfy', /Cannot find module/)
     );
     await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-    await subsetFonts(assetGraph);
+    await subsetFontsWithTestDefaults(assetGraph);
 
     expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
 
@@ -987,7 +987,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
         expect(warn, 'to satisfy', /Missing glyph|Cannot find module/)
       );
       await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
 
       expect(assetGraph, 'to contain asset', { fileName: 'index.html' });
       expect(assetGraph, 'to contain asset', { fileName: 'about.html' });
@@ -1125,7 +1125,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
         assetGraph,
         ['first.html', 'second.html']
       );
-      await subsetFonts(assetGraph);
+      await subsetFontsWithTestDefaults(assetGraph);
       expect(
         assetGraph.findRelations({
           from: firstHtmlAsset,
@@ -1176,7 +1176,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
           assetGraph,
           ['first.html', 'second.html']
         );
-        await subsetFonts(assetGraph);
+        await subsetFontsWithTestDefaults(assetGraph);
         const firstSubfontCss = assetGraph.findRelations({
           from: firstHtmlAsset,
           type: 'HtmlStyle',
@@ -1199,7 +1199,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
           assetGraph,
           ['first.html', 'second.html']
         );
-        await subsetFonts(assetGraph);
+        await subsetFontsWithTestDefaults(assetGraph);
         const firstSubfontCss = assetGraph.findRelations({
           from: firstHtmlAsset,
           type: 'HtmlStyle',
@@ -1262,7 +1262,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
           fontDisplayValue !== undefined
             ? { fontDisplay: fontDisplayValue }
             : undefined;
-        await subsetFonts(assetGraph, subsetFontsOptions);
+        await subsetFontsWithTestDefaults(assetGraph, subsetFontsOptions);
 
         const cssAsset = assetGraph.findAssets({
           type: 'Css',
