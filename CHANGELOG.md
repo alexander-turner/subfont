@@ -1,8 +1,8 @@
 # Changelog
 
-## 9.0.0 -- Hard fork from [Munter/subfont](https://github.com/Munter/subfont)
+## 8.0.0 -- Hard fork from [Munter/subfont](https://github.com/Munter/subfont)
 
-Hard fork of subfont v8.0.0 with modern defaults and new features. Published as `@alexander-turner/subfont`.
+Hard fork of subfont with modern defaults and new features. Published as `@alexander-turner/subfont`.
 
 ### Breaking changes
 
@@ -19,6 +19,15 @@ Hard fork of subfont v8.0.0 with modern defaults and new features. Published as 
 - **Timing summary** -- Every run prints a structured timing breakdown, useful for CI optimization.
 - **Better `--dry-run`** -- Shows a detailed preview of files, sizes, and CSS changes.
 - **Parallel font tracing** -- Worker pool traces fonts across pages concurrently. Pages sharing identical CSS reuse a single trace, re-extracting only the text.
+
+### Real-world performance
+
+On [TurnTrout.com](https://github.com/alexander-turner/TurnTrout.com) (382 pages), the font subsetting step dropped from ~107 minutes to ~30 minutes -- a 3.5x speedup:
+
+| Run | Version | Duration |
+| --- | --- | --- |
+| [Before](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) | Munter/subfont | 111 min |
+| [After](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824) | This fork | 28 min |
 
 ### Bug fixes
 

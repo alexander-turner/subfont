@@ -12,6 +12,17 @@ Automatically subset web fonts to only the characters used on your pages, then i
 - Adds preload hints and async-loads original fonts as fallback
 - Supports Google Fonts and self-hosted fonts
 
+## Performance
+
+On [TurnTrout.com](https://github.com/alexander-turner/TurnTrout.com) (382 pages, 20+ font variants), switching from upstream subfont to this fork cut the font subsetting step from **~107 minutes to ~30 minutes** -- a 3.5x speedup.
+
+| Run                                                                                  | Version        | Duration |
+| ------------------------------------------------------------------------------------ | -------------- | -------- |
+| [Before](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) | Munter/subfont | 111 min  |
+| [After](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824)  | This fork      | 28 min   |
+
+The gains come from parallel font tracing (worker pool), fast-path CSS caching (pages sharing identical stylesheets are traced once), and woff2-only output (half the subsetting work).
+
 ## Install
 
 ```
