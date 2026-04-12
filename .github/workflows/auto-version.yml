@@ -2,7 +2,7 @@ name: Auto Version Bump and Publish
 
 on:
   push:
-    branches: [master, main]
+    branches: [main, master]
 
 concurrency:
   group: version-and-publish

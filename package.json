@@ -18,6 +18,10 @@
     "subfont": "lib/cli.js"
   },
   "main": "lib/subfont.js",
+  "exports": {
+    ".": "./lib/subfont.js",
+    "./package.json": "./package.json"
+  },
   "files": [
     "lib",
     "*.md"
@@ -51,7 +55,7 @@
     "@gustavnikolaj/async-main-wrap": "^3.0.1",
     "@hookun/parse-animation-shorthand": "^0.1.5",
     "@puppeteer/browsers": "^2.0.0",
-    "assetgraph": "7.13.0",
+    "assetgraph": "^7.13.0",
     "css-font-parser": "^2.0.0",
     "css-font-weight-names": "^0.2.1",
     "css-list-helpers": "^2.0.0",
@@ -59,7 +63,7 @@
     "font-tracer": "^3.7.0",
     "fontverter": "^2.0.0",
     "harfbuzzjs": "^0.5.0",
-    "jsdom": "^16.5.3",
+    "jsdom": "^25.0.0",
     "lines-and-columns": "^1.1.6",
     "memoizesync": "^1.1.1",
     "p-limit": "^3.0.0",
@@ -69,7 +73,7 @@
     "pretty-bytes": "^5.1.0",
     "puppeteer-core": "^24.39.1",
     "specificity": "^0.4.1",
-    "subset-font": "~2.3.0",
+    "subset-font": "^2.3.0",
     "urltools": "^0.4.1",
     "yargs": "^17.7.2"
   },
