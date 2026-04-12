@@ -155,30 +155,31 @@ describe('subsetGeneration', function () {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it('should return undefined for a cache miss', function () {
-      expect(new SubsetDiskCache(tmpDir).get('nonexistent'), 'to be undefined');
+    it('should return undefined for a cache miss', async function () {
+      expect(
+        await new SubsetDiskCache(tmpDir).get('nonexistent'),
+        'to be undefined'
+      );
     });
 
-    it('should round-trip a buffer through set/get', function () {
+    it('should round-trip a buffer through set/get', async function () {
       const cache = new SubsetDiskCache(tmpDir);
       const buf = Buffer.from('hello');
-      cache.set('mykey', buf);
-      expect(cache.get('mykey'), 'to equal', buf);
+      await cache.set('mykey', buf);
+      expect(await cache.get('mykey'), 'to equal', buf);
     });
 
-    it('should create nested cache directories on first write', function () {
+    it('should create nested cache directories on first write', async function () {
       const nested = pathModule.join(tmpDir, 'sub', 'dir');
-      new SubsetDiskCache(nested).set('key', Buffer.from('data'));
+      await new SubsetDiskCache(nested).set('key', Buffer.from('data'));
       expect(fs.existsSync(nested), 'to be true');
     });
 
-    it('should not throw on write errors', function () {
+    it('should not reject on write errors', async function () {
       const filePath = pathModule.join(tmpDir, 'afile');
       fs.writeFileSync(filePath, 'x');
-      expect(
-        () => new SubsetDiskCache(filePath).set('key', Buffer.from('data')),
-        'not to throw'
-      );
+      // set() should resolve without throwing even when the path is invalid
+      await new SubsetDiskCache(filePath).set('key', Buffer.from('data'));
     });
   });
 });

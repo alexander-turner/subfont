@@ -41,7 +41,7 @@ describe('subsetFonts preload/prefetch handling', function () {
     expect(infos, 'to satisfy', [
       {
         message:
-          'Detached <link rel="prefetch" as="font" type="application/x-font-ttf" href="OpenSans.ttf">. Will be replaced with preload with JS fallback.\nIf you feel this is wrong, open an issue at https://github.com/Munter/subfont/issues',
+          'Detached <link rel="prefetch" as="font" type="application/x-font-ttf" href="OpenSans.ttf">. Will be replaced with preload with JS fallback.\nIf you feel this is wrong, open an issue at https://github.com/alexander-turner/subfont/issues',
         asset: {
           type: 'Html',
         },
