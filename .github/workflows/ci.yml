@@ -112,7 +112,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: pnpm
       - name: Pack and install as consumer
         run: |
           TARBALL=$(pnpm pack 2>/dev/null | tail -1)
