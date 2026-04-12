@@ -46,7 +46,7 @@ describe('injectSubsetDefinitions', function () {
     );
   });
 
-  it('should ignore occurrences that are immediately preceeded by other barewords', function () {
+  it('should ignore occurrences that are immediately preceded by other barewords', function () {
     expect(
       injectSubsetDefinitions('sorry times new roman, other', webfontNameMap),
       'to equal',
