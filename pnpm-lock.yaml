@@ -80,8 +80,8 @@ importers:
         specifier: ^0.4.1
         version: 0.4.2
       yargs:
-        specifier: ^15.4.0
-        version: 15.4.1
+        specifier: ^17.7.2
+        version: 17.7.2
     devDependencies:
       canvas:
         specifier: npm:@napi-rs/canvas@^0.1.97

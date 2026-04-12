@@ -71,7 +71,7 @@
     "specificity": "^0.4.1",
     "subset-font": "~2.3.0",
     "urltools": "^0.4.1",
-    "yargs": "^15.4.0"
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "canvas": "npm:@napi-rs/canvas@^0.1.97",
@@ -81,12 +81,12 @@
     "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.0.0",
     "eslint-plugin-mocha": "^10.0.0",
-    "neostandard": "^0.12.0",
     "html-generators": "^1.0.3",
     "httpception": "^3.0.0",
     "husky": "^9.1.7",
     "magicpen-prism": "^3.0.2",
     "mocha": "^11.0.0",
+    "neostandard": "^0.12.0",
     "nyc": "^15.1.0",
     "offline-github-changelog": "^1.6.1",
     "prettier": "^3.0.0",
