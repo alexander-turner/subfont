@@ -51,9 +51,67 @@ describe('normalizeFontPropertyValue', function () {
       );
     });
 
-    it('should strip extra characters', function () {
+    it('should resolve bold+lighter+bolder to 700 via CSS spec relative weights', function () {
+      // bold=700 → lighter(700)=400 → bolder(400)=700
       expect(
         normalizeFontPropertyValue('font-weight', 'bold+lighter+bolder'),
+        'to equal',
+        700
+      );
+    });
+
+    it('should resolve bolder from a light weight (< 350) to 400', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', '100+bolder'),
+        'to equal',
+        400
+      );
+    });
+
+    it('should resolve bolder from a medium weight (350-549) to 700', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', '400+bolder'),
+        'to equal',
+        700
+      );
+    });
+
+    it('should resolve bolder from a heavy weight (>= 550) to 900', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', '600+bolder'),
+        'to equal',
+        900
+      );
+    });
+
+    it('should resolve lighter from a heavy weight (>= 750) to 700', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', '900+lighter'),
+        'to equal',
+        700
+      );
+    });
+
+    it('should resolve lighter from a semi-heavy weight (550-749) to 400', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', '600+lighter'),
+        'to equal',
+        400
+      );
+    });
+
+    it('should resolve lighter from a normal weight (100-549) to 100', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', '400+lighter'),
+        'to equal',
+        100
+      );
+    });
+
+    it('should chain multiple bolder modifiers', function () {
+      // 100 → bolder → 400 → bolder → 700
+      expect(
+        normalizeFontPropertyValue('font-weight', '100+bolder+bolder'),
         'to equal',
         700
       );
