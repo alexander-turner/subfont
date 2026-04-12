@@ -40,12 +40,12 @@ importers:
       fontverter:
         specifier: ^2.0.0
         version: 2.0.0
-      gettemporaryfilepath:
-        specifier: ^1.0.1
-        version: 1.0.1
       harfbuzzjs:
         specifier: ^0.5.0
         version: 0.5.0
+      jsdom:
+        specifier: ^16.5.3
+        version: 16.7.0(@napi-rs/canvas@0.1.97)
       lines-and-columns:
         specifier: ^1.1.6
         version: 1.2.4
@@ -80,8 +80,8 @@ importers:
         specifier: ^0.4.1
         version: 0.4.2
       yargs:
-        specifier: ^15.4.0
-        version: 15.4.1
+        specifier: ^17.7.2
+        version: 17.7.2
     devDependencies:
       canvas:
         specifier: npm:@napi-rs/canvas@^0.1.97
