@@ -585,5 +585,108 @@ describe('getCssRulesByProperty', function () {
         });
       });
     });
+
+    describe('given as a single-quoted string', function () {
+      it('should annotate the style rules with the default namespace', function () {
+        const result = getRules(
+          ['font-size'],
+          "@namespace 'bar'; h1 { font-size: 10px }",
+          []
+        );
+
+        expect(result, 'to satisfy', {
+          'font-size': [
+            {
+              namespaceURI: 'bar',
+            },
+          ],
+        });
+      });
+    });
+  });
+
+  describe('with a prefixed namespace', function () {
+    it('should resolve namespace URI for selectors with a prefix', function () {
+      const result = getRules(
+        ['font-family'],
+        '@namespace svg "http://www.w3.org/2000/svg"; svg|text { font-family: serif }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        'font-family': [
+          {
+            selector: 'svg|text',
+            namespaceURI: 'http://www.w3.org/2000/svg',
+            value: 'serif',
+          },
+        ],
+      });
+    });
+
+    it('should use the default namespace for selectors without a prefix', function () {
+      const result = getRules(
+        ['color'],
+        '@namespace "http://www.w3.org/1999/xhtml"; @namespace svg "http://www.w3.org/2000/svg"; h1 { color: red }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        color: [
+          {
+            selector: 'h1',
+            namespaceURI: 'http://www.w3.org/1999/xhtml',
+          },
+        ],
+      });
+    });
+
+    it('should return undefined namespace for *| wildcard prefix', function () {
+      const result = getRules(
+        ['color'],
+        '@namespace svg "http://www.w3.org/2000/svg"; *|div { color: red }',
+        []
+      );
+
+      expect(result, 'to satisfy', {
+        color: [
+          {
+            namespaceURI: undefined,
+          },
+        ],
+      });
+    });
+  });
+
+  describe('deduplication', function () {
+    it('should remove fully duplicate rules', function () {
+      const result = getRules(
+        ['color'],
+        'h1 { color: red; } h1 { color: red; }',
+        []
+      );
+
+      expect(result.color, 'to have length', 1);
+    });
+
+    it('should keep rules with different values', function () {
+      const result = getRules(
+        ['color'],
+        'h1 { color: red; } h1 { color: blue; }',
+        []
+      );
+
+      expect(result.color, 'to have length', 2);
+    });
+
+    it('should keep rules with different selectors', function () {
+      const result = getRules(
+        ['color'],
+        'h1 { color: red; } h2 { color: red; }',
+        []
+      );
+
+      expect(result.color, 'to have length', 2);
+    });
   });
 });
