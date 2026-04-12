@@ -18,7 +18,6 @@ describe('warnAboutMissingGlyphs', function () {
   function makeInput({
     text = 'ABC',
     sourceText = '<p>ABC</p>',
-    subsetCharCodes = [0x41, 0x42, 0x43], // A, B, C
     fontFamily = 'TestFont',
     fontWeight = '400',
     fontStyle = 'normal',
@@ -26,10 +25,8 @@ describe('warnAboutMissingGlyphs', function () {
   } = {}) {
     const subsetBuffer = Buffer.from('fake-subset');
     const fontFaceNode = {
-      some: (predicate) =>
-        [{ prop: 'unicode-range' }].some(
-          (n) => !subsetCharCodes && predicate(n)
-        ),
+      // Simulate a PostCSS node with no existing unicode-range declaration
+      some: () => false,
       append: sinon.stub(),
     };
     const cssAsset = { markDirty: sinon.stub() };
