@@ -70,7 +70,12 @@ describe('fontFaceHelpers', function () {
       {
         input: '-valid',
         expected: '-valid',
-        desc: 'value starting with hyphen',
+        desc: 'value starting with hyphen followed by letter',
+      },
+      {
+        input: '-',
+        expected: "'-'",
+        desc: 'bare hyphen (not a valid CSS identifier)',
       },
     ].forEach(({ input, expected, desc }) => {
       it(`should handle ${desc}: ${JSON.stringify(input)}`, function () {
@@ -126,6 +131,14 @@ describe('fontFaceHelpers', function () {
           { to: { url: 'font.woff2', type: 'Woff2' } },
         ],
         expected: 'font.woff2',
+      },
+      {
+        desc: 'explicit format over type-only even when type ranks higher',
+        relations: [
+          { to: { url: 'font.woff2', type: 'Woff2' } },
+          { format: 'truetype', to: { url: 'font.ttf', type: 'Ttf' } },
+        ],
+        expected: 'font.ttf',
       },
       {
         desc: 'case-insensitive format matching',
