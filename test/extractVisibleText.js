@@ -111,7 +111,9 @@ describe('extractVisibleText', function () {
       </body>
       </html>
     `);
-    expect(result, 'to contain', 'Page Title');
+    // <title> is inside <head>, which is not visible page content
+    // (browser tab titles use system fonts, not web fonts)
+    expect(result, 'not to contain', 'Page Title');
     expect(result, 'to contain', 'Main Heading');
     expect(result, 'to contain', 'Paragraph with');
     expect(result, 'to contain', 'bold');
@@ -156,6 +158,45 @@ describe('extractVisibleText', function () {
   it('should handle unquoted attributes', function () {
     const result = extractVisibleText('<img alt=hello>');
     expect(result, 'to contain', 'hello');
+  });
+
+  it('should strip noscript elements and their contents', function () {
+    const result = extractVisibleText(
+      '<p>visible</p><noscript><p>fallback content</p></noscript>'
+    );
+    expect(result, 'to contain', 'visible');
+    expect(result, 'not to contain', 'fallback content');
+  });
+
+  it('should strip iframe elements and their contents', function () {
+    const result = extractVisibleText(
+      '<p>visible</p><iframe>iframe fallback</iframe>'
+    );
+    expect(result, 'to contain', 'visible');
+    expect(result, 'not to contain', 'iframe fallback');
+  });
+
+  it('should strip object elements and their contents', function () {
+    const result = extractVisibleText(
+      '<p>visible</p><object>object fallback</object>'
+    );
+    expect(result, 'to contain', 'visible');
+    expect(result, 'not to contain', 'object fallback');
+  });
+
+  it('should strip embed elements', function () {
+    const result = extractVisibleText(
+      '<p>visible</p><embed type="text/plain">'
+    );
+    expect(result, 'to contain', 'visible');
+  });
+
+  it('should strip head elements and their contents', function () {
+    const result = extractVisibleText(
+      '<html><head><title>Title</title><meta name="desc" content="hi"></head><body><p>visible</p></body></html>'
+    );
+    expect(result, 'to contain', 'visible');
+    expect(result, 'not to contain', 'Title');
   });
 
   it('should not extract data- attributes that look like extractable attrs', function () {

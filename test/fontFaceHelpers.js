@@ -57,6 +57,21 @@ describe('fontFaceHelpers', function () {
         desc: 'value with special char',
       },
       { input: "it's", expected: "'it\\'s'", desc: 'value with single quote' },
+      {
+        input: '123abc',
+        expected: "'123abc'",
+        desc: 'value starting with digit (not a valid CSS identifier)',
+      },
+      {
+        input: '_valid',
+        expected: '_valid',
+        desc: 'value starting with underscore',
+      },
+      {
+        input: '-valid',
+        expected: '-valid',
+        desc: 'value starting with hyphen',
+      },
     ].forEach(({ input, expected, desc }) => {
       it(`should handle ${desc}: ${JSON.stringify(input)}`, function () {
         expect(maybeCssQuote(input), 'to equal', expected);

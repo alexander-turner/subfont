@@ -667,4 +667,71 @@ describe('subfont', function () {
       );
     });
   });
+
+  describe('UsageError', function () {
+    it('should throw a UsageError (not SyntaxError) for missing options', async function () {
+      try {
+        await subfont({ inputFiles: [] }, mockConsole);
+        expect.fail('should have thrown');
+      } catch (err) {
+        expect(err.name, 'to equal', 'UsageError');
+        expect(err, 'not to be a', SyntaxError);
+      }
+    });
+
+    it('should export UsageError for library consumers', function () {
+      expect(subfont.UsageError, 'to be a', 'function');
+      const err = new subfont.UsageError('test');
+      expect(err.name, 'to equal', 'UsageError');
+      expect(err, 'to be an', Error);
+    });
+
+    it('should reject --concurrency with a negative value', async function () {
+      await expect(
+        subfont(
+          {
+            root: '/tmp',
+            inputFiles: ['index.html'],
+            concurrency: -1,
+            dryRun: true,
+          },
+          mockConsole
+        ),
+        'to be rejected with',
+        /--concurrency must be a positive integer/
+      );
+    });
+
+    it('should reject --concurrency with zero', async function () {
+      await expect(
+        subfont(
+          {
+            root: '/tmp',
+            inputFiles: ['index.html'],
+            concurrency: 0,
+            dryRun: true,
+          },
+          mockConsole
+        ),
+        'to be rejected with',
+        /--concurrency must be a positive integer/
+      );
+    });
+
+    it('should reject --concurrency with a non-integer', async function () {
+      await expect(
+        subfont(
+          {
+            root: '/tmp',
+            inputFiles: ['index.html'],
+            concurrency: 2.5,
+            dryRun: true,
+          },
+          mockConsole
+        ),
+        'to be rejected with',
+        /--concurrency must be a positive integer/
+      );
+    });
+  });
 });
