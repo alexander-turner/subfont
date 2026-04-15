@@ -8,12 +8,19 @@ const ttfPath = pathModule.resolve(
   '../testdata/subsetFonts/Roboto-400.ttf'
 );
 
+const variableFontPath = pathModule.resolve(
+  __dirname,
+  '../testdata/subsetFonts/variable-font-unused-axes/RobotoFlex-VariableFont_GRAD,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf'
+);
+
 describe('subsetFontWithGlyphs', function () {
   this.timeout(30000);
 
   let ttfBuffer;
+  let variableFontBuffer;
   before(function () {
     ttfBuffer = fs.readFileSync(ttfPath);
+    variableFontBuffer = fs.readFileSync(variableFontPath);
   });
 
   it('should produce a smaller woff2 subset for a few characters', async function () {
@@ -79,6 +86,62 @@ describe('subsetFontWithGlyphs', function () {
 
     expect(result, 'to be a', Buffer);
     expect(result.length, 'to be greater than', 0);
+  });
+
+  it('should pin a variation axis to a specific value', async function () {
+    const result = await subsetFontWithGlyphs(variableFontBuffer, 'Hello', {
+      targetFormat: 'woff2',
+      variationAxes: { wght: 400 },
+    });
+
+    expect(result, 'to be a', Buffer);
+    expect(result.length, 'to be greater than', 0);
+    expect(result.length, 'to be less than', variableFontBuffer.length);
+  });
+
+  it('should set a variation axis range', async function () {
+    const result = await subsetFontWithGlyphs(variableFontBuffer, 'Hello', {
+      targetFormat: 'woff2',
+      variationAxes: { wght: { min: 100, max: 700 } },
+    });
+
+    expect(result, 'to be a', Buffer);
+    expect(result.length, 'to be greater than', 0);
+  });
+
+  it('should handle mixed pinned and ranged variation axes', async function () {
+    const result = await subsetFontWithGlyphs(variableFontBuffer, 'Test', {
+      targetFormat: 'woff2',
+      variationAxes: {
+        wght: { min: 100, max: 400 },
+        wdth: 100,
+      },
+    });
+
+    expect(result, 'to be a', Buffer);
+    expect(result.length, 'to be greater than', 0);
+  });
+
+  it('should handle variation axis range with explicit default', async function () {
+    const result = await subsetFontWithGlyphs(variableFontBuffer, 'Hi', {
+      targetFormat: 'woff2',
+      variationAxes: { wght: { min: 100, max: 900, default: 400 } },
+    });
+
+    expect(result, 'to be a', Buffer);
+    expect(result.length, 'to be greater than', 0);
+  });
+
+  it('should throw when pinning an axis that does not exist in the font', async function () {
+    try {
+      await subsetFontWithGlyphs(ttfBuffer, 'A', {
+        targetFormat: 'woff2',
+        variationAxes: { ZZZZ: 100 },
+      });
+      expect.fail('Expected an error');
+    } catch (err) {
+      expect(err.message, 'to contain', 'Failed to pin axis ZZZZ');
+    }
   });
 
   it('should serialize concurrent calls (p-limit)', async function () {
