@@ -73,9 +73,6 @@ importers:
       specificity:
         specifier: ^0.4.1
         version: 0.4.1
-      subset-font:
-        specifier: ^2.3.0
-        version: 2.3.0
       urltools:
         specifier: ^0.4.1
         version: 0.4.2
@@ -3566,12 +3563,6 @@ packages:
     engines: { node: '>=6' }
     deprecated: this library is no longer supported
 
-  harfbuzzjs@0.3.6:
-    resolution:
-      {
-        integrity: sha512-dzf7y6NS8fiAIvPAL/VKwY8wx2HCzUB0vUfOo6h1J5UilFEEf7iYqFsvgwjHwvM3whbjfOMadNvQekU3KuRnWQ==,
-      }
-
   harfbuzzjs@0.5.0:
     resolution:
       {
@@ -6646,12 +6637,6 @@ packages:
     engines: { node: ^10 || ^12 || >=14.0 }
     peerDependencies:
       postcss: ^8.2.15
-
-  subset-font@2.3.0:
-    resolution:
-      {
-        integrity: sha512-RcB2cu/14zYxGceTnnptlc8uTuxMkVYdyu3Kj+CA1nye6bI1s1cSSp+ApzpkMzl8iAmEUt+zAE0VHvhVpTO/Ig==,
-      }
 
   supports-color@5.5.0:
     resolution:
@@ -10052,8 +10037,6 @@ snapshots:
       ajv: 6.14.0
       har-schema: 2.0.0
 
-  harfbuzzjs@0.3.6: {}
-
   harfbuzzjs@0.5.0: {}
 
   has-bigints@1.1.0: {}
@@ -12020,13 +12003,6 @@ snapshots:
       browserslist: 4.28.1
       postcss: 8.5.8
       postcss-selector-parser: 6.1.2
-
-  subset-font@2.3.0:
-    dependencies:
-      fontverter: 2.0.0
-      harfbuzzjs: 0.3.6
-      lodash: 4.17.23
-      p-limit: 3.1.0
 
   supports-color@5.5.0:
     dependencies:
