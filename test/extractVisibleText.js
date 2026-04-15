@@ -199,6 +199,14 @@ describe('extractVisibleText', function () {
     expect(result, 'not to contain', 'Title');
   });
 
+  it('should strip datalist elements and their contents', function () {
+    const result = extractVisibleText(
+      '<p>visible</p><datalist id="options"><option value="hidden option"></datalist>'
+    );
+    expect(result, 'to contain', 'visible');
+    expect(result, 'not to contain', 'hidden option');
+  });
+
   it('should not extract data- attributes that look like extractable attrs', function () {
     // parse5 matches exact attribute names, so data-alt is correctly ignored.
     const result = extractVisibleText(

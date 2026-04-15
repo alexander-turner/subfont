@@ -273,6 +273,28 @@ describe('FontTracerPool', function () {
       expect(results, 'to have length', 5);
     });
 
+    it('should reject in-flight tasks when pool is destroyed while workers are busy', async function () {
+      pool = new FontTracerPool(1);
+      await pool.init();
+
+      // Submit tasks - first will be dispatched to the worker, rest queued
+      const promises = Array.from({ length: 3 }, (_, i) =>
+        settle(pool.trace(html(`In-flight ${i}`), []))
+      );
+
+      // Destroy while the first task is in-flight on the worker
+      await pool.destroy();
+      pool = null;
+
+      const results = await Promise.all(promises);
+      const rejected = results.filter((r) => r.status === 'rejected');
+      // All tasks should be rejected (both in-flight and queued)
+      expect(rejected.length, 'to be', 3);
+      for (const r of rejected) {
+        expect(r.message, 'to match', /Worker pool destroyed|Worker exited/);
+      }
+    });
+
     it('should reject task on postMessage failure and keep pool functional', async function () {
       pool = new FontTracerPool(1);
       await pool.init();

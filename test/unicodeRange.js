@@ -43,6 +43,13 @@ describe('unicode range', function () {
     expect(unicodeRange(unsorted), 'to equal', unicodeRange(sorted));
   });
 
+  it('should not mutate the input array', function () {
+    const input = [0x63, 0x61, 0x62];
+    const copy = [...input];
+    unicodeRange(input);
+    expect(input, 'to equal', copy);
+  });
+
   it('should produce a range for consecutive code points', function () {
     expect(unicodeRange([0x61, 0x62]), 'to equal', 'U+61-62');
   });
