@@ -160,5 +160,41 @@ describe('HeadlessBrowser', function () {
         'Chrome not found'
       );
     });
+
+    it('should allow close() without throwing when launch failed', async function () {
+      puppeteerStub.launch.rejects(new Error('Chrome not found'));
+
+      const hb = new HeadlessBrowser({ console: fakeConsole });
+      // Trigger the launch (and swallow the rejection so it's tracked)
+      try {
+        await hb._launchBrowserMemoized();
+      } catch {
+        // expected
+      }
+
+      // close() should not throw even though the launch promise rejected
+      await hb.close();
+      // browser.close() should NOT have been called since launch failed
+      expect(mockBrowser.close, 'was not called');
+    });
+
+    it('should clear the launch promise after a failed launch so retry works', async function () {
+      puppeteerStub.launch.rejects(new Error('Chrome not found'));
+
+      const hb = new HeadlessBrowser({ console: fakeConsole });
+      await expect(
+        hb._launchBrowserMemoized(),
+        'to be rejected with',
+        'Chrome not found'
+      );
+
+      // The cached promise should have been cleared on failure
+      expect(hb._launchPromise, 'to be undefined');
+
+      // A second call should attempt a fresh launch
+      puppeteerStub.launch.resolves(mockBrowser);
+      const browser = await hb._launchBrowserMemoized();
+      expect(browser, 'to be', mockBrowser);
+    });
   });
 });

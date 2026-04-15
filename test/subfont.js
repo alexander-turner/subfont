@@ -733,5 +733,21 @@ describe('subfont', function () {
         /--concurrency must be a positive integer/
       );
     });
+
+    it('should reject --concurrency above 64', async function () {
+      await expect(
+        subfont(
+          {
+            root: '/tmp',
+            inputFiles: ['index.html'],
+            concurrency: 100,
+            dryRun: true,
+          },
+          mockConsole
+        ),
+        'to be rejected with',
+        /--concurrency must not exceed 64/
+      );
+    });
   });
 });
