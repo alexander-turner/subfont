@@ -73,7 +73,6 @@
     "pretty-bytes": "^5.1.0",
     "puppeteer-core": "^24.39.1",
     "specificity": "^0.4.1",
-    "subset-font": "^2.3.0",
     "urltools": "^0.4.1",
     "yargs": "^17.7.2"
   },
