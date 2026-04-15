@@ -132,6 +132,18 @@ describe('subsetFontWithGlyphs', function () {
     expect(result.length, 'to be greater than', 0);
   });
 
+  it('should throw when pinning an axis that does not exist in the font', async function () {
+    try {
+      await subsetFontWithGlyphs(ttfBuffer, 'A', {
+        targetFormat: 'woff2',
+        variationAxes: { ZZZZ: 100 },
+      });
+      expect.fail('Expected an error');
+    } catch (err) {
+      expect(err.message, 'to contain', 'Failed to pin axis ZZZZ');
+    }
+  });
+
   it('should serialize concurrent calls (p-limit)', async function () {
     const results = await Promise.all([
       subsetFontWithGlyphs(ttfBuffer, 'A', { targetFormat: 'woff2' }),
