@@ -735,11 +735,8 @@ describe('subfont', function () {
     });
 
     it('should reject --concurrency above memory-based limit', async function () {
-      const os = require('os');
-      const maxConcurrency = Math.max(
-        1,
-        Math.floor(os.totalmem() / (50 * 1024 * 1024))
-      );
+      const { getMaxConcurrency } = require('../lib/concurrencyLimit');
+      const maxConcurrency = getMaxConcurrency();
       await expect(
         subfont(
           {
