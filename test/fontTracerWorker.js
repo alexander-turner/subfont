@@ -141,4 +141,80 @@ describe('fontTracerWorker', function () {
 
     await worker.terminate();
   });
+
+  it('should recover and process the next request after an error', async function () {
+    const worker = createWorker();
+    await sendAndAwait(worker, { type: 'init' });
+
+    // Send an invalid request that will trigger an error
+    const errResponse = await sendAndAwait(worker, {
+      type: 'trace',
+      taskId: 'err-1',
+      htmlText: null,
+      stylesheetsWithPredicates: null,
+    });
+    expect(errResponse.type, 'to equal', 'error');
+
+    // The worker should still be alive and functional (jsdom cleaned up properly)
+    const okResponse = await sendAndAwait(worker, {
+      type: 'trace',
+      taskId: 'ok-after-err',
+      htmlText: '<html><body><p>Still works</p></body></html>',
+      stylesheetsWithPredicates: [],
+    });
+    expect(okResponse.type, 'to equal', 'result');
+    expect(okResponse.taskId, 'to equal', 'ok-after-err');
+
+    await worker.terminate();
+  });
+
+  it('should recover after malformed CSS in a stylesheet', async function () {
+    const worker = createWorker();
+    await sendAndAwait(worker, { type: 'init' });
+
+    // PostCSS can parse broken CSS without throwing, but font-tracer
+    // may choke on the resulting tree. Either way the worker should
+    // return a result or error and remain functional.
+    const response = await sendAndAwait(worker, {
+      type: 'trace',
+      taskId: 'bad-css',
+      htmlText: '<html><body><p>Test</p></body></html>',
+      stylesheetsWithPredicates: [
+        { text: '@font-face { font-family: ; }}}', predicates: {} },
+      ],
+    });
+
+    expect(response.taskId, 'to equal', 'bad-css');
+    expect(response.type, 'to match', /^(result|error)$/);
+
+    // Worker should still be alive
+    const okResponse = await sendAndAwait(worker, {
+      type: 'trace',
+      taskId: 'after-bad-css',
+      htmlText: '<html><body><p>OK</p></body></html>',
+      stylesheetsWithPredicates: [],
+    });
+    expect(okResponse.type, 'to equal', 'result');
+
+    await worker.terminate();
+  });
+
+  it('should ignore unrecognized message types', async function () {
+    const worker = createWorker();
+    await sendAndAwait(worker, { type: 'init' });
+
+    // Send a message with unknown type — worker should not crash
+    worker.postMessage({ type: 'unknown', taskId: 'nope' });
+
+    // Verify the worker is still alive by sending a valid request
+    const response = await sendAndAwait(worker, {
+      type: 'trace',
+      taskId: 'after-unknown',
+      htmlText: '<html><body>alive</body></html>',
+      stylesheetsWithPredicates: [],
+    });
+    expect(response.type, 'to equal', 'result');
+
+    await worker.terminate();
+  });
 });

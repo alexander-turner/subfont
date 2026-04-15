@@ -36,20 +36,26 @@ subfont path/to/index.html -i --cache
 
 ## Options
 
-|              Flag | Default | Description                                                  |
-| ----------------: | :-----: | :----------------------------------------------------------- |
-|  `-i, --in-place` |   off   | Modify files in-place                                        |
-|    `-o, --output` |         | Output directory                                             |
-| `-r, --recursive` |   off   | Crawl linked pages                                           |
-|       `--dynamic` |   off   | Trace with headless browser                                  |
-|       `--dry-run` |   off   | Preview without writing                                      |
-|     `--fallbacks` |   on    | Load the full original font for characters not in the subset |
-|  `--font-display` | `swap`  | `auto`/`block`/`swap`/`fallback`/`optional`                  |
-|          `--text` |         | Extra characters for every subset                            |
-|   `--cache [dir]` |   off   | Cache subset results to disk between runs                    |
-| `--concurrency N` |         | Max worker threads for parallel font tracing                 |
-|  `--chrome-flags` |         | Custom Chrome flags for `--dynamic`                          |
-|   `--source-maps` |   off   | Preserve CSS source maps (slower)                            |
+|               Flag | Default | Description                                                  |
+| -----------------: | :-----: | :----------------------------------------------------------- |
+|   `-i, --in-place` |   off   | Modify files in-place                                        |
+|     `-o, --output` |         | Output directory                                             |
+|           `--root` |         | Path to web root (deduced from input files if not specified) |
+| `--canonical-root` |         | URI root where the site will be deployed                     |
+|  `-r, --recursive` |   off   | Crawl linked pages                                           |
+|        `--dynamic` |   off   | Trace with headless browser                                  |
+|        `--dry-run` |   off   | Preview without writing                                      |
+|      `--fallbacks` |   on    | Load the full original font for characters not in the subset |
+|   `--font-display` | `swap`  | `auto`/`block`/`swap`/`fallback`/`optional`                  |
+|           `--text` |         | Extra characters for every subset                            |
+|    `--cache [dir]` |   off   | Cache subset results to disk between runs                    |
+|  `--concurrency N` |         | Max worker threads (capped by available memory, ~50 MB each) |
+|   `--chrome-flags` |         | Custom Chrome flags for `--dynamic`                          |
+|    `--source-maps` |   off   | Preserve CSS source maps (slower)                            |
+|     `-s, --silent` |   off   | Suppress all console output                                  |
+|      `-d, --debug` |   off   | Verbose timing and font glyph detection info                 |
+|  `--relative-urls` |   off   | Emit relative URLs instead of root-relative                  |
+|     `--inline-css` |   off   | Inline the subset @font-face CSS into HTML                   |
 
 Run `subfont --help` for the full list.
 

@@ -733,5 +733,23 @@ describe('subfont', function () {
         /--concurrency must be a positive integer/
       );
     });
+
+    it('should reject --concurrency above memory-based limit', async function () {
+      const { getMaxConcurrency } = require('../lib/concurrencyLimit');
+      const maxConcurrency = getMaxConcurrency();
+      await expect(
+        subfont(
+          {
+            root: '/tmp',
+            inputFiles: ['index.html'],
+            concurrency: maxConcurrency + 1,
+            dryRun: true,
+          },
+          mockConsole
+        ),
+        'to be rejected with',
+        /--concurrency must not exceed/
+      );
+    });
   });
 });
