@@ -80,17 +80,16 @@ describe('subsetGeneration', function () {
       const largeBuffer = Buffer.alloc(500, 0x42);
 
       const { getSubsetsForFontUsage } = proxyquire('../lib/subsetGeneration', {
-        'subset-font': (_buffer, _text, opts) =>
+        './variationAxes': {
+          getVariationAxisBounds: () => Promise.resolve(null),
+        },
+        './collectFeatureGlyphIds': () => Promise.resolve([]),
+        './subsetFontWithGlyphs': (_buffer, _text, opts) =>
           opts.targetFormat === 'woff2'
             ? new Promise((resolve) =>
                 setTimeout(() => resolve(smallBuffer), 50)
               )
             : Promise.resolve(largeBuffer),
-        './variationAxes': {
-          getVariationAxisBounds: () => Promise.resolve(null),
-        },
-        './collectFeatureGlyphIds': () => Promise.resolve([]),
-        './subsetFontWithGlyphs': () => Promise.resolve(smallBuffer),
       });
 
       const fontUrl = 'https://example.com/test.ttf';

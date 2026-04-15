@@ -75,4 +75,16 @@ describe('collectFeatureGlyphIds', function () {
     const result = await createModule(mock)(Buffer.from('font'), 'ab');
     expect(result, 'to equal', [5]);
   });
+
+  it('should include ccmp, rlig, locl, and rclt tags for complex scripts', async function () {
+    for (const tag of ['ccmp', 'rlig', 'locl', 'rclt']) {
+      const mock = makeHarfbuzzMock({
+        gsubTags: [tag],
+        baseGlyphs: [{ g: 1 }],
+        featureGlyphsByCall: [[{ g: 1 }, { g: 10 }]],
+      });
+      const result = await createModule(mock)(Buffer.from('font'), 'a');
+      expect(result, 'not to be empty');
+    }
+  });
 });

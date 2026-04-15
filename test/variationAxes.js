@@ -287,5 +287,51 @@ describe('variationAxes', function () {
       expect(result.numAxesPinned, 'to be greater than or equal to', 1);
       expect(result.fullyInstanced, 'to be true');
     });
+
+    describe('opsz axis handling', function () {
+      const { getVariationAxisBounds: getVariationAxisBoundsWithOpsz } =
+        proxyquire('../lib/variationAxes', {
+          './getFontInfo': async function mockGetFontInfo() {
+            return {
+              variationAxes: {
+                wght: { min: 100, max: 900, default: 400 },
+                opsz: { min: 8, max: 144, default: 14 },
+              },
+            };
+          },
+        });
+
+      it('should pin opsz to default when no explicit values are seen', async function () {
+        const fontAssetsByUrl = new Map();
+        fontAssetsByUrl.set('font://test', { rawSrc: Buffer.from('mock') });
+
+        const result = await getVariationAxisBoundsWithOpsz(
+          fontAssetsByUrl,
+          'font://test',
+          makeSeenAxes([['wght', [400]]])
+        );
+
+        // opsz should be pinned to default (14), not preserved as full range
+        expect(result.variationAxes.opsz, 'to equal', 14);
+      });
+
+      it('should respect explicit opsz values from font-variation-settings', async function () {
+        const fontAssetsByUrl = new Map();
+        fontAssetsByUrl.set('font://test', { rawSrc: Buffer.from('mock') });
+
+        const result = await getVariationAxisBoundsWithOpsz(
+          fontAssetsByUrl,
+          'font://test',
+          makeSeenAxes([
+            ['wght', [400]],
+            ['opsz', [12, 48]],
+          ])
+        );
+
+        // opsz should be narrowed to the seen range
+        expect(result.variationAxes.opsz.min, 'to equal', 12);
+        expect(result.variationAxes.opsz.max, 'to equal', 48);
+      });
+    });
   });
 });
