@@ -1,5 +1,6 @@
 const expect = require('unexpected');
 const extractVisibleText = require('../lib/extractVisibleText');
+const { INVISIBLE_ELEMENTS } = require('../lib/extractVisibleText');
 
 describe('extractVisibleText', function () {
   it('should extract plain text content', function () {
@@ -7,38 +8,19 @@ describe('extractVisibleText', function () {
     expect(result, 'to contain', 'Hello, world!');
   });
 
-  it('should strip script elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><script>var x = "hidden";</script><p>also visible</p>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'to contain', 'also visible');
-    expect(result, 'not to contain', 'hidden');
-  });
-
-  it('should strip style elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><style>.foo { color: red; }</style>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'color');
-  });
-
-  it('should strip SVG elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><svg><text>svg text</text></svg>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'svg text');
-  });
-
-  it('should strip template elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><template><div>template content</div></template>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'template content');
-  });
+  // <head> is only valid as a child of <html> (parser ignores it in body),
+  // <embed> is a void element (cannot contain text children).
+  const SKIP_GENERIC_TEST = new Set(['head', 'embed']);
+  for (const element of INVISIBLE_ELEMENTS) {
+    if (SKIP_GENERIC_TEST.has(element)) continue;
+    it(`should strip <${element}> elements and their contents`, function () {
+      const result = extractVisibleText(
+        `<p>visible</p><${element}>hidden content</${element}>`
+      );
+      expect(result, 'to contain', 'visible');
+      expect(result, 'not to contain', 'hidden content');
+    });
+  }
 
   it('should decode HTML entities', function () {
     const result = extractVisibleText('<p>&amp; &lt; &gt; &quot; &apos;</p>');
@@ -158,53 +140,6 @@ describe('extractVisibleText', function () {
   it('should handle unquoted attributes', function () {
     const result = extractVisibleText('<img alt=hello>');
     expect(result, 'to contain', 'hello');
-  });
-
-  it('should strip noscript elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><noscript><p>fallback content</p></noscript>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'fallback content');
-  });
-
-  it('should strip iframe elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><iframe>iframe fallback</iframe>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'iframe fallback');
-  });
-
-  it('should strip object elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><object>object fallback</object>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'object fallback');
-  });
-
-  it('should strip embed elements', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><embed type="text/plain">'
-    );
-    expect(result, 'to contain', 'visible');
-  });
-
-  it('should strip head elements and their contents', function () {
-    const result = extractVisibleText(
-      '<html><head><title>Title</title><meta name="desc" content="hi"></head><body><p>visible</p></body></html>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'Title');
-  });
-
-  it('should strip datalist elements and their contents', function () {
-    const result = extractVisibleText(
-      '<p>visible</p><datalist id="options"><option value="hidden option"></datalist>'
-    );
-    expect(result, 'to contain', 'visible');
-    expect(result, 'not to contain', 'hidden option');
   });
 
   it('should not extract data- attributes that look like extractable attrs', function () {
