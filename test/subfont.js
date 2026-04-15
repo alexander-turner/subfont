@@ -734,19 +734,24 @@ describe('subfont', function () {
       );
     });
 
-    it('should reject --concurrency above 64', async function () {
+    it('should reject --concurrency above memory-based limit', async function () {
+      const os = require('os');
+      const maxConcurrency = Math.max(
+        1,
+        Math.floor(os.totalmem() / (50 * 1024 * 1024))
+      );
       await expect(
         subfont(
           {
             root: '/tmp',
             inputFiles: ['index.html'],
-            concurrency: 100,
+            concurrency: maxConcurrency + 1,
             dryRun: true,
           },
           mockConsole
         ),
         'to be rejected with',
-        /--concurrency must not exceed 64/
+        /--concurrency must not exceed/
       );
     });
   });

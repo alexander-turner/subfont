@@ -49,7 +49,7 @@ subfont path/to/index.html -i --cache
 |   `--font-display` | `swap`  | `auto`/`block`/`swap`/`fallback`/`optional`                  |
 |           `--text` |         | Extra characters for every subset                            |
 |    `--cache [dir]` |   off   | Cache subset results to disk between runs                    |
-|  `--concurrency N` |         | Max worker threads for parallel font tracing (1-64)          |
+|  `--concurrency N` |         | Max worker threads (capped by available memory, ~50 MB each) |
 |   `--chrome-flags` |         | Custom Chrome flags for `--dynamic`                          |
 |    `--source-maps` |   off   | Preserve CSS source maps (slower)                            |
 |     `-s, --silent` |   off   | Suppress all console output                                  |
