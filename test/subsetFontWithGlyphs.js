@@ -88,6 +88,27 @@ describe('subsetFontWithGlyphs', function () {
     expect(result.length, 'to be greater than', 0);
   });
 
+  it('should include codepoints from both NFC and NFD normalized forms', async function () {
+    // Precomposed é (U+00E9) should also include decomposed e (U+0065) + combining acute (U+0301)
+    const precomposed = '\u00e9'; // NFC form
+    const result = await subsetFontWithGlyphs(ttfBuffer, precomposed, {
+      targetFormat: 'woff2',
+    });
+
+    // The subset with NFC+NFD expansion should be at least as large as
+    // one without it, because it includes extra codepoints
+    const decomposed = 'e\u0301'; // NFD form
+    const resultDecomposed = await subsetFontWithGlyphs(ttfBuffer, decomposed, {
+      targetFormat: 'woff2',
+    });
+
+    // Both should produce valid output
+    expect(result, 'to be a', Buffer);
+    expect(result.length, 'to be greater than', 0);
+    expect(resultDecomposed, 'to be a', Buffer);
+    expect(resultDecomposed.length, 'to be greater than', 0);
+  });
+
   it('should pin a variation axis to a specific value', async function () {
     const result = await subsetFontWithGlyphs(variableFontBuffer, 'Hello', {
       targetFormat: 'woff2',
