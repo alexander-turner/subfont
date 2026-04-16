@@ -1,307 +1,223 @@
 const expect = require('unexpected');
 const {
-  _extractFeatureTagsFromDecl: extractFeatureTagsFromDecl,
+  _extractFeatureTagsFromDecl: extract,
   _resolveFeatureSettings: resolveFeatureSettings,
 } = require('../lib/collectTextsByPage');
 
 describe('extractFeatureTagsFromDecl', function () {
   describe('font-feature-settings', function () {
-    it('should extract quoted 4-letter tags', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-feature-settings',
-        '"liga" 1, "dlig" 0'
-      );
-      expect(tags, 'to equal', new Set(['liga', 'dlig']));
-    });
+    for (const [value, expected] of [
+      ['"liga" 1, "dlig" 0', ['liga', 'dlig']],
+      ["'smcp' on", ['smcp']],
+      ['normal', []],
+      ['inherit', []],
+    ]) {
+      it(`should extract ${expected.length ? expected.join(', ') : 'nothing'} from "${value}"`, function () {
+        expect(
+          extract('font-feature-settings', value),
+          'to equal',
+          new Set(expected)
+        );
+      });
+    }
 
-    it('should handle single-quoted tags', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-feature-settings',
-        "'smcp' on"
+    it('should handle uppercase property names', function () {
+      expect(
+        extract('Font-Feature-Settings', '"liga" 1'),
+        'to equal',
+        new Set(['liga'])
       );
-      expect(tags, 'to equal', new Set(['smcp']));
-    });
-
-    it('should return empty set for normal', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-feature-settings',
-        'normal'
-      );
-      expect(tags, 'to equal', new Set());
-    });
-
-    it('should return empty set for inherit', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-feature-settings',
-        'inherit'
-      );
-      expect(tags, 'to equal', new Set());
     });
   });
 
   describe('font-variant-ligatures', function () {
-    it('should map common-ligatures to liga and clig', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-ligatures',
-        'common-ligatures'
-      );
-      expect(tags, 'to equal', new Set(['liga', 'clig']));
-    });
-
-    it('should handle multiple space-separated keywords', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-ligatures',
-        'common-ligatures discretionary-ligatures'
-      );
-      expect(tags, 'to equal', new Set(['liga', 'clig', 'dlig']));
-    });
-
-    it('should map historical-ligatures to hlig', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-ligatures',
-        'historical-ligatures'
-      );
-      expect(tags, 'to equal', new Set(['hlig']));
-    });
+    for (const [value, expected] of [
+      ['common-ligatures', ['liga', 'clig']],
+      ['common-ligatures discretionary-ligatures', ['liga', 'clig', 'dlig']],
+      ['historical-ligatures', ['hlig']],
+    ]) {
+      it(`should map "${value}"`, function () {
+        expect(
+          extract('font-variant-ligatures', value),
+          'to equal',
+          new Set(expected)
+        );
+      });
+    }
   });
 
   describe('font-variant-caps', function () {
-    it('should map small-caps to smcp', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-caps',
-        'small-caps'
-      );
-      expect(tags, 'to equal', new Set(['smcp']));
-    });
-
-    it('should map all-small-caps to smcp and c2sc', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-caps',
-        'all-small-caps'
-      );
-      expect(tags, 'to equal', new Set(['smcp', 'c2sc']));
-    });
-
-    it('should map petite-caps to pcap', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-caps',
-        'petite-caps'
-      );
-      expect(tags, 'to equal', new Set(['pcap']));
-    });
-
-    it('should map titling-caps to titl', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-caps',
-        'titling-caps'
-      );
-      expect(tags, 'to equal', new Set(['titl']));
-    });
-
-    it('should return empty set for normal', function () {
-      const tags = extractFeatureTagsFromDecl('font-variant-caps', 'normal');
-      expect(tags, 'to equal', new Set());
-    });
+    for (const [value, expected] of [
+      ['small-caps', ['smcp']],
+      ['all-small-caps', ['smcp', 'c2sc']],
+      ['petite-caps', ['pcap']],
+      ['titling-caps', ['titl']],
+      ['normal', []],
+    ]) {
+      it(`should map "${value}"`, function () {
+        expect(
+          extract('font-variant-caps', value),
+          'to equal',
+          new Set(expected)
+        );
+      });
+    }
   });
 
   describe('font-variant-numeric', function () {
-    it('should map tabular-nums to tnum', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-numeric',
-        'tabular-nums'
-      );
-      expect(tags, 'to equal', new Set(['tnum']));
-    });
-
-    it('should map multiple numeric features', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-numeric',
-        'lining-nums tabular-nums slashed-zero'
-      );
-      expect(tags, 'to equal', new Set(['lnum', 'tnum', 'zero']));
-    });
-
-    it('should map stacked-fractions to afrc', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-numeric',
-        'stacked-fractions'
-      );
-      expect(tags, 'to equal', new Set(['afrc']));
-    });
+    for (const [value, expected] of [
+      ['tabular-nums', ['tnum']],
+      ['lining-nums tabular-nums slashed-zero', ['lnum', 'tnum', 'zero']],
+      ['stacked-fractions', ['afrc']],
+    ]) {
+      it(`should map "${value}"`, function () {
+        expect(
+          extract('font-variant-numeric', value),
+          'to equal',
+          new Set(expected)
+        );
+      });
+    }
   });
 
   describe('font-variant-position', function () {
     it('should map sub to subs', function () {
-      const tags = extractFeatureTagsFromDecl('font-variant-position', 'sub');
-      expect(tags, 'to equal', new Set(['subs']));
+      expect(
+        extract('font-variant-position', 'sub'),
+        'to equal',
+        new Set(['subs'])
+      );
     });
 
     it('should map super to sups without matching sub', function () {
-      const tags = extractFeatureTagsFromDecl('font-variant-position', 'super');
-      expect(tags, 'to equal', new Set(['sups']));
+      expect(
+        extract('font-variant-position', 'super'),
+        'to equal',
+        new Set(['sups'])
+      );
     });
   });
 
   describe('font-variant-east-asian', function () {
-    it('should map jis78 to jp78', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-east-asian',
-        'jis78'
-      );
-      expect(tags, 'to equal', new Set(['jp78']));
-    });
-
-    it('should map ruby to ruby', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-east-asian',
-        'ruby'
-      );
-      expect(tags, 'to equal', new Set(['ruby']));
-    });
-
-    it('should handle full-width', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-east-asian',
-        'full-width'
-      );
-      expect(tags, 'to equal', new Set(['fwid']));
-    });
+    for (const [value, expected] of [
+      ['jis78', ['jp78']],
+      ['ruby', ['ruby']],
+      ['full-width', ['fwid']],
+    ]) {
+      it(`should map "${value}"`, function () {
+        expect(
+          extract('font-variant-east-asian', value),
+          'to equal',
+          new Set(expected)
+        );
+      });
+    }
   });
 
   describe('font-variant-alternates', function () {
-    it('should map stylistic() to salt', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-alternates',
-        'stylistic(fancy)'
-      );
-      expect(tags, 'to equal', new Set(['salt']));
-    });
-
-    it('should map swash() to swsh', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-alternates',
-        'swash(flowing)'
-      );
-      expect(tags, 'to equal', new Set(['swsh']));
-    });
-
-    it('should map historical-forms to hist', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-alternates',
-        'historical-forms'
-      );
-      expect(tags, 'to equal', new Set(['hist']));
-    });
-
-    it('should map ornaments() to ornm', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-alternates',
-        'ornaments(bullets)'
-      );
-      expect(tags, 'to equal', new Set(['ornm']));
-    });
-
-    it('should map annotation() to nalt', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-alternates',
-        'annotation(circled)'
-      );
-      expect(tags, 'to equal', new Set(['nalt']));
-    });
+    for (const [value, expected] of [
+      ['stylistic(fancy)', ['salt']],
+      ['swash(flowing)', ['swsh']],
+      ['historical-forms', ['hist']],
+      ['ornaments(bullets)', ['ornm']],
+      ['annotation(circled)', ['nalt']],
+    ]) {
+      it(`should map "${value}"`, function () {
+        expect(
+          extract('font-variant-alternates', value),
+          'to equal',
+          new Set(expected)
+        );
+      });
+    }
 
     it('should map styleset() to ss01-ss20', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-alternates',
-        'styleset(alt-g)'
-      );
+      const tags = extract('font-variant-alternates', 'styleset(alt-g)');
       expect(tags.size, 'to equal', 20);
       expect(tags.has('ss01'), 'to be true');
       expect(tags.has('ss20'), 'to be true');
     });
 
     it('should map character-variant() to cv01-cv99', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'font-variant-alternates',
-        'character-variant(alt-a)'
-      );
+      const tags = extract('font-variant-alternates', 'character-variant(a)');
       expect(tags.size, 'to equal', 99);
       expect(tags.has('cv01'), 'to be true');
       expect(tags.has('cv99'), 'to be true');
     });
 
     it('should handle multiple alternates', function () {
-      const tags = extractFeatureTagsFromDecl(
+      const tags = extract(
         'font-variant-alternates',
         'historical-forms stylistic(fancy) swash(flowing)'
       );
-      expect(tags.has('hist'), 'to be true');
-      expect(tags.has('salt'), 'to be true');
-      expect(tags.has('swsh'), 'to be true');
-    });
-  });
-
-  describe('case insensitivity', function () {
-    it('should handle uppercase property names', function () {
-      const tags = extractFeatureTagsFromDecl(
-        'Font-Feature-Settings',
-        '"liga" 1'
-      );
-      expect(tags, 'to equal', new Set(['liga']));
+      for (const t of ['hist', 'salt', 'swsh']) {
+        expect(tags.has(t), 'to be true');
+      }
     });
   });
 });
 
 describe('resolveFeatureSettings', function () {
-  it('should return false when no families have feature settings', function () {
-    const result = resolveFeatureSettings(['Open Sans'], null, new Map());
-    expect(result.hasFontFeatureSettings, 'to be false');
-    expect(result.fontFeatureTags, 'to be undefined');
-  });
+  for (const [desc, families, ffsArg, mapEntries, hasFFS, hasTags] of [
+    ['null ffs', ['Open Sans'], null, [], false, false],
+    ['true ffs', ['Open Sans'], true, [], true, false],
+    ['matching family', ['Open Sans'], new Set(['open sans']), [], true, false],
+    [
+      'non-matching family',
+      ['Open Sans'],
+      new Set(['roboto']),
+      [],
+      false,
+      false,
+    ],
+    [
+      'family-specific tags',
+      ['Open Sans'],
+      true,
+      [['open sans', new Set(['liga', 'smcp'])]],
+      true,
+      true,
+    ],
+    [
+      'global + family tags merged',
+      ['Open Sans'],
+      true,
+      [
+        ['*', new Set(['liga'])],
+        ['open sans', new Set(['smcp'])],
+      ],
+      true,
+      true,
+    ],
+  ]) {
+    it(`should handle ${desc}`, function () {
+      const result = resolveFeatureSettings(
+        families,
+        ffsArg,
+        new Map(mapEntries)
+      );
+      expect(result.hasFontFeatureSettings, 'to be', hasFFS);
+      if (hasTags) {
+        expect(result.fontFeatureTags, 'to be an array');
+      } else {
+        expect(result.fontFeatureTags, 'to be undefined');
+      }
+    });
+  }
 
-  it('should return true when all families are flagged', function () {
-    const result = resolveFeatureSettings(['Open Sans'], true, new Map());
-    expect(result.hasFontFeatureSettings, 'to be true');
-  });
-
-  it('should match families from the feature settings set', function () {
-    const families = new Set(['open sans']);
-    const result = resolveFeatureSettings(['Open Sans'], families, new Map());
-    expect(result.hasFontFeatureSettings, 'to be true');
-  });
-
-  it('should not match unrelated families', function () {
-    const families = new Set(['roboto']);
-    const result = resolveFeatureSettings(['Open Sans'], families, new Map());
-    expect(result.hasFontFeatureSettings, 'to be false');
-  });
-
-  it('should collect tags from featureTagsByFamily', function () {
-    const tagMap = new Map([['open sans', new Set(['liga', 'smcp'])]]);
-    const result = resolveFeatureSettings(['Open Sans'], true, tagMap);
-    expect(result.hasFontFeatureSettings, 'to be true');
+  it('should merge global and family tags', function () {
+    const result = resolveFeatureSettings(
+      ['Open Sans'],
+      true,
+      new Map([
+        ['*', new Set(['liga'])],
+        ['open sans', new Set(['smcp'])],
+      ])
+    );
     expect(
       new Set(result.fontFeatureTags),
       'to equal',
       new Set(['liga', 'smcp'])
     );
-  });
-
-  it('should merge global tags with family-specific tags', function () {
-    const tagMap = new Map([
-      ['*', new Set(['liga'])],
-      ['open sans', new Set(['smcp'])],
-    ]);
-    const result = resolveFeatureSettings(['Open Sans'], true, tagMap);
-    expect(
-      new Set(result.fontFeatureTags),
-      'to equal',
-      new Set(['liga', 'smcp'])
-    );
-  });
-
-  it('should return undefined fontFeatureTags when no tags found', function () {
-    const result = resolveFeatureSettings(['Open Sans'], true, new Map());
-    expect(result.hasFontFeatureSettings, 'to be true');
-    expect(result.fontFeatureTags, 'to be undefined');
   });
 });
