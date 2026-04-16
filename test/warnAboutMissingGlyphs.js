@@ -167,6 +167,28 @@ describe('warnAboutMissingGlyphs', function () {
     expect(getFontInfoStub, 'was called once');
   });
 
+  it('should collapse repeated occurrences of a missing glyph into a single entry', async function () {
+    // Subset has no glyphs at all; pageText repeats 'Z' 50 times
+    getFontInfoStub.resolves({ characterSet: [] });
+    const pageText = 'Z'.repeat(50);
+    const sourceText = `<p>${pageText}</p>`;
+
+    const input = makeInput({ text: pageText, sourceText });
+    await warnAboutMissingGlyphs([input], assetGraph);
+
+    expect(assetGraph.info, 'was called once');
+    const err = assetGraph.info.firstCall.args[0];
+    const zLines = err.message
+      .split('\n')
+      .filter((l) => l.startsWith('- \\u{5a}'));
+    // One entry (not 50) even though Z appears 50 times
+    expect(zLines, 'to have length', 1);
+    // Includes a count and only a capped list of locations
+    expect(zLines[0], 'to contain', '[50x]');
+    expect(zLines[0], 'to contain', '+');
+    expect(zLines[0], 'to contain', 'more');
+  });
+
   it('should add unicode-range to @font-face when glyphs are missing', async function () {
     getFontInfoStub.resolves({ characterSet: [0x41] });
 
