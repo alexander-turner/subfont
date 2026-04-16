@@ -31,7 +31,9 @@ describe('getFontInfo', function () {
 
     getFontInfo = proxyquire('../lib/getFontInfo', {
       harfbuzzjs: harfbuzzJsStub,
-      fontverter: fontverterStub,
+      './sfntCache': {
+        toSfnt: (...args) => fontverterStub.convert(...args),
+      },
     });
   });
 
