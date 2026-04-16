@@ -1,7 +1,9 @@
 const expect = require('unexpected');
+const postcss = require('postcss');
 const {
   _extractFeatureTagsFromDecl: extract,
   _resolveFeatureSettings: resolveFeatureSettings,
+  _findFontFamiliesWithFeatureSettings: findFontFamiliesWithFeatureSettings,
 } = require('../lib/collectTextsByPage');
 
 describe('extractFeatureTagsFromDecl', function () {
@@ -219,5 +221,55 @@ describe('resolveFeatureSettings', function () {
       'to equal',
       new Set(['liga', 'smcp'])
     );
+  });
+});
+
+describe('findFontFamiliesWithFeatureSettings', function () {
+  function makeStylesheets(css) {
+    return [{ asset: { parseTree: postcss.parse(css) } }];
+  }
+
+  it('should return true when a rule has no font-family', function () {
+    const result = findFontFamiliesWithFeatureSettings(
+      makeStylesheets('* { font-feature-settings: "liga"; }'),
+      new Map()
+    );
+    expect(result, 'to be true');
+  });
+
+  it('should return a Set of lowercase families for scoped rules', function () {
+    const result = findFontFamiliesWithFeatureSettings(
+      makeStylesheets(
+        '.a { font-family: Roboto; font-feature-settings: "smcp"; }'
+      ),
+      new Map()
+    );
+    expect(result, 'to equal', new Set(['roboto']));
+  });
+
+  it('should stay true when a global rule precedes a family-scoped rule', function () {
+    const featureTagsByFamily = new Map();
+    const result = findFontFamiliesWithFeatureSettings(
+      makeStylesheets(
+        '* { font-feature-settings: "liga"; } .a { font-family: Roboto; font-feature-settings: "smcp"; }'
+      ),
+      featureTagsByFamily
+    );
+    expect(result, 'to be true');
+    expect(featureTagsByFamily.get('*'), 'to equal', new Set(['liga']));
+    expect(featureTagsByFamily.get('roboto'), 'to equal', new Set(['smcp']));
+  });
+
+  it('should stay true when a family-scoped rule precedes a global rule', function () {
+    const featureTagsByFamily = new Map();
+    const result = findFontFamiliesWithFeatureSettings(
+      makeStylesheets(
+        '.a { font-family: Roboto; font-feature-settings: "smcp"; } * { font-feature-settings: "liga"; }'
+      ),
+      featureTagsByFamily
+    );
+    expect(result, 'to be true');
+    expect(featureTagsByFamily.get('*'), 'to equal', new Set(['liga']));
+    expect(featureTagsByFamily.get('roboto'), 'to equal', new Set(['smcp']));
   });
 });
