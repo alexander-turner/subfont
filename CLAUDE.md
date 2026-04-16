@@ -34,7 +34,7 @@ pnpm run check-coverage  # Verify coverage thresholds
 - Built on **assetgraph** for HTML/CSS asset graph traversal
 - Uses **puppeteer-core** for headless browser font tracing
 - **font-tracer** traces which fonts are used on each page
-- **harfbuzzjs** for WOFF2 subsetting (via `lib/subsetFontWithGlyphs.js`)
+- **harfbuzzjs** for WOFF2 subsetting (via direct WASM calls in `lib/subsetFontWithGlyphs.js`)
 - `lib/subsetFonts.js` — Main orchestration logic
 - `lib/FontTracerPool.js` — Manages puppeteer browser pool for parallel tracing
 
