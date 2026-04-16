@@ -4,6 +4,25 @@
 
 A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web fonts to only the characters used on your pages. Adds parallel tracing, disk caching, woff2-only output, and always-on variable font instancing. On [`turntrout.com`](https://github.com/alexander-turner/TurnTrout.com) (382 pages, 20+ font variants), switching to this fork cut font subsetting from [111 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) to [28 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824).
 
+### Aggressive woff2 subsetting
+
+subfont produces dramatically smaller font files by stripping data that browsers never use:
+
+| Optimization                | Technique                                                                          |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| Hinting removal             | Strips TrueType hinting instructions (browsers auto-hint)                          |
+| Name table pruning          | Keeps only the 4 IDs browsers read (family, subfamily, full name, PostScript name) |
+| Table stripping             | Drops DSIG, LTSH, VDMX, hdmx, gasp, PCLT                                           |
+| CSS-aware feature filtering | Only collects alternate glyphs for OpenType features actually used in your CSS     |
+
+On the [`turntrout.com/design`](https://turntrout.com/design) page, a typical font subset (OpenSans, woff2) is **48-68% smaller** than a naive subset of the same glyphs:
+
+| Text sample       | Naive subset | subfont | Savings |
+| ----------------- | ------------ | ------- | ------- |
+| Heading (short)   | 2,604 B      | 824 B   | **68%** |
+| Paragraph         | 4,052 B      | 1,840 B | **55%** |
+| Full page charset | 5,268 B      | 2,716 B | **48%** |
+
 ## Install
 
 ```
