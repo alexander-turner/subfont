@@ -153,6 +153,25 @@ describe('warnAboutMissingGlyphs', function () {
     expect(err.message, 'to contain', 'test.html:2:2');
   });
 
+  it('should collapse repeated occurrences of a missing char into one entry with a count', async function () {
+    getFontInfoStub.resolves({ characterSet: [0x41] });
+
+    // Z is missing from the subset and appears 4 times in the source.
+    const input = makeInput({
+      text: 'AZ',
+      sourceText: 'A\nZ Z\nZ Z',
+    });
+    await warnAboutMissingGlyphs([input], assetGraph);
+
+    expect(assetGraph.info, 'was called once');
+    const { message } = assetGraph.info.firstCall.args[0];
+    // Only the first location is reported, with a "+N more" suffix
+    expect(message, 'to contain', 'test.html:2:1 (+3 more)');
+    // No additional per-occurrence lines
+    const matchCount = (message.match(/\\u\{5a\}/g) || []).length;
+    expect(matchCount, 'to equal', 1);
+  });
+
   it('should deduplicate subset buffers across multiple font usages', async function () {
     getFontInfoStub.resolves({ characterSet: [0x41, 0x42, 0x43] });
 
