@@ -43,6 +43,14 @@ describe('concurrencyLimit', function () {
       expect(getMaxConcurrency(), 'to equal', 8); // 2 * 4
     });
 
+    it('should return 1 when both memory and CPUs report zero', function () {
+      const { getMaxConcurrency } = createModule({
+        freemem: 0,
+        cpus: 0,
+      });
+      expect(getMaxConcurrency(), 'to equal', 1);
+    });
+
     it('should use the minimum of memory and CPU bounds', function () {
       // 500 MB free (10 by memory), 4 CPUs (16 by CPU) — memory wins
       const { getMaxConcurrency } = createModule({
