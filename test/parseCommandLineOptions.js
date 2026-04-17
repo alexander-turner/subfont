@@ -23,6 +23,7 @@ describe('parseCommandLineOptions', function () {
         sourceMaps: false,
         relativeUrls: false,
         cache: false,
+        strict: false,
       }
     );
   });
@@ -97,6 +98,11 @@ describe('parseCommandLineOptions', function () {
       desc: '--source-maps',
       argv: ['--source-maps'],
       expected: { sourceMaps: true },
+    },
+    {
+      desc: '--strict',
+      argv: ['--strict'],
+      expected: { strict: true },
     },
     {
       desc: '--relative-urls',

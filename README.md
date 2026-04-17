@@ -71,6 +71,7 @@ subfont path/to/index.html -i --cache
 |  `--concurrency N` |         | Max worker threads (capped by available memory, ~50 MB each) |
 |   `--chrome-flags` |         | Custom Chrome flags for `--dynamic`                          |
 |    `--source-maps` |   off   | Preserve CSS source maps (slower)                            |
+|         `--strict` |   off   | Exit non-zero if any warnings are emitted                    |
 |     `-s, --silent` |   off   | Suppress all console output                                  |
 |      `-d, --debug` |   off   | Verbose timing and font glyph detection info                 |
 |  `--relative-urls` |   off   | Emit relative URLs instead of root-relative                  |
