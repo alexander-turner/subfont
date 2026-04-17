@@ -153,6 +153,25 @@ describe('warnAboutMissingGlyphs', function () {
     expect(err.message, 'to contain', 'test.html:2:2');
   });
 
+  it('should collapse repeated occurrences of a missing char into one entry with a count', async function () {
+    getFontInfoStub.resolves({ characterSet: [0x41] });
+
+    // Z is missing from the subset and appears 4 times in the source.
+    const input = makeInput({
+      text: 'AZ',
+      sourceText: 'A\nZ Z\nZ Z',
+    });
+    await warnAboutMissingGlyphs([input], assetGraph);
+
+    expect(assetGraph.info, 'was called once');
+    const { message } = assetGraph.info.firstCall.args[0];
+    // Only the first location is reported, with a "+N more" suffix
+    expect(message, 'to contain', 'test.html:2:1 (+3 more)');
+    // No additional per-occurrence lines
+    const matchCount = (message.match(/\\u\{5a\}/g) || []).length;
+    expect(matchCount, 'to equal', 1);
+  });
+
   it('should deduplicate subset buffers across multiple font usages', async function () {
     getFontInfoStub.resolves({ characterSet: [0x41, 0x42, 0x43] });
 
@@ -165,28 +184,6 @@ describe('warnAboutMissingGlyphs', function () {
 
     // getFontInfo should only be called once for the shared buffer
     expect(getFontInfoStub, 'was called once');
-  });
-
-  it('should collapse repeated occurrences of a missing glyph into a single entry', async function () {
-    // Subset has no glyphs at all; pageText repeats 'Z' 50 times
-    getFontInfoStub.resolves({ characterSet: [] });
-    const pageText = 'Z'.repeat(50);
-    const sourceText = `<p>${pageText}</p>`;
-
-    const input = makeInput({ text: pageText, sourceText });
-    await warnAboutMissingGlyphs([input], assetGraph);
-
-    expect(assetGraph.info, 'was called once');
-    const err = assetGraph.info.firstCall.args[0];
-    const zLines = err.message
-      .split('\n')
-      .filter((l) => l.startsWith('- \\u{5a}'));
-    // One entry (not 50) even though Z appears 50 times
-    expect(zLines, 'to have length', 1);
-    // Includes a count and only a capped list of locations
-    expect(zLines[0], 'to contain', '[50x]');
-    expect(zLines[0], 'to contain', '+');
-    expect(zLines[0], 'to contain', 'more');
   });
 
   it('should add unicode-range to @font-face when glyphs are missing', async function () {
