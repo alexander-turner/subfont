@@ -3,12 +3,14 @@
 # Version is tracked via npm registry and git tags, not committed to the repository
 set -e
 
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+
 # Get the latest published version from npm (source of truth).
 # Distinguish "package not yet published" (E404 — safe to start at 0.0.0) from
 # "npm registry unreachable" (fail — blind start would clobber a real version).
 PACKAGE_NAME=$(node -p "require('./package.json').name")
-NPM_VIEW_STDERR=$(mktemp)
-trap 'rm -f "$NPM_VIEW_STDERR"' EXIT
+NPM_VIEW_STDERR="$TMP_DIR/npm-view-stderr"
 if CURRENT_VERSION=$(npm view "$PACKAGE_NAME" version 2>"$NPM_VIEW_STDERR"); then
   :
 elif grep -q "E404\|404 Not Found" "$NPM_VIEW_STDERR"; then
@@ -100,16 +102,17 @@ REQUEST_BODY=$(jq -n \
 
 # Retry the Claude API call on transient failures (timeout, 5xx, network blips).
 # Exponential backoff: 2s, 4s, 8s between attempts.
+CLAUDE_RESPONSE_FILE="$TMP_DIR/claude-response.json"
 RESPONSE=""
 for attempt in 1 2 3; do
-  HTTP_CODE=$(curl -s -o /tmp/claude-response.json -w "%{http_code}" \
+  HTTP_CODE=$(curl -s -o "$CLAUDE_RESPONSE_FILE" -w "%{http_code}" \
     --max-time 30 https://api.anthropic.com/v1/messages \
     -H "Content-Type: application/json" \
     -H "x-api-key: $ANTHROPIC_API_KEY" \
     -H "anthropic-version: 2023-06-01" \
     -d "$REQUEST_BODY" || echo "000")
   if [[ "$HTTP_CODE" == "200" ]]; then
-    RESPONSE=$(cat /tmp/claude-response.json)
+    RESPONSE=$(cat "$CLAUDE_RESPONSE_FILE")
     break
   fi
   echo "Claude API attempt $attempt failed (HTTP $HTTP_CODE)" >&2
@@ -117,7 +120,6 @@ for attempt in 1 2 3; do
     sleep $((2 ** attempt))
   fi
 done
-rm -f /tmp/claude-response.json
 if [[ -z "$RESPONSE" ]]; then
   echo "Error: Claude API unreachable after 3 attempts" >&2
   exit 1
