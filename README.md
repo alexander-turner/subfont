@@ -105,6 +105,37 @@ const assetGraph = await subfont(
 
 Returns the [Assetgraph](https://github.com/assetgraph/assetgraph) instance.
 
+### Parameters
+
+`subfont(options, console)` — the second argument is an optional logger (anything
+with `log`, `warn`, and `error` methods — e.g. the global `console`). Pass
+`null` together with `silent: true` to suppress all output.
+
+The `options` object accepts the following keys:
+
+| Option          | Type                | Default  | Description                                                                                                  |
+| --------------- | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `inputFiles`    | `string[]`          | `[]`     | HTML entry points (file paths or URLs). At least one is required unless `root` is given.                     |
+| `root`          | `string`            | deduced  | Path or URL to the web root. Deduced from `inputFiles` if omitted.                                           |
+| `canonicalRoot` | `string`            | —        | URI root where the site will be deployed (used to rewrite absolute URLs).                                    |
+| `output`        | `string`            | —        | Output directory. Mutually exclusive with `inPlace`.                                                         |
+| `inPlace`       | `boolean`           | `false`  | Modify input files in place.                                                                                 |
+| `dryRun`        | `boolean`           | `false`  | Trace and compute subsets but do not write any files.                                                        |
+| `recursive`     | `boolean`           | `false`  | Crawl linked pages starting from `inputFiles`.                                                               |
+| `dynamic`       | `boolean`           | `false`  | Trace JS-rendered content in headless Chrome (via puppeteer).                                                |
+| `fallbacks`     | `boolean`           | `true`   | Keep the full original font for characters outside the subset.                                               |
+| `fontDisplay`   | `string`            | `'swap'` | `font-display` CSS value: `auto`, `block`, `swap`, `fallback`, or `optional`.                                |
+| `text`          | `string`            | —        | Extra characters to include in every subset.                                                                 |
+| `inlineCss`     | `boolean`           | `false`  | Inline the subset `@font-face` CSS into the HTML document.                                                   |
+| `relativeUrls`  | `boolean`           | `false`  | Emit relative URLs instead of root-relative URLs.                                                            |
+| `sourceMaps`    | `boolean`           | `false`  | Preserve CSS source maps (slower).                                                                           |
+| `concurrency`   | `number`            | auto     | Max parallel tracing workers. Capped by available memory (~50 MB per worker).                                |
+| `chromeFlags`   | `string[]`          | `[]`     | Extra Chrome flags forwarded to puppeteer when `dynamic` is set.                                             |
+| `cache`         | `boolean \| string` | `false`  | Cache subset results between runs. Pass a path to customize the cache directory; `true` uses the OS tmp dir. |
+| `strict`        | `boolean`           | `false`  | Resolve with a non-zero exit (via the CLI) if any warnings are emitted.                                      |
+| `silent`        | `boolean`           | `false`  | Suppress all log output to `console`.                                                                        |
+| `debug`         | `boolean`           | `false`  | Emit verbose timing and glyph-detection info.                                                                |
+
 ## License
 
 MIT -- Original work by [Peter Muller (Munter)](https://github.com/Munter/subfont)

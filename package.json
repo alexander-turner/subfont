@@ -9,6 +9,7 @@
   "scripts": {
     "lint": "eslint . && prettier --check '**/*.{js,md}'",
     "test": "mocha && npm run lint",
+    "prepublishOnly": "npm test",
     "coverage": "nyc --reporter=lcov --reporter=text -- mocha",
     "check-coverage": "nyc check-coverage",
     "preversion": "offline-github-changelog --next=${npm_new_version} > CHANGELOG.md && git add CHANGELOG.md",

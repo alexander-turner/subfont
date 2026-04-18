@@ -140,6 +140,9 @@ echo "Claude determined bump level: $BUMP"
 
 # Parse version components
 IFS='.' read -r MAJOR MINOR PATCH_NUM <<< "$CURRENT_VERSION"
+MAJOR="${MAJOR:-0}"
+MINOR="${MINOR:-0}"
+PATCH_NUM="${PATCH_NUM:-0}"
 
 # Calculate new version
 case $BUMP in
