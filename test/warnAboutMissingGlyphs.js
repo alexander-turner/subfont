@@ -198,4 +198,21 @@ describe('warnAboutMissingGlyphs', function () {
     const appendArg = fontFaceNode.append.firstCall.args[0];
     expect(appendArg.prop, 'to equal', 'unicode-range');
   });
+
+  it('should not add unicode-range to @font-face when one already exists', async function () {
+    getFontInfoStub.resolves({ characterSet: [0x41] });
+
+    const input = makeInput({ text: 'AB' });
+    const fontFaceNode =
+      input.accumulatedFontFaceDeclarations[0].relations[0].node;
+    const cssAsset = input.accumulatedFontFaceDeclarations[0].relations[0].from;
+    // Simulate an @font-face block that already has a unicode-range declaration
+    fontFaceNode.some = (predicate) =>
+      predicate({ prop: 'unicode-range' }) === true;
+
+    await warnAboutMissingGlyphs([input], assetGraph);
+
+    expect(fontFaceNode.append, 'was not called');
+    expect(cssAsset.markDirty, 'was not called');
+  });
 });

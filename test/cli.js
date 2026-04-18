@@ -76,4 +76,21 @@ describe('cli', function () {
     );
     expect(stderr, 'not to match', /^\s+at/m);
   });
+
+  it('should subset a local HTML fixture with --dry-run and exit 0', async function () {
+    this.timeout(120000);
+    const fixture = pathModule.resolve(
+      __dirname,
+      '..',
+      'testdata',
+      'subsetFonts',
+      'local-single',
+      'index.html'
+    );
+    const { err, stdout } = await runSubfont(fixture, '--dry-run');
+    expect(err, 'to be falsy');
+    expect(stdout, 'to contain', 'Open Sans');
+    expect(stdout, 'to contain', 'Dry Run Preview');
+    expect(stdout, 'to contain', 'no files were written');
+  });
 });

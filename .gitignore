@@ -4,3 +4,5 @@ coverage
 puppeteer-browsers
 package-lock.json
 *.tgz
+.DS_Store
+*.log
