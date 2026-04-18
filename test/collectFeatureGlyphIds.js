@@ -1,6 +1,9 @@
 const expect = require('unexpected');
 const sinon = require('sinon');
+const fs = require('fs');
+const pathModule = require('path');
 const proxyquire = require('proxyquire').noCallThru();
+const collectFeatureGlyphIds = require('../lib/collectFeatureGlyphIds');
 
 function makeHarfbuzzMock({
   gsubTags = [],
@@ -86,5 +89,37 @@ describe('collectFeatureGlyphIds', function () {
       const result = await createModule(mock)(Buffer.from('font'), 'a');
       expect(result, 'not to be empty');
     }
+  });
+
+  describe('real font integration', function () {
+    this.timeout(30000);
+
+    it('should return an array of integer glyph IDs for a real TTF', async function () {
+      const buffer = fs.readFileSync(
+        pathModule.resolve(
+          __dirname,
+          '../testdata/subsetFonts/OpenSans-400.ttf'
+        )
+      );
+      const result = await collectFeatureGlyphIds(buffer, 'fi ffi hello');
+
+      expect(result, 'to be an array');
+      for (const gid of result) {
+        expect(gid, 'to be a number');
+        expect(Number.isInteger(gid), 'to be true');
+        expect(gid, 'to be greater than or equal to', 0);
+      }
+    });
+
+    it('should return empty for whitespace-only input on a real TTF', async function () {
+      const buffer = fs.readFileSync(
+        pathModule.resolve(
+          __dirname,
+          '../testdata/subsetFonts/OpenSans-400.ttf'
+        )
+      );
+      const result = await collectFeatureGlyphIds(buffer, '   \t\n');
+      expect(result, 'to equal', []);
+    });
   });
 });

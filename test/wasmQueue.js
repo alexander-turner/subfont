@@ -70,6 +70,32 @@ describe('wasmQueue', function () {
     await expect(p, 'to be rejected with', 'sync error');
   });
 
+  it('should not pass previous result or error as argument to fn', async function () {
+    const enqueue = freshEnqueue();
+    const receivedArgs = [];
+
+    await enqueue(() => Promise.resolve('result-1'));
+
+    await enqueue((...args) => {
+      receivedArgs.push(args);
+      return Promise.resolve('result-2');
+    });
+
+    // fn should be called with zero arguments, not with previous result
+    expect(receivedArgs, 'to equal', [[]]);
+
+    // Also verify after a rejection
+    await enqueue(() => Promise.reject(new Error('fail'))).catch(() => {});
+
+    await enqueue((...args) => {
+      receivedArgs.push(args);
+      return Promise.resolve('result-3');
+    });
+
+    // fn should still be called with zero arguments, not with previous error
+    expect(receivedArgs, 'to equal', [[], []]);
+  });
+
   it('should preserve ordering across many queued calls', async function () {
     const enqueue = freshEnqueue();
     const results = [];

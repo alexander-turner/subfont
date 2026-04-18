@@ -114,6 +114,52 @@ describe('subsetGeneration', function () {
       expect(fontUsage.smallestSubsetSize, 'to equal', 100);
       expect(fontUsage.subsets, 'to have keys', ['woff', 'woff2']);
     });
+
+    it('should skip a format when subsetFontWithGlyphs rejects and warn via assetGraph', async function () {
+      const goodBuffer = Buffer.alloc(200, 0x43);
+      const warnCalls = [];
+
+      const { getSubsetsForFontUsage } = proxyquire('../lib/subsetGeneration', {
+        './variationAxes': {
+          getVariationAxisBounds: () => Promise.resolve(null),
+        },
+        './collectFeatureGlyphIds': () => Promise.resolve([]),
+        './subsetFontWithGlyphs': (_buffer, _text, opts) =>
+          opts.targetFormat === 'woff2'
+            ? Promise.reject(new Error('simulated woff2 failure'))
+            : Promise.resolve(goodBuffer),
+      });
+
+      const fontUrl = 'https://example.com/partial.ttf';
+      const fontUsage = { text: 'abc', fontUrl };
+      const fontAsset = {
+        url: fontUrl,
+        isLoaded: true,
+        rawSrc: Buffer.alloc(10),
+      };
+      const mockAssetGraph = {
+        populate: () => Promise.resolve(),
+        findAssets: () => [fontAsset],
+        warn: (err) => warnCalls.push(err),
+      };
+
+      await getSubsetsForFontUsage(
+        mockAssetGraph,
+        [{ fontUsages: [fontUsage] }],
+        ['woff', 'woff2'],
+        new Map(),
+        false
+      );
+
+      // woff should have succeeded; woff2 should be absent (not undefined/null entries)
+      expect(fontUsage.subsets, 'to have keys', ['woff']);
+      expect(fontUsage.subsets.woff, 'to equal', goodBuffer);
+      expect(fontUsage.smallestSubsetFormat, 'to equal', 'woff');
+      // The failure should have been reported via assetGraph.warn and tagged with the asset
+      expect(warnCalls, 'to have length', 1);
+      expect(warnCalls[0].message, 'to equal', 'simulated woff2 failure');
+      expect(warnCalls[0].asset, 'to be', fontAsset);
+    });
   });
 
   describe('subsetCacheKey', function () {
