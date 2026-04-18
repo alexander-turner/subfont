@@ -1,6 +1,9 @@
 const expect = require('unexpected').clone().use(require('unexpected-sinon'));
 const sinon = require('sinon');
+const fs = require('fs');
+const pathModule = require('path');
 const proxyquire = require('proxyquire').noCallThru();
+const realGetFontInfo = require('../lib/getFontInfo');
 
 describe('getFontInfo', function () {
   let getFontInfo;
@@ -204,6 +207,47 @@ describe('getFontInfo', function () {
 
       const r3 = await p3;
       expect(r3.characterSet, 'to equal', [0x41, 0x42, 0x43]);
+    });
+  });
+
+  describe('real font integration', function () {
+    this.timeout(30000);
+
+    it('should extract a non-empty character set from a real TTF', async function () {
+      const buffer = fs.readFileSync(
+        pathModule.resolve(
+          __dirname,
+          '../testdata/subsetFonts/OpenSans-400.ttf'
+        )
+      );
+      const info = await realGetFontInfo(buffer);
+
+      // Verify structure: real fonts return code points (numbers), not mock values.
+      expect(info.characterSet, 'to be an array');
+      expect(info.characterSet.length, 'to be greater than', 0);
+      for (const codePoint of info.characterSet) {
+        expect(codePoint, 'to be a number');
+      }
+      expect(info.variationAxes, 'to equal', {});
+    });
+
+    it('should extract variation axes from a real variable TTF', async function () {
+      const buffer = fs.readFileSync(
+        pathModule.resolve(
+          __dirname,
+          '../testdata/subsetFonts/variable-font-unused-axes/RobotoFlex-VariableFont_GRAD,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf'
+        )
+      );
+      const info = await realGetFontInfo(buffer);
+
+      expect(info.variationAxes, 'to have keys', ['wght', 'wdth', 'opsz']);
+      expect(info.variationAxes.wght, 'to satisfy', {
+        min: expect.it('to be a number'),
+        max: expect.it('to be a number'),
+        default: expect.it('to be a number'),
+      });
+      expect(info.variationAxes.wght.min, 'to be less than', 400);
+      expect(info.variationAxes.wght.max, 'to be greater than', 400);
     });
   });
 });
