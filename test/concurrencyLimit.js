@@ -59,6 +59,14 @@ describe('concurrencyLimit', function () {
       });
       expect(getMaxConcurrency(), 'to equal', 10);
     });
+
+    it('should cap at MAX_CONCURRENCY on high-core systems', function () {
+      const { getMaxConcurrency, MAX_CONCURRENCY } = createModule({
+        freemem: 100 * 1024 * 1024 * 1024,
+        cpus: 256,
+      });
+      expect(getMaxConcurrency(), 'to equal', MAX_CONCURRENCY);
+    });
   });
 
   describe('WORKER_MEMORY_BYTES', function () {
