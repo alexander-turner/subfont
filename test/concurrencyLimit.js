@@ -40,7 +40,7 @@ describe('concurrencyLimit', function () {
         freemem: 100 * 1024 * 1024 * 1024,
         cpus: 2,
       });
-      expect(getMaxConcurrency(), 'to equal', 8); // 2 * 4
+      expect(getMaxConcurrency(), 'to equal', 2);
     });
 
     it('should return 1 when both memory and CPUs report zero', function () {
@@ -52,20 +52,20 @@ describe('concurrencyLimit', function () {
     });
 
     it('should use the minimum of memory and CPU bounds', function () {
-      // 500 MB free (10 by memory), 4 CPUs (16 by CPU) — memory wins
+      // 500 MB free (10 by memory), 4 CPUs — CPU wins
       const { getMaxConcurrency } = createModule({
         freemem: 500 * 1024 * 1024,
         cpus: 4,
       });
-      expect(getMaxConcurrency(), 'to equal', 10);
+      expect(getMaxConcurrency(), 'to equal', 4);
     });
 
-    it('should cap at MAX_CONCURRENCY on high-core systems', function () {
-      const { getMaxConcurrency, MAX_CONCURRENCY } = createModule({
+    it('should scale to high core counts when memory is ample', function () {
+      const { getMaxConcurrency } = createModule({
         freemem: 100 * 1024 * 1024 * 1024,
         cpus: 256,
       });
-      expect(getMaxConcurrency(), 'to equal', MAX_CONCURRENCY);
+      expect(getMaxConcurrency(), 'to equal', 256);
     });
   });
 
