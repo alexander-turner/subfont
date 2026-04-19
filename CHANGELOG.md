@@ -33,3 +33,10 @@ On [TurnTrout.com](https://github.com/alexander-turner/TurnTrout.com) (382 pages
 
 - Fixed crash on invalid/corrupt font files during instancing.
 - Fixed incorrect axis range computation for variable fonts.
+- Fixed OOM / >1h runtimes on large sites. `font-size` was added to
+  `font-tracer`'s `propsToReturn` to derive `opsz`, which bucketed every text
+  chunk by size and exploded per-page entry counts 10-50x on sites with many
+  distinct sizes (headings, dropcaps, smallcaps). `opsz` now falls back to
+  pinning at the font default (the pre-regression behaviour); an explicit
+  `font-variation-settings: "opsz" …` still narrows the axis. TurnTrout.com
+  returned from 46+ min / runner-OOM to ~33 min.

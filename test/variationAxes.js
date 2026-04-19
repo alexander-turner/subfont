@@ -2,7 +2,6 @@ const expect = require('unexpected');
 const proxyquire = require('proxyquire');
 const {
   renderNumberRange,
-  parseFontSizePx,
   getVariationAxisUsage,
 } = require('../lib/variationAxes');
 const {
@@ -20,34 +19,6 @@ describe('variationAxes', function () {
     ].forEach(({ min, max, expected, desc }) => {
       it(`should render ${desc}: ${expected}`, function () {
         expect(renderNumberRange(min, max), 'to equal', expected);
-      });
-    });
-  });
-
-  describe('parseFontSizePx', function () {
-    [
-      { input: '16px', expected: 16, desc: 'px value' },
-      { input: '12pt', expected: 16, desc: 'pt value (12pt = 16px)' },
-      { input: '24px', expected: 24, desc: 'larger px value' },
-      { input: '9pt', expected: 12, desc: 'pt value (9pt = 12px)' },
-      { input: 14, expected: 14, desc: 'numeric value' },
-      { input: '0px', expected: NaN, desc: 'zero px' },
-      { input: '1.5em', expected: NaN, desc: 'em unit (relative)' },
-      { input: '2rem', expected: NaN, desc: 'rem unit (relative)' },
-      { input: '80%', expected: NaN, desc: 'percentage (relative)' },
-      { input: '10vw', expected: NaN, desc: 'viewport unit' },
-      { input: undefined, expected: NaN, desc: 'undefined' },
-      { input: null, expected: NaN, desc: 'null' },
-      { input: '', expected: NaN, desc: 'empty string' },
-      { input: 'large', expected: NaN, desc: 'keyword' },
-    ].forEach(({ input, expected, desc }) => {
-      it(`should return ${expected} for ${desc}: ${JSON.stringify(input)}`, function () {
-        const result = parseFontSizePx(input);
-        if (Number.isNaN(expected)) {
-          expect(Number.isNaN(result), 'to be true');
-        } else {
-          expect(result, 'to equal', expected);
-        }
       });
     });
   });
@@ -225,46 +196,6 @@ describe('variationAxes', function () {
         const axes = getAxes(result, url);
         expect(axes.get('wght').has(present), 'to be true');
         expect(axes.get('wght').has(absent), 'to be false');
-      });
-    });
-
-    describe('font-size to opsz axis mapping', function () {
-      it('should map px font-size values to opsz axis', function () {
-        const result = runUsage([
-          makeFontUsage({
-            fontSizes: new Set(['16px', '24px']),
-          }),
-        ]);
-        const axes = getAxes(result);
-        expect(axes.get('opsz').has(16), 'to be true');
-        expect(axes.get('opsz').has(24), 'to be true');
-      });
-
-      it('should map pt font-size values to opsz axis in px', function () {
-        const result = runUsage([
-          makeFontUsage({
-            fontSizes: new Set(['12pt']),
-          }),
-        ]);
-        const axes = getAxes(result);
-        // 12pt = 16px
-        expect(axes.get('opsz').has(16), 'to be true');
-      });
-
-      it('should skip relative font-size units', function () {
-        const result = runUsage([
-          makeFontUsage({
-            fontSizes: new Set(['1.5em', '2rem', '80%']),
-          }),
-        ]);
-        const axes = getAxes(result);
-        expect(axes.has('opsz'), 'to be false');
-      });
-
-      it('should not set opsz when fontSizes is undefined', function () {
-        const result = runUsage([makeFontUsage()]);
-        const axes = getAxes(result);
-        expect(axes.has('opsz'), 'to be false');
       });
     });
 

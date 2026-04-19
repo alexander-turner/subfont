@@ -106,6 +106,29 @@ describe('collectTextsByPage', function () {
     expect(fontFaceDeclarationsByHtmlOrSvgAsset.get(htmlAsset), 'to be empty');
   });
 
+  // Regression guard: https://github.com/alexander-turner/subfont/issues ...
+  // Adding `font-size` to font-tracer propsToReturn buckets every text chunk
+  // by size, exploding per-page entry counts 10-50x on sites with many
+  // distinct sizes (headings, dropcaps, smallcaps). Each entry propagates
+  // through globalTextByProps → snappedGlobalEntries → allTexts, OOMing the
+  // 6 GB heap on TurnTrout-scale sites. Keep font-size out of the pipeline.
+  it('should not expose a fontSizes property on fontUsage', async function () {
+    const assetGraph = new AssetGraph({ root: localSingleRoot });
+    await assetGraph.loadAssets('index.html');
+    await assetGraph.populate();
+    const htmlAssets = assetGraph.findAssets({
+      type: 'Html',
+      isInline: false,
+    });
+    const { htmlOrSvgAssetTextsWithProps } = await collectTextsByPage(
+      assetGraph,
+      htmlAssets
+    );
+    const fontUsage = htmlOrSvgAssetTextsWithProps[0].fontUsages[0];
+    expect(fontUsage, 'not to have key', 'fontSizes');
+    expect(fontUsage.props, 'not to have key', 'font-size');
+  });
+
   it('should handle multiple pages sharing the same CSS (fast path)', async function () {
     const multiPageRoot = pathModule.resolve(
       __dirname,

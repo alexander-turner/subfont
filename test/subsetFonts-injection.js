@@ -175,7 +175,6 @@ describe('subsetFonts CSS injection and rewriting', function () {
               fontWeights: expect.it('to be a', Set),
               fontStretches: expect.it('to be a', Set),
               fontVariationSettings: expect.it('to be a', Set),
-              fontSizes: expect.it('to be a', Set),
               codepoints: {
                 original: expect.it('to be an array'),
                 used: [72, 101, 108, 111, 32],
