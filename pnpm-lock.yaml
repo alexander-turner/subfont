@@ -70,6 +70,9 @@ importers:
       puppeteer-core:
         specifier: ^24.39.1
         version: 24.40.0
+      sanitize-filename:
+        specifier: ^1.6.4
+        version: 1.6.4
       specificity:
         specifier: ^0.4.1
         version: 0.4.1
@@ -6196,6 +6199,12 @@ packages:
         integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==,
       }
 
+  sanitize-filename@1.6.4:
+    resolution:
+      {
+        integrity: sha512-9ZyI08PsvdQl2r/bBIGubpVdR3RR9sY6RDiWFPreA21C/EFlQhmgo20UZlNjZMMZNubusLhAQozkA0Od5J21Eg==,
+      }
+
   sax@1.6.0:
     resolution:
       {
@@ -6833,6 +6842,12 @@ packages:
       }
     engines: { node: '>=4' }
 
+  truncate-utf8-bytes@1.0.2:
+    resolution:
+      {
+        integrity: sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==,
+      }
+
   ts-api-utils@2.5.0:
     resolution:
       {
@@ -7168,6 +7183,12 @@ packages:
         integrity: sha512-nsAASNzc1+n8MZuQ335Oa9z8KOCtDNfiQzFOAYCiu+IPZQVD0FH6n9hP/NKygKxs5nmRYnj8ftYKgyNcJKlgUw==,
       }
     engines: { node: '>= 4' }
+
+  utf8-byte-length@1.0.5:
+    resolution:
+      {
+        integrity: sha512-Xn0w3MtiQ6zoz2vFyUVruaCL53O/DwUvkEeOvj+uulMm0BkUGYWmBYVyElqZaSLhY6ZD0ulfU3aBra2aVT4xfA==,
+      }
 
   utf8@2.1.2:
     resolution:
@@ -11700,6 +11721,10 @@ snapshots:
 
   safer-buffer@2.1.2: {}
 
+  sanitize-filename@1.6.4:
+    dependencies:
+      truncate-utf8-bytes: 1.0.2
+
   sax@1.6.0: {}
 
   saxes@5.0.1:
@@ -12161,6 +12186,10 @@ snapshots:
 
   trim-newlines@2.0.0: {}
 
+  truncate-utf8-bytes@1.0.2:
+    dependencies:
+      utf8-byte-length: 1.0.5
+
   ts-api-utils@2.5.0(typescript@5.9.3):
     dependencies:
       typescript: 5.9.3
@@ -12399,6 +12428,8 @@ snapshots:
       glob: 7.2.3
       underscore: 1.13.8
       urijs: 1.19.11
+
+  utf8-byte-length@1.0.5: {}
 
   utf8@2.1.2: {}
 

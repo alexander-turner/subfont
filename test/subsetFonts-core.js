@@ -349,7 +349,7 @@ describe('subsetFonts core subsetting logic', function () {
     ]);
   });
 
-  it('should foo', async function () {
+  it('should preserve noscript elements when subsetting local fonts', async function () {
     httpception();
 
     const assetGraph = createGraph('local-with-noscript');

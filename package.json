@@ -73,6 +73,7 @@
     "postcss-value-parser": "^4.0.2",
     "pretty-bytes": "^5.1.0",
     "puppeteer-core": "^24.39.1",
+    "sanitize-filename": "^1.6.4",
     "specificity": "^0.4.1",
     "urltools": "^0.4.1",
     "yargs": "^17.7.2"
