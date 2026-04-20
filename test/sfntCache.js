@@ -60,6 +60,22 @@ describe('sfntCache', function () {
     expect(convertStub, 'was called once');
   });
 
+  it('should cache the fallback convert when detectFormat throws', async function () {
+    const buffer = Buffer.from('garbage');
+    const converted = Buffer.from('converted');
+    const convertStub = sinon.stub().resolves(converted);
+    const { toSfnt } = proxyquire('../lib/sfntCache', {
+      fontverter: {
+        detectFormat: sinon.stub().throws(new Error('Unknown format')),
+        convert: convertStub,
+      },
+    });
+
+    await toSfnt(buffer);
+    await toSfnt(buffer);
+    expect(convertStub, 'was called once');
+  });
+
   it('should evict cache on rejection so retries work', async function () {
     const buffer = Buffer.from('test');
     let callCount = 0;
