@@ -76,13 +76,10 @@ describe('progress', function () {
       for (let i = 0; i < 5; i++) {
         progress.tick();
       }
-      const progressCalls = log.args.filter((args) =>
-        args[0].includes('pages...')
-      );
-      expect(
-        progressCalls.every(([msg]) => !msg.includes('5/5 pages...')),
-        'to be true'
-      );
+      // The final tick (count === total) should be suppressed;
+      // only the done() method prints the completion message.
+      const lastCall = log.args[log.args.length - 1][0];
+      expect(lastCall, 'not to contain', '5/5');
     });
 
     it('should print done message with total', function () {
@@ -116,6 +113,16 @@ describe('progress', function () {
       expect(progress.tick(), 'to equal', 1);
       expect(progress.tick(), 'to equal', 2);
       expect(progress.tick(), 'to equal', 3);
+    });
+
+    it('should still count ticks when disabled', function () {
+      const progress = createPageProgress({
+        total: 2,
+        label: 'test',
+      });
+      expect(progress.enabled, 'to be false');
+      expect(progress.tick(), 'to equal', 1);
+      expect(progress.tick(), 'to equal', 2);
     });
   });
 

@@ -176,7 +176,7 @@ describe('extractVisibleText', function () {
     expect(result, 'to contain', 'visible-value');
   });
 
-  it('should handle consecutive calls without regex state leakage', function () {
+  it('should return independent results for consecutive calls', function () {
     const result1 = extractVisibleText('<p>first</p>');
     const result2 = extractVisibleText('<p>second</p>');
     expect(result1, 'to contain', 'first');
