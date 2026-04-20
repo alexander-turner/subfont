@@ -43,6 +43,30 @@ describe('normalizeFontPropertyValue', function () {
       );
     });
 
+    it('should accept exactly 1 (lower boundary)', function () {
+      expect(normalizeFontPropertyValue('font-weight', '1'), 'to equal', 1);
+    });
+
+    it('should accept exactly 1000 (upper boundary)', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', '1000'),
+        'to equal',
+        1000
+      );
+    });
+
+    it('should ignore 0 (below valid range)', function () {
+      expect(normalizeFontPropertyValue('font-weight', '0'), 'to equal', '0');
+    });
+
+    it('should return unrecognized strings as-is', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', 'notaweight'),
+        'to equal',
+        'notaweight'
+      );
+    });
+
     it('should parse an in-range value with decimals', function () {
       expect(
         normalizeFontPropertyValue('font-weight', '234.56'),

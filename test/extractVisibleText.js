@@ -150,4 +150,37 @@ describe('extractVisibleText', function () {
     expect(result, 'to contain', 'content');
     expect(result, 'not to contain', 'extra-text');
   });
+
+  it('should return empty string for null input', function () {
+    expect(extractVisibleText(null), 'to equal', '');
+  });
+
+  it('should return empty string for undefined input', function () {
+    expect(extractVisibleText(undefined), 'to equal', '');
+  });
+
+  it('should decode typographic entities', function () {
+    const result = extractVisibleText(
+      '<p>&ldquo;hello&rdquo; &mdash; &hellip;</p>'
+    );
+    expect(result, 'to contain', '\u201C');
+    expect(result, 'to contain', '\u201D');
+    expect(result, 'to contain', '\u2014');
+    expect(result, 'to contain', '\u2026');
+  });
+
+  it('should extract value from visible inputs', function () {
+    const result = extractVisibleText(
+      '<input type="text" value="visible-value">'
+    );
+    expect(result, 'to contain', 'visible-value');
+  });
+
+  it('should return independent results for consecutive calls', function () {
+    const result1 = extractVisibleText('<p>first</p>');
+    const result2 = extractVisibleText('<p>second</p>');
+    expect(result1, 'to contain', 'first');
+    expect(result2, 'to contain', 'second');
+    expect(result2, 'not to contain', 'first');
+  });
 });
