@@ -87,6 +87,16 @@ describe('cli', function () {
     expect(stderr, 'to contain', '--concurrency must be a positive integer');
   });
 
+  it('should reject negative --concurrency', async function () {
+    const { err, stderr } = await runSubfont(
+      'dummy.html',
+      '--concurrency',
+      '-1'
+    );
+    expect(err, 'to have property', 'exitCode', 1);
+    expect(stderr, 'to contain', '--concurrency must be a positive integer');
+  });
+
   it('should reject non-integer --concurrency', async function () {
     const { err, stderr } = await runSubfont(
       'dummy.html',

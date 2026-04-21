@@ -25,6 +25,7 @@ describe('HeadlessBrowser', function () {
         jsonValue: sinon.stub().resolves([]),
         getProperty: sinon.stub().resolves({
           getProperty: sinon.stub().resolves(null),
+          dispose: sinon.stub().resolves(),
         }),
         dispose: sinon.stub().resolves(),
       }),
