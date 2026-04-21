@@ -9,6 +9,18 @@ expect.addAssertion(
 );
 
 describe('stripLocalTokens', function () {
+  it('should return empty string for empty input', function () {
+    expect('', 'to come out as', '');
+  });
+
+  it('should return input unchanged when no local() tokens are present', function () {
+    expect(
+      "url('foo.woff2') format('woff2')",
+      'to come out as',
+      "url('foo.woff2') format('woff2')"
+    );
+  });
+
   it('should strip a standalone local(...) token', function () {
     expect('local(foo)', 'to come out as', '');
   });

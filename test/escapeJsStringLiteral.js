@@ -1,9 +1,11 @@
 const expect = require('unexpected');
-const {
-  _escapeJsStringLiteral: escapeJsStringLiteral,
-} = require('../lib/subsetFonts');
+const escapeJsStringLiteral = require('../lib/escapeJsStringLiteral');
 
 describe('escapeJsStringLiteral', function () {
+  it('should return empty string unchanged', function () {
+    expect(escapeJsStringLiteral(''), 'to equal', '');
+  });
+
   it('should return plain strings unchanged', function () {
     expect(escapeJsStringLiteral('hello'), 'to equal', 'hello');
   });
@@ -55,6 +57,14 @@ describe('escapeJsStringLiteral', function () {
     // raw single quotes must not appear (only escaped ones)
     expect(escaped, 'not to match', /(?<!\\)'/);
     expect(escaped, 'to contain', "\\'");
+  });
+
+  it('should escape backticks to prevent template literal injection', function () {
+    expect(escapeJsStringLiteral('a`b'), 'to equal', 'a\\x60b');
+  });
+
+  it('should escape null bytes', function () {
+    expect(escapeJsStringLiteral('a\0b'), 'to equal', 'a\\u0000b');
   });
 
   it('should handle combined special characters', function () {

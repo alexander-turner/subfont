@@ -26,6 +26,7 @@ describe('HeadlessBrowser', function () {
         getProperty: sinon.stub().resolves({
           getProperty: sinon.stub().resolves(null),
         }),
+        dispose: sinon.stub().resolves(),
       }),
     };
 
@@ -132,6 +133,7 @@ describe('HeadlessBrowser', function () {
     it('should close the page even if transferResults throws', async function () {
       mockPage.evaluateHandle = sinon.stub().resolves({
         jsonValue: sinon.stub().rejects(new Error('evaluation failed')),
+        dispose: sinon.stub().resolves(),
       });
       const hb = new HeadlessBrowser({ console: fakeConsole });
       const mockHtmlAsset = {
