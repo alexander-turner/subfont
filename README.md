@@ -55,27 +55,27 @@ subfont path/to/index.html -i --cache
 
 ## Options
 
-|               Flag | Default | Description                                                  |
-| -----------------: | :-----: | :----------------------------------------------------------- |
-|   `-i, --in-place` |   off   | Modify files in-place                                        |
-|     `-o, --output` |         | Output directory                                             |
-|           `--root` |         | Path to web root (deduced from input files if not specified) |
-| `--canonical-root` |         | URI root where the site will be deployed                     |
-|  `-r, --recursive` |   off   | Crawl linked pages                                           |
-|        `--dynamic` |   off   | Trace with headless browser                                  |
-|        `--dry-run` |   off   | Preview without writing                                      |
-|      `--fallbacks` |   on    | Load the full original font for characters not in the subset |
-|   `--font-display` | `swap`  | `auto`/`block`/`swap`/`fallback`/`optional`                  |
-|           `--text` |         | Extra characters for every subset                            |
-|    `--cache [dir]` |   off   | Cache subset results to disk between runs                    |
-|  `--concurrency N` |         | Max worker threads (capped by available memory, ~50 MB each) |
-|   `--chrome-flags` |         | Custom Chrome flags for `--dynamic`                          |
-|    `--source-maps` |   off   | Preserve CSS source maps (slower)                            |
-|         `--strict` |   off   | Exit non-zero if any warnings are emitted                    |
-|     `-s, --silent` |   off   | Suppress all console output                                  |
-|      `-d, --debug` |   off   | Verbose timing and font glyph detection info                 |
-|  `--relative-urls` |   off   | Emit relative URLs instead of root-relative                  |
-|     `--inline-css` |   off   | Inline the subset @font-face CSS into HTML                   |
+|               Flag | Default | Description                                                                           |
+| -----------------: | :-----: | :------------------------------------------------------------------------------------ |
+|   `-i, --in-place` |   off   | Modify files in-place                                                                 |
+|     `-o, --output` |         | Output directory                                                                      |
+|           `--root` |         | Path to web root (deduced from input files if not specified)                          |
+| `--canonical-root` |         | URI root where the site will be deployed                                              |
+|  `-r, --recursive` |   off   | Crawl linked pages                                                                    |
+|        `--dynamic` |   off   | Trace with headless browser                                                           |
+|        `--dry-run` |   off   | Preview without writing                                                               |
+|      `--fallbacks` |   on    | Async-load the full original font as a fallback for dynamic content                   |
+|   `--font-display` | `swap`  | `auto`/`block`/`swap`/`fallback`/`optional`                                           |
+|           `--text` |         | Extra characters for every subset                                                     |
+|    `--cache [dir]` |   off   | Cache subset results to disk between runs                                             |
+|  `--concurrency N` |  auto   | Max worker threads (defaults to CPU count, capped by available memory at ~50 MB each) |
+|   `--chrome-flags` |         | Custom Chrome flags for `--dynamic` (comma-separated)                                 |
+|    `--source-maps` |   off   | Preserve CSS source maps (slower)                                                     |
+|         `--strict` |   off   | Exit non-zero if any warnings are emitted                                             |
+|     `-s, --silent` |   off   | Suppress all console output                                                           |
+|      `-d, --debug` |   off   | Verbose timing and font glyph detection info                                          |
+|  `--relative-urls` |   off   | Emit relative URLs instead of root-relative                                           |
+|     `--inline-css` |   off   | Inline the subset @font-face CSS into HTML                                            |
 
 Run `subfont --help` for the full list.
 
@@ -113,28 +113,28 @@ with `log`, `warn`, and `error` methods — e.g. the global `console`). Pass
 
 The `options` object accepts the following keys:
 
-| Option          | Type                | Default  | Description                                                                                                  |
-| --------------- | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `inputFiles`    | `string[]`          | `[]`     | HTML entry points (file paths or URLs). At least one is required unless `root` is given.                     |
-| `root`          | `string`            | deduced  | Path or URL to the web root. Deduced from `inputFiles` if omitted.                                           |
-| `canonicalRoot` | `string`            | —        | URI root where the site will be deployed (used to rewrite absolute URLs).                                    |
-| `output`        | `string`            | —        | Output directory. Mutually exclusive with `inPlace`.                                                         |
-| `inPlace`       | `boolean`           | `false`  | Modify input files in place.                                                                                 |
-| `dryRun`        | `boolean`           | `false`  | Trace and compute subsets but do not write any files.                                                        |
-| `recursive`     | `boolean`           | `false`  | Crawl linked pages starting from `inputFiles`.                                                               |
-| `dynamic`       | `boolean`           | `false`  | Trace JS-rendered content in headless Chrome (via puppeteer).                                                |
-| `fallbacks`     | `boolean`           | `true`   | Keep the full original font for characters outside the subset.                                               |
-| `fontDisplay`   | `string`            | `'swap'` | `font-display` CSS value: `auto`, `block`, `swap`, `fallback`, or `optional`.                                |
-| `text`          | `string`            | —        | Extra characters to include in every subset.                                                                 |
-| `inlineCss`     | `boolean`           | `false`  | Inline the subset `@font-face` CSS into the HTML document.                                                   |
-| `relativeUrls`  | `boolean`           | `false`  | Emit relative URLs instead of root-relative URLs.                                                            |
-| `sourceMaps`    | `boolean`           | `false`  | Preserve CSS source maps (slower).                                                                           |
-| `concurrency`   | `number`            | auto     | Max parallel tracing workers. Capped by available memory (~50 MB per worker).                                |
-| `chromeFlags`   | `string[]`          | `[]`     | Extra Chrome flags forwarded to puppeteer when `dynamic` is set.                                             |
-| `cache`         | `boolean \| string` | `false`  | Cache subset results between runs. Pass a path to customize the cache directory; `true` uses the OS tmp dir. |
-| `strict`        | `boolean`           | `false`  | Resolve with a non-zero exit (via the CLI) if any warnings are emitted.                                      |
-| `silent`        | `boolean`           | `false`  | Suppress all log output to `console`.                                                                        |
-| `debug`         | `boolean`           | `false`  | Emit verbose timing and glyph-detection info.                                                                |
+| Option          | Type                | Default  | Description                                                                                                                                |
+| --------------- | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `inputFiles`    | `string[]`          | `[]`     | HTML entry points (file paths or URLs). At least one is required unless `root` is given.                                                   |
+| `root`          | `string`            | deduced  | Path or URL to the web root. Deduced from `inputFiles` if omitted.                                                                         |
+| `canonicalRoot` | `string`            | —        | URI root where the site will be deployed (used to rewrite absolute URLs).                                                                  |
+| `output`        | `string`            | —        | Output directory. Mutually exclusive with `inPlace`.                                                                                       |
+| `inPlace`       | `boolean`           | `false`  | Modify input files in place.                                                                                                               |
+| `dryRun`        | `boolean`           | `false`  | Trace and compute subsets but do not write any files.                                                                                      |
+| `recursive`     | `boolean`           | `false`  | Crawl linked pages starting from `inputFiles`.                                                                                             |
+| `dynamic`       | `boolean`           | `false`  | Trace JS-rendered content in headless Chrome (via puppeteer).                                                                              |
+| `fallbacks`     | `boolean`           | `true`   | Async-load the full original font as a fallback for dynamic content.                                                                       |
+| `fontDisplay`   | `string`            | `'swap'` | `font-display` CSS value: `auto`, `block`, `swap`, `fallback`, or `optional`.                                                              |
+| `text`          | `string`            | —        | Extra characters to include in every subset.                                                                                               |
+| `inlineCss`     | `boolean`           | `false`  | Inline the subset `@font-face` CSS into the HTML document.                                                                                 |
+| `relativeUrls`  | `boolean`           | `false`  | Emit relative URLs instead of root-relative URLs.                                                                                          |
+| `sourceMaps`    | `boolean`           | `false`  | Preserve CSS source maps (slower).                                                                                                         |
+| `concurrency`   | `number`            | auto     | Max parallel tracing workers. Defaults to CPU count, capped by available memory (~50 MB per worker).                                       |
+| `chromeFlags`   | `string[]`          | `[]`     | Extra Chrome flags forwarded to puppeteer when `dynamic` is set.                                                                           |
+| `cache`         | `boolean \| string` | `false`  | Cache subset results between runs. Pass a path to customize the cache directory; `true` uses `.subfont-cache` inside the `root` directory. |
+| `strict`        | `boolean`           | `false`  | Resolve with a non-zero exit (via the CLI) if any warnings are emitted.                                                                    |
+| `silent`        | `boolean`           | `false`  | Suppress all log output to `console`.                                                                                                      |
+| `debug`         | `boolean`           | `false`  | Emit verbose timing and glyph-detection info.                                                                                              |
 
 ## License
 

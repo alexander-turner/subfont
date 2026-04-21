@@ -25,7 +25,9 @@ describe('HeadlessBrowser', function () {
         jsonValue: sinon.stub().resolves([]),
         getProperty: sinon.stub().resolves({
           getProperty: sinon.stub().resolves(null),
+          dispose: sinon.stub().resolves(),
         }),
+        dispose: sinon.stub().resolves(),
       }),
     };
 
@@ -113,6 +115,28 @@ describe('HeadlessBrowser', function () {
       expect(mockPage.close, 'was called once');
     });
 
+    it('should dispose intermediate result handles when results are non-empty', async function () {
+      const resultDispose = sinon.stub().resolves();
+      const nodeHandle = { fake: 'elementHandle' };
+      mockPage.evaluateHandle = sinon.stub().resolves({
+        jsonValue: sinon.stub().resolves([{ text: 'hello' }]),
+        getProperty: sinon.stub().resolves({
+          getProperty: sinon.stub().resolves(nodeHandle),
+          dispose: resultDispose,
+        }),
+        dispose: sinon.stub().resolves(),
+      });
+      const hb = new HeadlessBrowser({ console: fakeConsole });
+      const mockHtmlAsset = {
+        assetGraph: mockAssetGraph,
+        url: 'file:///test/index.html',
+      };
+
+      const results = await hb.tracePage(mockHtmlAsset);
+      expect(resultDispose, 'was called once');
+      expect(results[0].node, 'to be', nodeHandle);
+    });
+
     it('should close the page even if goto throws', async function () {
       mockPage.goto = sinon.stub().rejects(new Error('navigation failed'));
       const hb = new HeadlessBrowser({ console: fakeConsole });
@@ -132,6 +156,7 @@ describe('HeadlessBrowser', function () {
     it('should close the page even if transferResults throws', async function () {
       mockPage.evaluateHandle = sinon.stub().resolves({
         jsonValue: sinon.stub().rejects(new Error('evaluation failed')),
+        dispose: sinon.stub().resolves(),
       });
       const hb = new HeadlessBrowser({ console: fakeConsole });
       const mockHtmlAsset = {

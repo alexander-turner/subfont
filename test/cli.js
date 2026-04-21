@@ -77,6 +77,36 @@ describe('cli', function () {
     expect(stderr, 'not to match', /^\s+at/m);
   });
 
+  it('should reject --concurrency 0', async function () {
+    const { err, stderr } = await runSubfont(
+      'dummy.html',
+      '--concurrency',
+      '0'
+    );
+    expect(err, 'to have property', 'exitCode', 1);
+    expect(stderr, 'to contain', '--concurrency must be a positive integer');
+  });
+
+  it('should reject negative --concurrency', async function () {
+    const { err, stderr } = await runSubfont(
+      'dummy.html',
+      '--concurrency',
+      '-1'
+    );
+    expect(err, 'to have property', 'exitCode', 1);
+    expect(stderr, 'to contain', '--concurrency must be a positive integer');
+  });
+
+  it('should reject non-integer --concurrency', async function () {
+    const { err, stderr } = await runSubfont(
+      'dummy.html',
+      '--concurrency',
+      '1.5'
+    );
+    expect(err, 'to have property', 'exitCode', 1);
+    expect(stderr, 'to contain', '--concurrency must be a positive integer');
+  });
+
   it('should subset a local HTML fixture with --dry-run and exit 0', async function () {
     this.timeout(120000);
     const fixture = pathModule.resolve(

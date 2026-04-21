@@ -11,6 +11,22 @@ describe('parseFontVariationSettings', function () {
       }
     );
 
+  it('should return no entries for "normal"', function () {
+    expect('normal', 'to come out as', []);
+  });
+
+  it('should return no entries for an empty string', function () {
+    expect('', 'to come out as', []);
+  });
+
+  it('should parse a single axis-value pair', function () {
+    expect('"wght" 700', 'to come out as', [['wght', 700]]);
+  });
+
+  it('should parse fractional axis values', function () {
+    expect('"wght" 123.5', 'to come out as', [['wght', 123.5]]);
+  });
+
   it('should ignore extra whitespace', function () {
     expect(' "FOOB" 200 , "QUUX" 400', 'to come out as', [
       ['FOOB', 200],
