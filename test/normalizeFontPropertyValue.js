@@ -150,6 +150,29 @@ describe('normalizeFontPropertyValue', function () {
         'normal'
       );
     });
+
+    it('should return the initial value for font-weight', function () {
+      expect(
+        normalizeFontPropertyValue('font-weight', undefined),
+        'to equal',
+        'normal'
+      );
+    });
+
+    it('should return the initial value regardless of prop name casing', function () {
+      expect(
+        normalizeFontPropertyValue('Font-Weight', undefined),
+        'to equal',
+        'normal'
+      );
+    });
+
+    it('should return undefined for an unknown property', function () {
+      expect(
+        normalizeFontPropertyValue('unknown-prop', undefined),
+        'to be undefined'
+      );
+    });
   });
 
   describe('with font-family', function () {
