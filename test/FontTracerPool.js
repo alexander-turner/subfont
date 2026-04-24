@@ -230,13 +230,14 @@ describe('FontTracerPool', function () {
       expect(rejected.length, 'to be less than or equal to', 1);
     });
 
-    it('should reject a task that exceeds the configured timeout', async function () {
+    it('should reject a task that exceeds the configured timeout and terminate the hung worker', async function () {
       pool = new FontTracerPool(1, { taskTimeoutMs: 200 });
       await pool.init();
 
       // Monkey-patch the worker's postMessage so the task is dispatched
       // but the worker never responds (simulating a hang).
       const worker = pool._workers[0];
+      const exitPromise = new Promise((resolve) => worker.on('exit', resolve));
       const originalPostMessage = worker.postMessage.bind(worker);
       worker.postMessage = function (msg) {
         if (msg.type === 'trace') {
@@ -252,6 +253,10 @@ describe('FontTracerPool', function () {
       } catch (err) {
         expect(err.message, 'to contain', 'timed out');
       }
+
+      // The hung worker should be terminated, shrinking the pool
+      await exitPromise;
+      expect(pool._workers, 'to have length', 0);
     });
 
     it('should handle large HTML with complex stylesheets', async function () {
