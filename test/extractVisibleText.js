@@ -191,5 +191,7 @@ describe('extractVisibleText', function () {
     expect(result, 'to contain', 'before');
     expect(result, 'to contain', 'after');
     expect(result, 'to contain', 'end');
+    expect(result, 'to contain', '&#xFFFFFFFF;');
+    expect(result, 'to contain', '&#99999999;');
   });
 });
