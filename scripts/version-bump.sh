@@ -3,6 +3,11 @@
 # Version is tracked via npm registry and git tags, not committed to the repository
 set -e
 
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  echo "Error: ANTHROPIC_API_KEY is not set. Configure it as a repository secret." >&2
+  exit 1
+fi
+
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 

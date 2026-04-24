@@ -103,4 +103,10 @@ describe('unquote', function () {
       expect(unquote('foo'), 'to equal', 'foo');
     });
   });
+
+  describe('with an out-of-range hex escape', function () {
+    it('should preserve the raw escape sequence', function () {
+      expect(unquote("'\\ffffff'"), 'to equal', '\\ffffff');
+    });
+  });
 });

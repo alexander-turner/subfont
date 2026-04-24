@@ -183,4 +183,15 @@ describe('extractVisibleText', function () {
     expect(result2, 'to contain', 'second');
     expect(result2, 'not to contain', 'first');
   });
+
+  it('should not throw on invalid numeric HTML entities', function () {
+    const result = extractVisibleText(
+      '<p>before &#xFFFFFFFF; after &#99999999; end</p>'
+    );
+    expect(result, 'to contain', 'before');
+    expect(result, 'to contain', 'after');
+    expect(result, 'to contain', 'end');
+    expect(result, 'to contain', '&#xFFFFFFFF;');
+    expect(result, 'to contain', '&#99999999;');
+  });
 });

@@ -1,10 +1,10 @@
 const expect = require('unexpected');
 const postcss = require('postcss');
 const {
-  _extractFeatureTagsFromDecl: extract,
-  _resolveFeatureSettings: resolveFeatureSettings,
-  _findFontFamiliesWithFeatureSettings: findFontFamiliesWithFeatureSettings,
-} = require('../lib/collectTextsByPage');
+  extractFeatureTagsFromDecl: extract,
+  resolveFeatureSettings,
+  findFontFamiliesWithFeatureSettings,
+} = require('../lib/fontFeatureHelpers');
 
 describe('extractFeatureTagsFromDecl', function () {
   describe('font-feature-settings', function () {

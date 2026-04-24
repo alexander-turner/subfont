@@ -982,8 +982,7 @@ describe('subsetFonts CSS injection and rewriting', function () {
       httpception(defaultLocalSubsetMock);
       const assetGraph = createGraph('multi-page');
       assetGraph.on('warn', (warn) =>
-        // FIXME: The mocked out woff and woff2 fonts from Google don't contain space.
-        // Redo the mocks so we don't have to allow 'Missing glyph' here:
+        // Mocked Google fonts lack the space glyph; allow the missing-glyph warning.
         expect(warn, 'to satisfy', /Missing glyph|Cannot find module/)
       );
       await loadAndPopulate(assetGraph, 'index.html', { crossorigin: false });
