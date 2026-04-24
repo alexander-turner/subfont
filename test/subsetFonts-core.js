@@ -724,7 +724,7 @@ describe('subsetFonts core subsetting logic', function () {
     httpception(defaultLocalSubsetMock);
 
     const assetGraph = createGraph('html-link');
-    // FIXME: Maybe use a font that's not missing any chars?
+    // Test font doesn't cover all chars; expect the missing-glyph warning.
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /is missing these characters/)
     );
@@ -875,7 +875,7 @@ describe('subsetFonts core subsetting logic', function () {
     httpception(defaultLocalSubsetMock);
 
     const assetGraph = createGraph('local-mixed');
-    // FIXME: Maybe use a font that's not missing any chars?
+    // Test font doesn't cover all chars; expect the missing-glyph warning.
     assetGraph.on('warn', (warn) =>
       expect(warn, 'to satisfy', /is missing these characters/)
     );
