@@ -1,35 +1,72 @@
-const fs = require('fs/promises');
-const pathModule = require('path');
-const crypto = require('crypto');
-const { getVariationAxisBounds } = require('./variationAxes');
-const collectFeatureGlyphIds = require('./collectFeatureGlyphIds');
-const subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
+import * as fs from 'fs/promises';
+import pathModule = require('path');
+import * as crypto from 'crypto';
+import type { Asset, AssetGraph } from 'assetgraph';
+import { getVariationAxisBounds } from './variationAxes';
+import collectFeatureGlyphIds = require('./collectFeatureGlyphIds');
+import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
 const SUBSET_CACHE_VERSION = '2';
 
+type FontBuffer = Buffer | Uint8Array;
+
+type VariationAxes =
+  | Record<string, number | { min: number; max: number; default?: number }>
+  | undefined;
+
+interface FontUsage {
+  text: string;
+  pageText?: string;
+  fontUrl?: string;
+  hasFontFeatureSettings?: boolean;
+  fontFeatureTags?: Iterable<string>;
+  subsets?: Record<string, Buffer>;
+  smallestSubsetSize?: number;
+  smallestSubsetFormat?: string;
+  variationAxes?: VariationAxes;
+  fullyInstanced?: boolean;
+  numAxesPinned?: number;
+  numAxesReduced?: number;
+  [key: string]: unknown;
+}
+
+interface AssetTextWithProps {
+  fontUsages: FontUsage[];
+  [key: string]: unknown;
+}
+
+interface SubsetInfo {
+  variationAxes: VariationAxes;
+  fullyInstanced: boolean;
+  numAxesPinned: number;
+  numAxesReduced: number;
+}
+
 // Cache the SHA-256 hash state after feeding SUBSET_CACHE_VERSION + fontBuffer.
 // For a font with 2 target formats this halves the hashing work on large buffers.
 // Uses WeakMap so entries are garbage-collected when the buffer is released.
-const fontBufferHashPrefixes = new WeakMap();
-function getFontBufferHashPrefix(fontBuffer) {
-  if (!fontBufferHashPrefixes.has(fontBuffer)) {
-    const hash = crypto.createHash('sha256');
-    hash.update(SUBSET_CACHE_VERSION);
-    hash.update(fontBuffer);
-    fontBufferHashPrefixes.set(fontBuffer, hash);
+const fontBufferHashPrefixes = new WeakMap<object, crypto.Hash>();
+function getFontBufferHashPrefix(fontBuffer: FontBuffer): crypto.Hash {
+  const key = fontBuffer as unknown as object;
+  let cached = fontBufferHashPrefixes.get(key);
+  if (!cached) {
+    cached = crypto.createHash('sha256');
+    cached.update(SUBSET_CACHE_VERSION);
+    cached.update(fontBuffer);
+    fontBufferHashPrefixes.set(key, cached);
   }
-  return fontBufferHashPrefixes.get(fontBuffer);
+  return cached;
 }
 
 function subsetCacheKey(
-  fontBuffer,
-  text,
-  targetFormat,
-  variationAxes,
-  featureGlyphIds
-) {
+  fontBuffer: FontBuffer,
+  text: string,
+  targetFormat: string,
+  variationAxes: VariationAxes,
+  featureGlyphIds: number[] | undefined
+): string {
   // Clone the pre-computed prefix (version + font buffer) and append
   // the remaining fields. hash.copy() is O(1) — just copies the
   // internal digest state, avoiding re-hashing the entire font buffer.
@@ -42,14 +79,19 @@ function subsetCacheKey(
 }
 
 class SubsetDiskCache {
-  constructor(cacheDir, console) {
+  private _cacheDir: string;
+  private _console: Console | null;
+  private _ensured: boolean;
+  private _warnedWrite: boolean;
+
+  constructor(cacheDir: string, console: Console | null | undefined) {
     this._cacheDir = cacheDir;
-    this._console = console;
+    this._console = console ?? null;
     this._ensured = false;
     this._warnedWrite = false;
   }
 
-  async _ensureDir() {
+  private async _ensureDir(): Promise<void> {
     if (!this._ensured) {
       // Only attempt once — persistent failures (bad path, permissions)
       // are far more common than transient ones, and retrying just
@@ -60,14 +102,14 @@ class SubsetDiskCache {
       } catch (err) {
         if (this._console) {
           this._console.warn(
-            `subfont: cache directory ${this._cacheDir} could not be created: ${err.message}`
+            `subfont: cache directory ${this._cacheDir} could not be created: ${(err as Error).message}`
           );
         }
       }
     }
   }
 
-  async get(key) {
+  async get(key: string): Promise<Buffer | undefined> {
     const filePath = pathModule.join(this._cacheDir, key);
     try {
       return await fs.readFile(filePath);
@@ -76,14 +118,15 @@ class SubsetDiskCache {
     }
   }
 
-  async set(key, buffer) {
+  async set(key: string, buffer: Buffer): Promise<void> {
     await this._ensureDir();
     const filePath = pathModule.join(this._cacheDir, key);
     try {
       await fs.writeFile(filePath, buffer);
     } catch (err) {
+      const errno = err as NodeJS.ErrnoException;
       // If the directory was removed after init, retry once
-      if (err.code === 'ENOENT') {
+      if (errno.code === 'ENOENT') {
         try {
           await fs.mkdir(this._cacheDir, { recursive: true });
           await fs.writeFile(filePath, buffer);
@@ -96,14 +139,18 @@ class SubsetDiskCache {
       this._warnedWrite = true;
       if (this._console) {
         this._console.warn(
-          `subfont: failed to write cache entry ${key}: ${err.message}`
+          `subfont: failed to write cache entry ${key}: ${errno.message}`
         );
       }
     }
   }
 }
 
-function getSubsetPromiseId(fontUsage, format, variationAxes = null) {
+export function getSubsetPromiseId(
+  fontUsage: FontUsage,
+  format: string,
+  variationAxes: VariationAxes | null = null
+): string {
   return [
     fontUsage.text,
     fontUsage.fontUrl,
@@ -112,20 +159,20 @@ function getSubsetPromiseId(fontUsage, format, variationAxes = null) {
   ].join('\x1d');
 }
 
-async function getSubsetsForFontUsage(
-  assetGraph,
-  htmlOrSvgAssetTextsWithProps,
-  formats,
-  seenAxisValuesByFontUrlAndAxisName,
-  cacheDir = null,
-  console = null,
+export async function getSubsetsForFontUsage(
+  assetGraph: AssetGraph,
+  htmlOrSvgAssetTextsWithProps: AssetTextWithProps[],
+  formats: string[],
+  seenAxisValuesByFontUrlAndAxisName: Map<string, Map<string, Set<number>>>,
+  cacheDir: string | null = null,
+  console: Console | null = null,
   debug = false
-) {
+): Promise<Map<string, Asset>> {
   const diskCache = cacheDir ? new SubsetDiskCache(cacheDir, console) : null;
   const cacheStats = diskCache ? { hits: 0, misses: 0 } : null;
 
   // Collect one canonical fontUsage per font URL
-  const canonicalFontUsageByUrl = new Map();
+  const canonicalFontUsageByUrl = new Map<string, FontUsage>();
   for (const item of htmlOrSvgAssetTextsWithProps) {
     for (const fontUsage of item.fontUsages) {
       if (
@@ -146,8 +193,8 @@ async function getSubsetsForFontUsage(
     },
   });
 
-  const fontAssetsByUrl = new Map();
-  const originalFontBuffers = new Map();
+  const fontAssetsByUrl = new Map<string, Asset>();
+  const originalFontBuffers = new Map<string, FontBuffer>();
   for (const fontUrl of allFontUrls) {
     const fontAsset = assetGraph.findAssets({
       url: fontUrl,
@@ -172,13 +219,16 @@ async function getSubsetsForFontUsage(
       )
     )
   );
-  const variationAxisBoundsCache = new Map();
+  const variationAxisBoundsCache = new Map<
+    string,
+    Awaited<ReturnType<typeof getVariationAxisBounds>>
+  >();
   for (let i = 0; i < fontUrlsWithAssets.length; i++) {
     variationAxisBoundsCache.set(fontUrlsWithAssets[i], boundsResults[i]);
   }
 
-  const subsetPromiseMap = new Map();
-  const subsetInfoByFontUrl = new Map();
+  const subsetPromiseMap = new Map<string, Promise<Buffer | null>>();
+  const subsetInfoByFontUrl = new Map<string, SubsetInfo>();
 
   // Process fonts concurrently — each font's feature glyph collection
   // and subset queuing run in parallel, so fonts without feature settings
@@ -190,7 +240,7 @@ async function getSubsetsForFontUsage(
       const text = fontUsage.text;
 
       const bounds = variationAxisBoundsCache.get(fontUrl);
-      const subsetInfo = bounds
+      const subsetInfo: SubsetInfo = bounds
         ? {
             variationAxes: bounds.variationAxes,
             fullyInstanced: bounds.fullyInstanced,
@@ -205,7 +255,7 @@ async function getSubsetsForFontUsage(
           };
       subsetInfoByFontUrl.set(fontUrl, subsetInfo);
 
-      let featureGlyphIds;
+      let featureGlyphIds: number[] | undefined;
       if (fontUsage.hasFontFeatureSettings && fontBuffer) {
         try {
           featureGlyphIds = await collectFeatureGlyphIds(
@@ -213,10 +263,11 @@ async function getSubsetsForFontUsage(
             text,
             fontUsage.fontFeatureTags
           );
-        } catch (err) {
+        } catch (rawErr) {
           // Feature glyph collection failed — continue without feature
           // glyphs rather than blocking all fonts (Promise.all would
           // reject entirely if this propagated).
+          const err = rawErr as Error & { asset?: unknown };
           err.asset = err.asset || fontAssetsByUrl.get(fontUrl);
           assetGraph.warn(err);
         }
@@ -239,7 +290,8 @@ async function getSubsetsForFontUsage(
                 featureGlyphIds
               )
             : null;
-          const cachedResult = diskCache ? await diskCache.get(cacheKey) : null;
+          const cachedResult =
+            diskCache && cacheKey ? await diskCache.get(cacheKey) : null;
 
           if (cachedResult) {
             if (cacheStats) cacheStats.hits++;
@@ -256,7 +308,7 @@ async function getSubsetsForFontUsage(
               promiseId,
               subsetCall
                 .then(async (result) => {
-                  if (diskCache && result) {
+                  if (diskCache && result && cacheKey) {
                     // Fire-and-forget: cache writes are best-effort.
                     // Errors are handled inside set(); the catch is a
                     // safety net against unhandled rejections.
@@ -264,7 +316,8 @@ async function getSubsetsForFontUsage(
                   }
                   return result;
                 })
-                .catch((err) => {
+                .catch((rawErr) => {
+                  const err = rawErr as Error & { asset?: unknown };
                   err.asset = err.asset || fontAssetsByUrl.get(fontUrl);
                   assetGraph.warn(err);
                   return null;
@@ -277,9 +330,12 @@ async function getSubsetsForFontUsage(
   );
 
   // Await all subset promises
-  const resolvedSubsets = new Map(
+  const resolvedSubsets = new Map<string, Buffer | null>(
     await Promise.all(
-      [...subsetPromiseMap].map(async ([key, promise]) => [key, await promise])
+      [...subsetPromiseMap].map(
+        async ([key, promise]) =>
+          [key, await promise] as [string, Buffer | null]
+      )
     )
   );
 
@@ -293,7 +349,8 @@ async function getSubsetsForFontUsage(
 
   // Assign subset results to canonical font usages
   for (const [, fontUsage] of canonicalFontUsageByUrl) {
-    const info = subsetInfoByFontUrl.get(fontUsage.fontUrl);
+    const info = subsetInfoByFontUrl.get(fontUsage.fontUrl as string);
+    if (!info) continue;
     for (const targetFormat of formats) {
       const promiseId = getSubsetPromiseId(
         fontUsage,
@@ -329,6 +386,7 @@ async function getSubsetsForFontUsage(
       const canonical = canonicalFontUsageByUrl.get(fontUsage.fontUrl);
       if (canonical && canonical !== fontUsage && canonical.subsets) {
         const info = subsetInfoByFontUrl.get(fontUsage.fontUrl);
+        if (!info) continue;
         fontUsage.subsets = canonical.subsets;
         fontUsage.smallestSubsetSize = canonical.smallestSubsetSize;
         fontUsage.smallestSubsetFormat = canonical.smallestSubsetFormat;
@@ -343,10 +401,8 @@ async function getSubsetsForFontUsage(
   return fontAssetsByUrl;
 }
 
-module.exports = {
-  getSubsetPromiseId,
-  getSubsetsForFontUsage,
-  // Exported for testing
-  _subsetCacheKey: subsetCacheKey,
-  _SubsetDiskCache: SubsetDiskCache,
+// Exported for testing
+export {
+  subsetCacheKey as _subsetCacheKey,
+  SubsetDiskCache as _SubsetDiskCache,
 };

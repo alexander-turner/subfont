@@ -1,5 +1,5 @@
-const pathModule = require('path');
-const { Worker } = require('worker_threads');
+import pathModule = require('path');
+import { Worker } from 'worker_threads';
 
 /**
  * Worker pool for running fontTracer in parallel across pages.
@@ -7,8 +7,69 @@ const { Worker } = require('worker_threads');
  */
 const DEFAULT_TASK_TIMEOUT_MS = 60_000;
 
+interface TaskCallbacks {
+  resolve: (value: unknown) => void;
+  reject: (reason?: unknown) => void;
+}
+
+interface StylesheetWithPredicates {
+  text?: string;
+  asset?: { text?: string };
+  predicates?: Record<string, unknown>;
+}
+
+interface TraceMessage {
+  type: 'trace';
+  taskId: number;
+  htmlText: string;
+  stylesheetsWithPredicates: Array<{
+    text: string;
+    predicates: Record<string, unknown>;
+  }>;
+}
+
+interface WorkerResultMessage {
+  type: 'result';
+  taskId: number;
+  textByProps: unknown;
+}
+
+interface WorkerErrorMessage {
+  type: 'error';
+  taskId: number;
+  error: string;
+  stack?: string;
+}
+
+interface WorkerReadyMessage {
+  type: 'ready';
+}
+
+type WorkerMessage =
+  | WorkerResultMessage
+  | WorkerErrorMessage
+  | WorkerReadyMessage;
+
+interface FontTracerPoolOptions {
+  taskTimeoutMs?: number;
+}
+
 class FontTracerPool {
-  constructor(numWorkers, { taskTimeoutMs = DEFAULT_TASK_TIMEOUT_MS } = {}) {
+  private _workerPath: string;
+  private _numWorkers: number;
+  private _taskTimeoutMs: number;
+  private _workers: Worker[];
+  private _idle: Worker[];
+  private _pendingTasks: Array<{ message: TraceMessage }>;
+  private _taskCallbacks: Map<number, TaskCallbacks>;
+  private _taskTimers: Map<number, NodeJS.Timeout>;
+  private _taskByWorker: Map<Worker, number>;
+  private _nextTaskId: number;
+
+  constructor(
+    numWorkers: number,
+    { taskTimeoutMs = DEFAULT_TASK_TIMEOUT_MS }: FontTracerPoolOptions = {}
+  ) {
     this._workerPath = pathModule.join(__dirname, 'fontTracerWorker.js');
     this._numWorkers = numWorkers;
     this._taskTimeoutMs = taskTimeoutMs;
@@ -17,24 +78,28 @@ class FontTracerPool {
     this._pendingTasks = [];
     this._taskCallbacks = new Map();
     this._taskTimers = new Map();
-    this._taskByWorker = new Map(); // track which taskId each worker is processing
+    this._taskByWorker = new Map();
     this._nextTaskId = 0;
   }
 
-  async init() {
-    const initPromises = [];
+  async init(): Promise<void> {
+    const initPromises: Array<Promise<void>> = [];
     for (let i = 0; i < this._numWorkers; i++) {
       const worker = new Worker(this._workerPath);
       this._workers.push(worker);
 
-      const initPromise = new Promise((resolve, reject) => {
+      const initPromise = new Promise<void>((resolve, reject) => {
         const onError = reject;
-        const onMessage = (msg) => {
+        const onMessage = (msg: WorkerMessage) => {
           if (msg.type === 'ready') {
             worker.off('message', onMessage);
             worker.off('error', onError);
-            worker.on('message', (msg) => this._onWorkerMessage(worker, msg));
-            worker.on('exit', (code) => this._onWorkerExit(worker, code));
+            worker.on('message', (msg: WorkerMessage) =>
+              this._onWorkerMessage(worker, msg)
+            );
+            worker.on('exit', (code: number) =>
+              this._onWorkerExit(worker, code)
+            );
             this._idle.push(worker);
             resolve();
           }
@@ -50,7 +115,7 @@ class FontTracerPool {
     await Promise.all(initPromises);
   }
 
-  _clearTaskTimer(taskId) {
+  private _clearTaskTimer(taskId: number): void {
     const timer = this._taskTimers.get(taskId);
     if (timer) {
       clearTimeout(timer);
@@ -58,7 +123,8 @@ class FontTracerPool {
     }
   }
 
-  _onWorkerMessage(worker, msg) {
+  private _onWorkerMessage(worker: Worker, msg: WorkerMessage): void {
+    if (msg.type === 'ready') return;
     this._taskByWorker.delete(worker);
     this._clearTaskTimer(msg.taskId);
     const cb = this._taskCallbacks.get(msg.taskId);
@@ -75,7 +141,7 @@ class FontTracerPool {
     this._dispatchPending();
   }
 
-  _onWorkerExit(worker, code) {
+  private _onWorkerExit(worker: Worker, code: number): void {
     // Remove crashed worker from tracking
     const workerIdx = this._workers.indexOf(worker);
     if (workerIdx !== -1) {
@@ -115,7 +181,7 @@ class FontTracerPool {
     }
   }
 
-  _startTaskTimer(taskId) {
+  private _startTaskTimer(taskId: number): void {
     if (this._taskTimeoutMs <= 0) return;
     const timer = setTimeout(() => {
       this._taskTimers.delete(taskId);
@@ -142,10 +208,10 @@ class FontTracerPool {
     this._taskTimers.set(taskId, timer);
   }
 
-  _dispatchPending() {
+  private _dispatchPending(): void {
     while (this._idle.length > 0 && this._pendingTasks.length > 0) {
-      const worker = this._idle.pop();
-      const task = this._pendingTasks.shift();
+      const worker = this._idle.pop() as Worker;
+      const task = this._pendingTasks.shift() as { message: TraceMessage };
       this._taskByWorker.set(worker, task.message.taskId);
       try {
         worker.postMessage(task.message);
@@ -168,7 +234,10 @@ class FontTracerPool {
    * Run fontTracer on the given HTML text + stylesheets in a worker.
    * Returns a promise that resolves to textByProps.
    */
-  trace(htmlText, stylesheetsWithPredicates) {
+  trace(
+    htmlText: string,
+    stylesheetsWithPredicates: StylesheetWithPredicates[]
+  ): Promise<unknown> {
     const taskId = this._nextTaskId++;
     // Serialize stylesheets to plain data — asset objects contain DOM/PostCSS
     // trees that cannot be transferred via structured clone.
@@ -176,7 +245,7 @@ class FontTracerPool {
       text: entry.text || (entry.asset && entry.asset.text) || '',
       predicates: entry.predicates || {},
     }));
-    const message = {
+    const message: TraceMessage = {
       type: 'trace',
       taskId,
       htmlText,
@@ -190,7 +259,7 @@ class FontTracerPool {
     });
   }
 
-  async destroy() {
+  async destroy(): Promise<void> {
     // Clear all task timers
     for (const timer of this._taskTimers.values()) {
       clearTimeout(timer);
@@ -224,7 +293,7 @@ class FontTracerPool {
       this._workers.map((w) =>
         Promise.race([
           w.terminate(),
-          new Promise((resolve) => {
+          new Promise<void>((resolve) => {
             const timer = setTimeout(resolve, TERMINATE_TIMEOUT_MS);
             timer.unref();
           }),
@@ -236,4 +305,4 @@ class FontTracerPool {
   }
 }
 
-module.exports = FontTracerPool;
+export = FontTracerPool;
