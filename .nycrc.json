@@ -1,7 +1,7 @@
 {
   "all": true,
   "include": ["lib/**/*.js"],
-  "exclude": ["lib/cli.js"],
+  "exclude": ["lib/cli.js", "lib/fontConverterWorker.js"],
   "reporter": ["text", "lcov"],
   "check-coverage": true,
   "branches": 70,

@@ -165,7 +165,7 @@ describe('subsetFontWithGlyphs', function () {
     }
   });
 
-  it('should serialize concurrent calls (p-limit)', async function () {
+  it('should handle concurrent calls via worker pool', async function () {
     const results = await Promise.all([
       subsetFontWithGlyphs(ttfBuffer, 'A', { targetFormat: 'woff2' }),
       subsetFontWithGlyphs(ttfBuffer, 'B', { targetFormat: 'woff2' }),
