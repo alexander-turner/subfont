@@ -2,7 +2,11 @@
 
 [![Build Status](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml)
 
-A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web fonts to only the characters used on your pages. Adds parallel tracing, disk caching, woff2-only output, and always-on variable font instancing. On [`turntrout.com`](https://github.com/alexander-turner/TurnTrout.com) (382 pages, 20+ font variants), switching to this fork cut font subsetting from [111 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) to [28 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824).
+A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web fonts to only the characters used on your pages. Adds parallel tracing, disk caching, woff2-only output, always-on variable font instancing, and is **fully written in TypeScript** (the upstream is JavaScript). On [`turntrout.com`](https://github.com/alexander-turner/TurnTrout.com) (382 pages, 20+ font variants), switching to this fork cut font subsetting from [111 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) to [28 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824).
+
+### TypeScript
+
+Every source module under `src/` is TypeScript compiled with `tsc --strict`, and first-class declaration files ship to consumers via `lib/*.d.ts`. The codebase forbids unannotated `any` and `unknown` (see [`eslint.config.js`](eslint.config.js)), so the orchestration, WASM bridges, and worker pool all carry compile-time guarantees that the upstream lacks.
 
 ### Aggressive woff2 subsetting
 

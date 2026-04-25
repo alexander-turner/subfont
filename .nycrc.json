@@ -1,11 +1,17 @@
 {
   "all": true,
   "include": ["lib/**/*.js"],
-  "exclude": ["lib/cli.js", "lib/fontConverterWorker.js"],
+  "exclude": [
+    "lib/cli.js",
+    "lib/fontConverterWorker.js",
+    "lib/fontTracerWorker.js"
+  ],
   "reporter": ["text", "lcov"],
   "check-coverage": true,
   "branches": 70,
   "lines": 80,
   "functions": 75,
-  "statements": 80
+  "statements": 80,
+  "sourceMap": false,
+  "produce-source-map": false
 }
