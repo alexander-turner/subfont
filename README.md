@@ -2,11 +2,11 @@
 
 [![Build Status](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml/badge.svg)](https://github.com/alexander-turner/subfont/actions/workflows/ci.yml)
 
-A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web fonts to only the characters used on your pages. Adds parallel tracing, disk caching, woff2-only output, and always-on variable font instancing. On [`turntrout.com`](https://github.com/alexander-turner/TurnTrout.com) (382 pages, 20+ font variants), switching to this fork cut font subsetting from [111 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) to [28 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824).
+A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web fonts to only the characters used on your pages. Adds parallel tracing, disk caching, woff2-only output, always-on variable font instancing, and is fully written in TypeScript (the upstream is JavaScript). On [`turntrout.com`](https://github.com/alexander-turner/TurnTrout.com) (382 pages, 20+ font variants), switching to this fork cut font subsetting from [111 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23470135763) to [28 minutes](https://github.com/alexander-turner/TurnTrout.com/actions/runs/23518006824).
 
 ### Aggressive woff2 subsetting
 
-subfont produces dramatically smaller font files by stripping data that browsers never use:
+`subfont` produces dramatically smaller font files by stripping data that browsers never use:
 
 | Optimization                | Technique                                                                          |
 | --------------------------- | ---------------------------------------------------------------------------------- |
@@ -17,7 +17,7 @@ subfont produces dramatically smaller font files by stripping data that browsers
 
 On the [`turntrout.com/design`](https://turntrout.com/design) page, a typical font subset (OpenSans, woff2) is **48-68% smaller** than a naive subset of the same glyphs:
 
-| Text sample       | Naive subset | subfont | Savings |
+| Text sample       | Naive subset | `subfont`| Savings |
 | ----------------- | ------------ | ------- | ------- |
 | Heading (short)   | 2,604 B      | 824 B   | **68%** |
 | Paragraph         | 4,052 B      | 1,840 B | **55%** |
@@ -35,22 +35,22 @@ Requires Node.js >= 18.
 
 ```bash
 # Optimize build artifacts in-place (recommended)
-subfont path/to/dist/index.html -i
+`subfont`path/to/dist/index.html -i
 
 # Preview without writing
-subfont path/to/dist/index.html --dry-run
+`subfont`path/to/dist/index.html --dry-run
 
 # Output to a separate directory
-subfont path/to/index.html -o path/to/output
+`subfont`path/to/index.html -o path/to/output
 
 # Crawl all linked pages
-subfont path/to/index.html -i --recursive
+`subfont`path/to/index.html -i --recursive
 
 # Trace JS-rendered content in headless Chrome
-subfont path/to/index.html -i --dynamic
+`subfont`path/to/index.html -i --dynamic
 
 # Cache subset results between runs
-subfont path/to/index.html -i --cache
+`subfont`path/to/index.html -i --cache
 ```
 
 ## Options
@@ -92,7 +92,7 @@ To include extra characters in a specific font's subset, add `-subfont-text` to 
 ## Programmatic API
 
 ```js
-const subfont = require('@turntrout/subfont');
+const `subfont`= require('@turntrout/subfont');
 
 const assetGraph = await subfont(
   {

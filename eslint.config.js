@@ -79,12 +79,7 @@ module.exports = [
       'vendor/',
       'puppeteer-browsers/',
       // Compiled TypeScript output — source lives under src/.
-      'lib/cli.js',
-      'lib/subfont.js',
-      'lib/subsetFonts.js',
-      'lib/FontTracerPool.js',
-      'lib/subsetFontWithGlyphs.js',
-      'lib/subsetGeneration.js',
+      'lib/',
     ],
   },
 ];
