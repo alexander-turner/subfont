@@ -129,6 +129,12 @@ async function acquireInstance(): Promise<PoolInstance> {
   }
   // All instances busy — wait for one to be released.
   return new Promise<PoolInstance>((resolve, reject) => {
+    // Define entry before the timeout callback so it's captured by value,
+    // not by a TDZ reference that happens to work only due to async timing.
+    const entry = (inst: PoolInstance) => {
+      clearTimeout(timer);
+      resolve(inst);
+    };
     const timer = setTimeout(() => {
       const idx = _waiters.indexOf(entry);
       if (idx !== -1) _waiters.splice(idx, 1);
@@ -139,10 +145,6 @@ async function acquireInstance(): Promise<PoolInstance> {
       );
     }, ACQUIRE_TIMEOUT_MS);
     timer.unref();
-    const entry = (inst: PoolInstance) => {
-      clearTimeout(timer);
-      resolve(inst);
-    };
     _waiters.push(entry);
   });
 }
@@ -311,7 +313,7 @@ function extractSubsetFont(exports: HarfbuzzExports, subset: number): Buffer {
   // detached by a grow during hb_face_reference_blob / hb_blob_get_data.
   const heapu8 = getHeapu8(exports);
 
-  if (offset + subsetByteLength > heapu8.byteLength) {
+  if (offset < 0 || offset + subsetByteLength > heapu8.byteLength) {
     exports.hb_blob_destroy(result);
     throw new Error(
       `WASM returned out-of-bounds offset ${offset} + length ${subsetByteLength} (heap size ${heapu8.byteLength})`

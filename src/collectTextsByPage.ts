@@ -489,11 +489,18 @@ async function tracePages(
                 `Worker fontTracer failed for ${pd.htmlOrSvgAsset.url}, falling back to main thread: ${err.message}`
               );
             }
-            pd.textByProps = fontTracer(pd.htmlOrSvgAsset.parseTree, {
-              stylesheetsWithPredicates: pd.stylesheetsWithPredicates,
-              getCssRulesByProperty: memoizedGetCssRulesByProperty,
-              asset: pd.htmlOrSvgAsset,
-            });
+            try {
+              pd.textByProps = fontTracer(pd.htmlOrSvgAsset.parseTree, {
+                stylesheetsWithPredicates: pd.stylesheetsWithPredicates,
+                getCssRulesByProperty: memoizedGetCssRulesByProperty,
+                asset: pd.htmlOrSvgAsset,
+              });
+            } catch (fallbackErr) {
+              const fbErr = fallbackErr as Error;
+              throw new Error(
+                `fontTracer failed for ${pd.htmlOrSvgAsset.url} in both worker and main thread: ${fbErr.message}`
+              );
+            }
           }
           const idx = progress.tick();
           logTracedPage(

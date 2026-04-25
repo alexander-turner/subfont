@@ -138,32 +138,36 @@ class HeadlessBrowser {
       await page.setRequestInterception(true);
       page.on('request', (request) => {
         const url = request.url();
-        if (url.startsWith(baseUrl)) {
-          let agUrl = url.replace(baseUrl, assetGraph.root);
-          if (/\/$/.test(agUrl)) {
-            agUrl += 'index.html';
+        try {
+          if (url.startsWith(baseUrl)) {
+            let agUrl = url.replace(baseUrl, assetGraph.root);
+            if (/\/$/.test(agUrl)) {
+              agUrl += 'index.html';
+            }
+            const asset = assetGraph.findAssets({
+              isLoaded: true,
+              url: agUrl,
+            })[0];
+            if (asset) {
+              request.respond({
+                status: 200,
+                contentType: asset.contentType,
+                body: asset.rawSrc,
+              });
+            } else {
+              request.respond({ status: 404, body: '' });
+            }
+            return;
           }
-          const asset = assetGraph.findAssets({
-            isLoaded: true,
-            url: agUrl,
-          })[0];
-          if (asset) {
-            request.respond({
-              status: 200,
-              contentType: asset.contentType,
-              body: asset.rawSrc,
-            });
-          } else {
-            request.respond({ status: 404, body: '' });
+          if (url.startsWith('file:')) {
+            request.continue();
+            return;
           }
-          return;
+          // External request — abort to avoid hanging on DNS/network.
+          request.abort('failed');
+        } catch {
+          // Request may already be handled or page may be closing — ignore.
         }
-        if (url.startsWith('file:')) {
-          request.continue();
-          return;
-        }
-        // External request — abort to avoid hanging on DNS/network.
-        request.abort('failed');
       });
 
       page.on('requestfailed', (request) => {
