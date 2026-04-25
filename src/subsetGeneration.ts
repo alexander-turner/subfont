@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import pathModule = require('path');
 import * as crypto from 'crypto';
-import type { Asset, AssetGraph } from 'assetgraph';
+import type { Asset, AssetGraph, Relation } from 'assetgraph';
 import { getVariationAxisBounds } from './variationAxes';
 import collectFeatureGlyphIds = require('./collectFeatureGlyphIds');
 import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
@@ -16,6 +16,8 @@ type VariationAxes =
   | Record<string, number | { min: number; max: number; default?: number }>
   | undefined;
 
+type AssetGraphError = Error & { asset?: Asset; relation?: Relation };
+
 interface FontUsage {
   text: string;
   pageText?: string;
@@ -29,12 +31,10 @@ interface FontUsage {
   fullyInstanced?: boolean;
   numAxesPinned?: number;
   numAxesReduced?: number;
-  [key: string]: unknown;
 }
 
 interface AssetTextWithProps {
   fontUsages: FontUsage[];
-  [key: string]: unknown;
 }
 
 interface SubsetInfo {
@@ -47,15 +47,14 @@ interface SubsetInfo {
 // Cache the SHA-256 hash state after feeding SUBSET_CACHE_VERSION + fontBuffer.
 // For a font with 2 target formats this halves the hashing work on large buffers.
 // Uses WeakMap so entries are garbage-collected when the buffer is released.
-const fontBufferHashPrefixes = new WeakMap<object, crypto.Hash>();
+const fontBufferHashPrefixes = new WeakMap<FontBuffer, crypto.Hash>();
 function getFontBufferHashPrefix(fontBuffer: FontBuffer): crypto.Hash {
-  const key = fontBuffer as unknown as object;
-  let cached = fontBufferHashPrefixes.get(key);
+  let cached = fontBufferHashPrefixes.get(fontBuffer);
   if (!cached) {
     cached = crypto.createHash('sha256');
     cached.update(SUBSET_CACHE_VERSION);
     cached.update(fontBuffer);
-    fontBufferHashPrefixes.set(key, cached);
+    fontBufferHashPrefixes.set(fontBuffer, cached);
   }
   return cached;
 }
@@ -267,7 +266,7 @@ export async function getSubsetsForFontUsage(
           // Feature glyph collection failed — continue without feature
           // glyphs rather than blocking all fonts (Promise.all would
           // reject entirely if this propagated).
-          const err = rawErr as Error & { asset?: unknown };
+          const err = rawErr as AssetGraphError;
           err.asset = err.asset || fontAssetsByUrl.get(fontUrl);
           assetGraph.warn(err);
         }
@@ -317,7 +316,7 @@ export async function getSubsetsForFontUsage(
                   return result;
                 })
                 .catch((rawErr) => {
-                  const err = rawErr as Error & { asset?: unknown };
+                  const err = rawErr as AssetGraphError;
                   err.asset = err.asset || fontAssetsByUrl.get(fontUrl);
                   assetGraph.warn(err);
                   return null;

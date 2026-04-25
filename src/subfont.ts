@@ -4,7 +4,7 @@ import pathModule = require('path');
 import sanitizeFilename = require('sanitize-filename');
 import { getMaxConcurrency } from './concurrencyLimit';
 import AssetGraph = require('assetgraph');
-import type { Asset, Relation } from 'assetgraph';
+import type { Asset, AssetQuery, Relation } from 'assetgraph';
 import prettyBytes = require('pretty-bytes');
 import * as urlTools from 'urltools';
 import * as util from 'util';
@@ -120,7 +120,7 @@ const subfont = async function subfont(
 
   function logToConsole(severity: 'log' | 'warn', ...args: unknown[]): void {
     if (!silent && console) {
-      (console[severity] as (...a: unknown[]) => void)(...args);
+      (console[severity] as Console['log'])(...args);
     }
   }
   function log(...args: unknown[]): void {
@@ -201,7 +201,7 @@ const subfont = async function subfont(
     'HtmlNoscript',
   ];
 
-  let followRelationsQuery: Record<string, unknown>;
+  let followRelationsQuery: AssetQuery;
   if (recursive) {
     followRelationsQuery = {
       $or: [
@@ -607,14 +607,14 @@ const subfont = async function subfont(
   log(`Total savings: ${prettyBytes(totalSavings)}`);
   outerTimings['output reporting'] = reportingPhase.end();
 
-  type Timings = Record<string, unknown>;
-  const st: Timings = (subsetTimings ?? {}) as Timings;
-  const details = (st.collectTextsByPageDetails ?? {}) as Record<
-    string,
-    number | undefined
-  >;
-  const stNum = (key: string): number | undefined =>
-    typeof st[key] === 'number' ? (st[key] as number) : undefined;
+  const st = subsetTimings ?? {};
+  const detailsRaw = st.collectTextsByPageDetails;
+  const details: Record<string, number | undefined> =
+    detailsRaw && typeof detailsRaw === 'object' ? detailsRaw : {};
+  const stNum = (key: string): number | undefined => {
+    const value = st[key];
+    return typeof value === 'number' ? value : undefined;
+  };
   const totalElapsed =
     (outerTimings.loadAssets || 0) +
     (outerTimings['populate (initial)'] || 0) +

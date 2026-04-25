@@ -1,6 +1,12 @@
 import * as urltools from 'urltools';
 import * as fontverter from 'fontverter';
-import type { Asset, AssetGraph, PostCssNode, Relation } from 'assetgraph';
+import type {
+  Asset,
+  AssetGraph,
+  AssetQuery,
+  PostCssNode,
+  Relation,
+} from 'assetgraph';
 import compileQuery = require('assetgraph/lib/compileQuery');
 
 import findCustomPropertyDefinitions = require('./findCustomPropertyDefinitions');
@@ -34,6 +40,12 @@ import warnAboutMissingGlyphs = require('./warnAboutMissingGlyphs');
 
 const googleFontsCssUrlRegex = /^(?:https?:)?\/\/fonts\.googleapis\.com\/css/;
 
+type VariationAxes =
+  | Record<string, number | { min: number; max: number; default?: number }>
+  | undefined;
+
+type AssetGraphError = Error & { asset?: Asset; relation?: Relation };
+
 interface FontUsage {
   text: string;
   pageText?: string;
@@ -55,7 +67,7 @@ interface FontUsage {
   fullyInstanced?: boolean;
   numAxesPinned?: number;
   numAxesReduced?: number;
-  variationAxes?: unknown;
+  variationAxes?: VariationAxes;
   hasFontFeatureSettings?: boolean;
   fontFeatureTags?: Iterable<string>;
 }
@@ -70,7 +82,7 @@ interface AssetTextWithProps {
   accumulatedFontFaceDeclarations: AccumulatedFontFaceDeclaration[];
 }
 
-function getParents(asset: Asset, assetQuery: unknown): Asset[] {
+function getParents(asset: Asset, assetQuery: AssetQuery): Asset[] {
   const assetMatcher = compileQuery(assetQuery);
   const seenAssets = new Set<Asset>();
   const parents: Asset[] = [];
@@ -558,9 +570,14 @@ interface SubsetFontsOptions {
   cacheDir?: string | null;
 }
 
+type SubsetFontsTimings = Record<
+  string,
+  number | undefined | Record<string, number | undefined>
+>;
+
 interface SubsetFontsResult {
   fontInfo: Array<{ assetFileName: string; fontUsages: Partial<FontUsage>[] }>;
-  timings: Record<string, number | undefined | Record<string, unknown>>;
+  timings: SubsetFontsTimings;
 }
 
 async function subsetFonts(
@@ -596,8 +613,7 @@ async function subsetFonts(
 
   const subsetUrl = urltools.ensureTrailingSlash(assetGraph.root + subsetPath);
 
-  const timings: Record<string, number | undefined | Record<string, unknown>> =
-    {};
+  const timings: SubsetFontsTimings = {};
   const trackPhase = makePhaseTracker(console, debug);
 
   const applySourceMapsPhase = trackPhase('applySourceMaps');
@@ -695,7 +711,7 @@ async function subsetFonts(
       fontInfoPromises.set(
         fontUrl,
         getFontInfo(fontAsset.rawSrc).catch((rawErr: unknown) => {
-          const err = rawErr as Error & { asset?: unknown };
+          const err = rawErr as AssetGraphError;
           err.asset = err.asset || fontAsset;
           assetGraph.warn(err);
           return null;
@@ -924,7 +940,7 @@ async function subsetFonts(
       if (relation.type === 'HtmlPrefetchLink') {
         const err = new Error(
           `Detached ${relation.node.outerHTML}. Will be replaced with preload with JS fallback.\nIf you feel this is wrong, open an issue at https://github.com/alexander-turner/subfont/issues`
-        ) as Error & { asset?: unknown; relation?: unknown };
+        ) as AssetGraphError;
         err.asset = relation.from;
         err.relation = relation;
         assetGraph.info(err);
@@ -1314,7 +1330,7 @@ async function subsetFonts(
     type: 'Css',
     isLoaded: true,
   });
-  const parseTreeToAsset = new Map<unknown, Asset>();
+  const parseTreeToAsset = new Map<Asset['parseTree'], Asset>();
   for (const cssAsset of cssAssets) {
     parseTreeToAsset.set(cssAsset.parseTree, cssAsset);
   }
