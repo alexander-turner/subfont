@@ -1,23 +1,74 @@
-const fsPromises = require('fs/promises');
-const os = require('os');
-const pathModule = require('path');
-const sanitizeFilename = require('sanitize-filename');
-const { getMaxConcurrency } = require('./concurrencyLimit');
-const AssetGraph = require('assetgraph');
-const prettyBytes = require('pretty-bytes');
-const urlTools = require('urltools');
-const util = require('util');
-const subsetFonts = require('./subsetFonts');
-const { makePhaseTracker } = require('./progress');
+import * as fsPromises from 'fs/promises';
+import os = require('os');
+import pathModule = require('path');
+import sanitizeFilename = require('sanitize-filename');
+import { getMaxConcurrency } from './concurrencyLimit';
+import AssetGraph = require('assetgraph');
+import type { Asset, AssetQuery, Relation } from 'assetgraph';
+import prettyBytes = require('pretty-bytes');
+import * as urlTools from 'urltools';
+import * as util from 'util';
+import subsetFonts = require('./subsetFonts');
+import { makePhaseTracker } from './progress';
 
 class UsageError extends Error {
-  constructor(message) {
+  constructor(message: string) {
     super(message);
     this.name = 'UsageError';
   }
 }
 
-module.exports = async function subfont(
+interface SubfontOptions {
+  root?: string;
+  canonicalRoot?: string;
+  output?: string;
+  debug?: boolean;
+  dryRun?: boolean;
+  silent?: boolean;
+  inlineCss?: boolean;
+  fontDisplay?: string;
+  inPlace?: boolean;
+  inputFiles?: Array<string | URL>;
+  recursive?: boolean;
+  relativeUrls?: boolean;
+  dynamic?: boolean;
+  fallbacks?: boolean;
+  text?: string;
+  sourceMaps?: boolean;
+  concurrency?: number;
+  chromeFlags?: string[];
+  cache?: boolean | string;
+  strict?: boolean;
+}
+
+interface ReportFontUsage {
+  fontUrl?: string;
+  preload?: boolean;
+  fullyInstanced?: boolean;
+  numAxesPinned?: number;
+  numAxesReduced?: number;
+  smallestOriginalFormat?: string;
+  smallestSubsetFormat?: string;
+  smallestOriginalSize?: number;
+  smallestSubsetSize?: number;
+  props: Record<string, string>;
+  codepoints: {
+    original: number[];
+    used: number[];
+    unused: number[];
+    page: number[];
+  };
+}
+
+interface SubfontFn {
+  (
+    options: SubfontOptions,
+    console?: Console
+  ): Promise<InstanceType<typeof AssetGraph>>;
+  UsageError: typeof UsageError;
+}
+
+const subfont = async function subfont(
   {
     root,
     canonicalRoot,
@@ -39,9 +90,9 @@ module.exports = async function subfont(
     chromeFlags = [],
     cache = false,
     strict = false,
-  },
-  console
-) {
+  }: SubfontOptions,
+  console?: Console
+): Promise<InstanceType<typeof AssetGraph>> {
   if (
     concurrency !== undefined &&
     (!Number.isInteger(concurrency) || concurrency < 1)
@@ -67,19 +118,23 @@ module.exports = async function subfont(
 
   const formats = ['woff2'];
 
-  function logToConsole(severity, ...args) {
+  // Variadic console-style helpers: console.log / .warn accept any argument.
+  /* eslint-disable no-restricted-syntax */
+  function logToConsole(severity: 'log' | 'warn', ...args: unknown[]): void {
     if (!silent && console) {
-      console[severity](...args);
+      (console[severity] as Console['log'])(...args);
     }
   }
-  function log(...args) {
+  function log(...args: unknown[]): void {
     logToConsole('log', ...args);
   }
-  function warn(...args) {
+  function warn(...args: unknown[]): void {
     logToConsole('warn', ...args);
   }
+  /* eslint-enable no-restricted-syntax */
 
-  let rootUrl = root && urlTools.urlOrFsPathToUrl(root, true);
+  let rootUrl: string | undefined =
+    root && urlTools.urlOrFsPathToUrl(root, true);
   // Validate --root path exists early to give a clear error message
   if (root && rootUrl && rootUrl.startsWith('file:')) {
     const rootPath = urlTools.fileUrlToFsPath(rootUrl);
@@ -90,7 +145,7 @@ module.exports = async function subfont(
     }
   }
   const outRoot = output && urlTools.urlOrFsPathToUrl(output, true);
-  let inputUrls;
+  let inputUrls: string[];
   if (inputFiles.length > 0) {
     inputUrls = inputFiles.map((urlOrFsPath) =>
       urlTools.urlOrFsPathToUrl(String(urlOrFsPath), false)
@@ -127,12 +182,13 @@ module.exports = async function subfont(
     );
   }
 
-  const assetGraphConfig = {
-    root: rootUrl,
-    canonicalRoot,
-  };
+  const assetGraphConfig: { root: string | undefined; canonicalRoot?: string } =
+    {
+      root: rootUrl,
+      canonicalRoot,
+    };
 
-  if (!rootUrl.startsWith('file:')) {
+  if (rootUrl && !rootUrl.startsWith('file:')) {
     assetGraphConfig.canonicalRoot = rootUrl.replace(/\/?$/, '/'); // Ensure trailing slash
   }
 
@@ -148,7 +204,7 @@ module.exports = async function subfont(
     'HtmlNoscript',
   ];
 
-  let followRelationsQuery;
+  let followRelationsQuery: AssetQuery;
   if (recursive) {
     followRelationsQuery = {
       $or: [
@@ -168,23 +224,29 @@ module.exports = async function subfont(
   }
   const assetGraph = new AssetGraph(assetGraphConfig);
 
-  function isExtensionlessEnoent(err) {
+  // Catch-clause idiom: error values are `unknown` until narrowed.
+  // eslint-disable-next-line no-restricted-syntax
+  function isExtensionlessEnoent(err: unknown): boolean {
+    if (typeof err !== 'object' || err === null) return false;
+    // eslint-disable-next-line no-restricted-syntax
+    const e = err as { code?: unknown; path?: unknown };
     return (
-      err &&
-      err.code === 'ENOENT' &&
-      typeof err.path === 'string' &&
-      !/\.[^/]+$/.test(err.path)
+      e.code === 'ENOENT' &&
+      typeof e.path === 'string' &&
+      !/\.[^/]+$/.test(e.path)
     );
   }
 
   let sawWarning = false;
   const origEmit = assetGraph.emit;
-  assetGraph.emit = function (event, err, ...rest) {
+  // EventEmitter.emit forwards arbitrary varargs.
+  // eslint-disable-next-line no-restricted-syntax
+  assetGraph.emit = function (event: string, ...rest: unknown[]) {
     if (event === 'warn') {
-      if (isExtensionlessEnoent(err)) return false;
+      if (isExtensionlessEnoent(rest[0])) return false;
       sawWarning = true;
     }
-    return origEmit.call(this, event, err, ...rest);
+    return origEmit.call(this, event, ...rest);
   };
   if (silent) {
     assetGraph.on('warn', () => {});
@@ -192,7 +254,7 @@ module.exports = async function subfont(
     await assetGraph.logEvents({ console, stopOnWarning: strict });
   }
 
-  const outerTimings = {};
+  const outerTimings: Record<string, number | undefined> = {};
   // The tracker writes with console.log (duck-typed). Route it through
   // the silent-aware log wrapper so --silent suppresses phase markers
   // the same way it suppresses other subfont output.
@@ -209,10 +271,11 @@ module.exports = async function subfont(
   outerTimings['populate (initial)'] = populatePhase.end();
 
   const entrypointAssets = assetGraph.findAssets({ isInitial: true });
-  const redirectOrigins = new Set();
-  for (const relation of assetGraph
-    .findRelations({ type: 'HttpRedirect' })
-    .sort((a, b) => a.id - b.id)) {
+  const redirectOrigins = new Set<string>();
+  type Redirect = Relation & { id: number };
+  for (const relation of (
+    assetGraph.findRelations({ type: 'HttpRedirect' }) as Redirect[]
+  ).sort((a, b) => a.id - b.id)) {
     if (relation.from.isInitial) {
       assetGraph.info(
         new Error(`${relation.from.url} redirected to ${relation.to.url}`)
@@ -220,7 +283,7 @@ module.exports = async function subfont(
       relation.to.isInitial = true;
       relation.from.isInitial = false;
 
-      redirectOrigins.add(relation.to.origin);
+      redirectOrigins.add((relation.to as Asset & { origin: string }).origin);
     }
   }
   if (
@@ -256,7 +319,7 @@ module.exports = async function subfont(
     );
   }
 
-  let cacheDir = null;
+  let cacheDir: string | null = null;
   if (cache && typeof cache === 'string' && cache.length > 0) {
     cacheDir = cache;
   } else if (cache && rootUrl && rootUrl.startsWith('file:')) {
@@ -271,21 +334,28 @@ module.exports = async function subfont(
   }
 
   const subsetPhase = trackPhase('subsetFonts total');
-  const { fontInfo, timings: subsetTimings } = await subsetFonts(assetGraph, {
-    inlineCss,
-    fontDisplay,
-    formats,
-    omitFallbacks: !fallbacks,
-    hrefType: relativeUrls ? 'relative' : 'rootRelative',
-    text,
-    dynamic,
-    console,
-    sourceMaps,
-    debug,
-    concurrency,
-    chromeArgs: chromeFlags,
-    cacheDir,
-  });
+  const { fontInfo: rawFontInfo, timings: subsetTimings } = await subsetFonts(
+    assetGraph,
+    {
+      inlineCss,
+      fontDisplay,
+      formats,
+      omitFallbacks: !fallbacks,
+      hrefType: relativeUrls ? 'relative' : 'rootRelative',
+      text,
+      dynamic,
+      console,
+      sourceMaps,
+      debug,
+      concurrency,
+      chromeArgs: chromeFlags,
+      cacheDir,
+    }
+  );
+  const fontInfo = rawFontInfo as Array<{
+    assetFileName: string;
+    fontUsages: ReportFontUsage[];
+  }>;
   const subsetFontsTotal = subsetPhase.end();
 
   const postProcessingPhase = trackPhase('post-subsetFonts processing');
@@ -321,7 +391,7 @@ module.exports = async function subfont(
     }
   }
 
-  if (!rootUrl.startsWith('file:')) {
+  if (rootUrl && !rootUrl.startsWith('file:')) {
     for (const relation of assetGraph.findRelations()) {
       if (
         relation.hrefType === 'protocolRelative' ||
@@ -338,7 +408,7 @@ module.exports = async function subfont(
         isInline: false,
         fileName: { $or: ['', undefined] },
       },
-      (asset, assetGraph) =>
+      (asset) =>
         `${asset.url.replace(/\/?$/, '/')}index${asset.defaultExtension}`
     );
   }
@@ -360,7 +430,7 @@ module.exports = async function subfont(
       {
         isLoaded: true,
         isRedirect: { $ne: true },
-        url: (url) => url && url.startsWith(assetGraph.root),
+        url: (url: string) => url && url.startsWith(assetGraph.root),
       },
       outRoot,
       assetGraph.root
@@ -375,7 +445,22 @@ module.exports = async function subfont(
     // and subset sizes are per-font, so the remaining per-page variation
     // worth surfacing is just which pages reference the variant.
     const SAMPLE_PAGES = 5;
-    const byVariant = new Map();
+    interface VariantEntry {
+      fontUrl?: string;
+      props: Record<string, string>;
+      preload?: boolean;
+      fullyInstanced?: boolean;
+      numAxesPinned?: number;
+      numAxesReduced?: number;
+      smallestOriginalFormat?: string;
+      smallestSubsetFormat?: string;
+      smallestOriginalSize?: number;
+      smallestSubsetSize?: number;
+      codepoints?: { original: number; used: number; unused: number };
+      pageCount: number;
+      samplePages: string[];
+    }
+    const byVariant = new Map<string, VariantEntry>();
     for (const { assetFileName, fontUsages } of fontInfo) {
       for (const fu of fontUsages) {
         const p = fu.props || {};
@@ -437,7 +522,7 @@ module.exports = async function subfont(
     let maxOriginalCodePoints = 0;
     for (const fontUsage of fontUsages) {
       sumSmallestSubsetSize += fontUsage.smallestSubsetSize || 0;
-      sumSmallestOriginalSize += fontUsage.smallestOriginalSize;
+      sumSmallestOriginalSize += fontUsage.smallestOriginalSize ?? 0;
       maxUsedCodePoints = Math.max(
         fontUsage.codepoints.used.length,
         maxUsedCodePoints
@@ -447,7 +532,7 @@ module.exports = async function subfont(
         maxOriginalCodePoints
       );
     }
-    const fontUsagesByFontFamily = {};
+    const fontUsagesByFontFamily: Record<string, ReportFontUsage[]> = {};
     for (const fontUsage of fontUsages) {
       const key = fontUsage.props['font-family'];
       if (!fontUsagesByFontFamily[key]) fontUsagesByFontFamily[key] = [];
@@ -481,23 +566,25 @@ module.exports = async function subfont(
           fontUsage.smallestOriginalSize !== undefined &&
           fontUsage.smallestSubsetSize !== undefined
         ) {
+          const numAxesReduced = fontUsage.numAxesReduced ?? 0;
+          const numAxesPinned = fontUsage.numAxesPinned ?? 0;
           if (fontUsage.fullyInstanced) {
             status += ', fully instanced';
-          } else if (fontUsage.numAxesReduced > 0 || fontUsage.numAxesPinned) {
+          } else if (numAxesReduced > 0 || numAxesPinned) {
             const instancingInfos = [];
-            if (fontUsage.numAxesPinned > 0) {
+            if (numAxesPinned > 0) {
               instancingInfos.push(
-                `${fontUsage.numAxesPinned} ${
-                  fontUsage.numAxesPinned === 1 ? 'axis' : 'axes'
+                `${numAxesPinned} ${
+                  numAxesPinned === 1 ? 'axis' : 'axes'
                 } pinned`
               );
             }
-            if (fontUsage.numAxesReduced) {
+            if (numAxesReduced) {
               instancingInfos.push(
-                `${fontUsage.numAxesReduced}${
-                  fontUsage.numAxesPinned > 0
+                `${numAxesReduced}${
+                  numAxesPinned > 0
                     ? ''
-                    : fontUsage.numAxesReduced === 1
+                    : numAxesReduced === 1
                       ? ' axis'
                       : ' axes'
                 } reduced`
@@ -528,8 +615,14 @@ module.exports = async function subfont(
   log(`Total savings: ${prettyBytes(totalSavings)}`);
   outerTimings['output reporting'] = reportingPhase.end();
 
-  const st = subsetTimings || {};
-  const details = st.collectTextsByPageDetails || {};
+  const st = subsetTimings ?? {};
+  const detailsRaw = st.collectTextsByPageDetails;
+  const details: Record<string, number | undefined> =
+    detailsRaw && typeof detailsRaw === 'object' ? detailsRaw : {};
+  const stNum = (key: string): number | undefined => {
+    const value = st[key];
+    return typeof value === 'number' ? value : undefined;
+  };
   const totalElapsed =
     (outerTimings.loadAssets || 0) +
     (outerTimings['populate (initial)'] || 0) +
@@ -538,20 +631,20 @@ module.exports = async function subfont(
     (outerTimings.writeAssetsToDisc || 0) +
     (outerTimings['output reporting'] || 0);
 
-  const rows = [
+  const rows: Array<[string, number | undefined, number]> = [
     ['loadAssets', outerTimings.loadAssets, 0],
     ['populate (initial)', outerTimings['populate (initial)'], 0],
     ['subsetFonts total', subsetFontsTotal, 0],
-    ['collectTextsByPage', st.collectTextsByPage, 1],
+    ['collectTextsByPage', stNum('collectTextsByPage'), 1],
     ['Stylesheet precompute', details['Stylesheet precompute'], 2],
     ['Full tracing', details['Full tracing'], 2],
     ['Fast-path extraction', details['Fast-path extraction'], 2],
     ['Per-page loop', details['Per-page loop'], 2],
     ['Post-processing', details['Post-processing total'], 2],
-    ['codepoint generation', st['codepoint generation'], 1],
-    ['getSubsetsForFontUsage', st.getSubsetsForFontUsage, 1],
-    ['insert subsets loop', st['insert subsets loop'], 1],
-    ['inject font-family', st['inject subset font-family'], 1],
+    ['codepoint generation', stNum('codepoint generation'), 1],
+    ['getSubsetsForFontUsage', stNum('getSubsetsForFontUsage'), 1],
+    ['insert subsets loop', stNum('insert subsets loop'), 1],
+    ['inject font-family', stNum('inject subset font-family'), 1],
     ['post-subsetFonts', outerTimings['post-subsetFonts processing'], 0],
     ['writeAssetsToDisc', outerTimings.writeAssetsToDisc, 0],
     ['output reporting', outerTimings['output reporting'], 0],
@@ -575,9 +668,12 @@ module.exports = async function subfont(
     const assetsToWrite = assetGraph.findAssets({
       isLoaded: true,
       isRedirect: { $ne: true },
-      url: (url) => url && url.startsWith(assetGraph.root),
+      url: (url: string) => url && url.startsWith(assetGraph.root),
     });
-    const byType = {};
+    const byType: Record<
+      string,
+      { count: number; size: number; files: string[] }
+    > = {};
     let totalOutputSize = 0;
     for (const asset of assetsToWrite) {
       const type = asset.type || 'Other';
@@ -621,7 +717,7 @@ module.exports = async function subfont(
     const subsetCssAssets = assetGraph.findAssets({
       type: 'Css',
       isLoaded: true,
-      url: (url) => url && url.includes('/subfont/'),
+      url: (url: string) => url && url.includes('/subfont/'),
     });
     if (subsetCssAssets.length > 0) {
       log(
@@ -641,6 +737,8 @@ module.exports = async function subfont(
     log('Output written to', outRoot || assetGraph.root);
   }
   return assetGraph;
-};
+} as SubfontFn;
 
-module.exports.UsageError = UsageError;
+subfont.UsageError = UsageError;
+
+export = subfont;

@@ -7,7 +7,12 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "lint": "eslint . && prettier --check '**/*.{js,md}'",
+    "build": "tsc && chmod +x lib/cli.js",
+    "clean": "rimraf 'lib/{cli,subfont,subsetFonts,FontTracerPool,subsetFontWithGlyphs,subsetGeneration}.{js,d.ts,d.ts.map,js.map}'",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . && prettier --check '**/*.{js,ts,md}'",
+    "pretest": "npm run build",
+    "prepack": "npm run build",
     "test": "mocha && npm run lint",
     "prepublishOnly": "npm test",
     "coverage": "nyc --reporter=lcov --reporter=text -- mocha",
@@ -78,6 +83,8 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/yargs": "^17.0.0",
     "canvas": "npm:@napi-rs/canvas@^0.1.97",
     "combos": "^0.2.0",
     "coveralls": "^3.0.9",
@@ -96,7 +103,10 @@
     "prettier": "^3.0.0",
     "proxyquire": "^2.1.1",
     "puppeteer": "^24.39.1",
+    "rimraf": "^6.0.0",
     "sinon": "^19.0.0",
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.59.0",
     "unexpected": "^11.8.1",
     "unexpected-check": "^2.3.1",
     "unexpected-resemble": "^5.0.1",

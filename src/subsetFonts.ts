@@ -1,23 +1,28 @@
-const urltools = require('urltools');
+import * as urltools from 'urltools';
+import * as fontverter from 'fontverter';
+import type {
+  Asset,
+  AssetGraph,
+  AssetQuery,
+  PostCssNode,
+  Relation,
+} from 'assetgraph';
+import compileQuery = require('assetgraph/lib/compileQuery');
 
-const fontverter = require('fontverter');
+import findCustomPropertyDefinitions = require('./findCustomPropertyDefinitions');
+import extractReferencedCustomPropertyNames = require('./extractReferencedCustomPropertyNames');
+import injectSubsetDefinitions = require('./injectSubsetDefinitions');
+import { makePhaseTracker } from './progress';
+import * as cssFontParser from 'css-font-parser';
+import * as cssListHelpers from 'css-list-helpers';
+import unquote = require('./unquote');
+import normalizeFontPropertyValue = require('./normalizeFontPropertyValue');
+import unicodeRange = require('./unicodeRange');
+import getFontInfo = require('./getFontInfo');
+import collectTextsByPage = require('./collectTextsByPage');
 
-const compileQuery = require('assetgraph/lib/compileQuery');
-
-const findCustomPropertyDefinitions = require('./findCustomPropertyDefinitions');
-const extractReferencedCustomPropertyNames = require('./extractReferencedCustomPropertyNames');
-const injectSubsetDefinitions = require('./injectSubsetDefinitions');
-const { makePhaseTracker } = require('./progress');
-const cssFontParser = require('css-font-parser');
-const cssListHelpers = require('css-list-helpers');
-const unquote = require('./unquote');
-const normalizeFontPropertyValue = require('./normalizeFontPropertyValue');
-const unicodeRange = require('./unicodeRange');
-const getFontInfo = require('./getFontInfo');
-const collectTextsByPage = require('./collectTextsByPage');
-
-const escapeJsStringLiteral = require('./escapeJsStringLiteral');
-const {
+import escapeJsStringLiteral = require('./escapeJsStringLiteral');
+import {
   maybeCssQuote,
   getFontFaceDeclarationText,
   getUnusedVariantsStylesheet,
@@ -27,18 +32,61 @@ const {
   parseFontWeightRange,
   parseFontStretchRange,
   hashHexPrefix,
-} = require('./fontFaceHelpers');
-const { getVariationAxisUsage } = require('./variationAxes');
-const { getSubsetsForFontUsage } = require('./subsetGeneration');
-const subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
+} from './fontFaceHelpers';
+import { getVariationAxisUsage } from './variationAxes';
+import { getSubsetsForFontUsage } from './subsetGeneration';
+import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
+import warnAboutMissingGlyphs = require('./warnAboutMissingGlyphs');
 
 const googleFontsCssUrlRegex = /^(?:https?:)?\/\/fonts\.googleapis\.com\/css/;
 
-function getParents(asset, assetQuery) {
+type VariationAxes =
+  | Record<string, number | { min: number; max: number; default?: number }>
+  | undefined;
+
+type AssetGraphError = Error & { asset?: Asset; relation?: Relation };
+
+interface FontUsage {
+  text: string;
+  pageText?: string;
+  fontUrl?: string;
+  preload?: boolean;
+  subsets?: Record<string, Buffer>;
+  fontFamilies: Set<string>;
+  props: Record<string, string>;
+  codepoints: {
+    original: number[];
+    used: number[];
+    unused: number[];
+    page: number[];
+  };
+  smallestSubsetSize?: number;
+  smallestSubsetFormat?: string;
+  smallestOriginalSize?: number;
+  smallestOriginalFormat?: string;
+  fullyInstanced?: boolean;
+  numAxesPinned?: number;
+  numAxesReduced?: number;
+  variationAxes?: VariationAxes;
+  hasFontFeatureSettings?: boolean;
+  fontFeatureTags?: Iterable<string>;
+}
+
+interface AccumulatedFontFaceDeclaration {
+  relations: Relation[];
+}
+
+interface AssetTextWithProps {
+  htmlOrSvgAsset: Asset;
+  fontUsages: FontUsage[];
+  accumulatedFontFaceDeclarations: AccumulatedFontFaceDeclaration[];
+}
+
+function getParents(asset: Asset, assetQuery: AssetQuery): Asset[] {
   const assetMatcher = compileQuery(assetQuery);
-  const seenAssets = new Set();
-  const parents = [];
-  (function visit(asset) {
+  const seenAssets = new Set<Asset>();
+  const parents: Asset[] = [];
+  (function visit(asset: Asset) {
     if (seenAssets.has(asset)) {
       return;
     }
@@ -56,8 +104,10 @@ function getParents(asset, assetQuery) {
   return parents;
 }
 
-function countUniqueFontUrls(htmlOrSvgAssetTextsWithProps) {
-  const urls = new Set();
+function countUniqueFontUrls(
+  htmlOrSvgAssetTextsWithProps: AssetTextWithProps[]
+): number {
+  const urls = new Set<string>();
   for (const item of htmlOrSvgAssetTextsWithProps) {
     for (const fu of item.fontUsages) {
       if (fu.fontUrl) urls.add(fu.fontUrl);
@@ -67,10 +117,10 @@ function countUniqueFontUrls(htmlOrSvgAssetTextsWithProps) {
 }
 
 function asyncLoadStyleRelationWithFallback(
-  htmlOrSvgAsset,
-  originalRelation,
-  hrefType
-) {
+  htmlOrSvgAsset: Asset,
+  originalRelation: Relation,
+  hrefType: string
+): void {
   // Async load google font stylesheet
   // Insert async CSS loading <script>
   const href = escapeJsStringLiteral(
@@ -130,20 +180,20 @@ function asyncLoadStyleRelationWithFallback(
   htmlOrSvgAsset.markDirty();
 }
 
-const extensionByFormat = {
+const extensionByFormat: Record<string, string> = {
   truetype: '.ttf',
   woff: '.woff',
   woff2: '.woff2',
 };
 
 async function createSelfHostedGoogleFontsCssAsset(
-  assetGraph,
-  googleFontsCssAsset,
-  formats,
-  hrefType,
-  subsetUrl
-) {
-  const lines = [];
+  assetGraph: AssetGraph,
+  googleFontsCssAsset: Asset,
+  formats: string[],
+  hrefType: string,
+  subsetUrl: string
+): Promise<Asset> {
+  const lines: string[] = [];
   for (const cssFontFaceSrc of assetGraph.findRelations({
     from: googleFontsCssAsset,
     type: 'CssFontFaceSrc',
@@ -162,7 +212,7 @@ async function createSelfHostedGoogleFontsCssAsset(
         fontverter.convert(cssFontFaceSrc.to.rawSrc, format)
       )
     );
-    const srcFragments = [];
+    const srcFragments: string[] = [];
     for (let fi = 0; fi < formats.length; fi++) {
       const format = formats[fi];
       const rawSrc = convertedFonts[fi];
@@ -212,7 +262,18 @@ const validFontDisplayValues = [
   'optional',
 ];
 
-const warnAboutMissingGlyphs = require('./warnAboutMissingGlyphs');
+interface GetOrCreateSubsetCssAssetArgs {
+  assetGraph: AssetGraph;
+  subsetCssText: string;
+  subsetFontUsages: FontUsage[];
+  formats: string[];
+  subsetUrl: string;
+  hrefType: string;
+  inlineCss: boolean;
+  fontUrlsUsedOnEveryPage: Set<string>;
+  numPages: number;
+  subsetCssAssetCache: Map<string, Asset>;
+}
 
 // Create (or retrieve from disk cache) the subset CSS asset for a set of
 // fontUsages, relocating the font binary to its hashed URL under subsetUrl.
@@ -227,7 +288,7 @@ async function getOrCreateSubsetCssAsset({
   fontUrlsUsedOnEveryPage,
   numPages,
   subsetCssAssetCache,
-}) {
+}: GetOrCreateSubsetCssAssetArgs): Promise<Asset> {
   let cssAsset = subsetCssAssetCache.get(subsetCssText);
   if (cssAsset) return cssAsset;
 
@@ -251,6 +312,7 @@ async function getOrCreateSubsetCssAsset({
     if (
       formats.length === 1 &&
       fontUsage &&
+      fontUsage.fontUrl &&
       (!inlineCss || numPages === 1) &&
       fontUrlsUsedOnEveryPage.has(fontUsage.fontUrl)
     ) {
@@ -258,15 +320,17 @@ async function getOrCreateSubsetCssAsset({
       continue;
     }
 
-    const extension = fontAsset.contentType.split('/').pop();
+    const extension = (fontAsset.contentType ?? '').split('/').pop();
 
     const nameProps = ['font-family', 'font-weight', 'font-style']
-      .map((prop) => fontRelation.node.nodes.find((decl) => decl.prop === prop))
-      .map((decl) => decl.value);
+      .map((prop) =>
+        fontRelation.node.nodes?.find((decl) => decl.prop === prop)
+      )
+      .map((decl) => decl?.value as string);
 
     const fontWeightRangeStr = nameProps[1]
       .split(/\s+/)
-      .map((token) => normalizeFontPropertyValue('font-weight', token))
+      .map((token: string) => normalizeFontPropertyValue('font-weight', token))
       .join('_');
     const fileNamePrefix = `${unquote(
       cssFontParser.parseFontFamily(nameProps[0])[0]
@@ -311,6 +375,15 @@ async function getOrCreateSubsetCssAsset({
   return cssAsset;
 }
 
+interface AddSubsetFontPreloadsArgs {
+  cssAsset: Asset;
+  fontUsages: FontUsage[];
+  htmlOrSvgAsset: Asset;
+  subsetUrl: string;
+  hrefType: string;
+  insertionPoint: Relation | undefined;
+}
+
 // Insert <link rel="preload"> hints for every woff2 subset flagged as
 // preload-worthy, so the browser starts fetching them during HTML parse.
 function addSubsetFontPreloads({
@@ -320,7 +393,7 @@ function addSubsetFontPreloads({
   subsetUrl,
   hrefType,
   insertionPoint,
-}) {
+}: AddSubsetFontPreloadsArgs): Relation | undefined {
   if (htmlOrSvgAsset.type !== 'Html') return insertionPoint;
 
   // Only <link rel="preload"> for woff2 subset files whose original
@@ -336,9 +409,13 @@ function addSubsetFontPreloads({
       continue;
     }
 
-    const originalFontFamily = unquote(
-      fontRelation.node.nodes.find((node) => node.prop === 'font-family').value
-    ).replace(/__subset$/, '');
+    const familyDecl = fontRelation.node.nodes?.find(
+      (node) => node.prop === 'font-family'
+    );
+    const originalFontFamily = unquote(familyDecl?.value ?? '').replace(
+      /__subset$/,
+      ''
+    );
     if (
       !fontUsages.some(
         (fontUsage) =>
@@ -367,7 +444,9 @@ function addSubsetFontPreloads({
 // otherwise assetgraph spends ~30s network-walking for nothing on sites
 // that only self-host. Returns whether the populate ran so callers can
 // annotate their phase timing.
-async function populateGoogleFontsIfPresent(assetGraph) {
+async function populateGoogleFontsIfPresent(
+  assetGraph: AssetGraph
+): Promise<boolean> {
   const hasGoogleFonts =
     assetGraph.findRelations({
       to: { url: { $regex: googleFontsCssUrlRegex } },
@@ -392,13 +471,17 @@ async function populateGoogleFontsIfPresent(assetGraph) {
 // severed assets are returned via the `potentiallyOrphanedAssets` set so
 // the final orphan sweep can remove anything left dangling.
 function removeOriginalFontFaceRules(
-  htmlOrSvgAssets,
-  fontFaceDeclarationsByHtmlOrSvgAsset,
-  potentiallyOrphanedAssets
-) {
+  htmlOrSvgAssets: Asset[],
+  fontFaceDeclarationsByHtmlOrSvgAsset: Map<
+    Asset,
+    AccumulatedFontFaceDeclaration[]
+  >,
+  potentiallyOrphanedAssets: Set<Asset>
+): void {
   for (const htmlOrSvgAsset of htmlOrSvgAssets) {
     const accumulatedFontFaceDeclarations =
       fontFaceDeclarationsByHtmlOrSvgAsset.get(htmlOrSvgAsset);
+    if (!accumulatedFontFaceDeclarations) continue;
     for (const { relations } of accumulatedFontFaceDeclarations) {
       for (const relation of relations) {
         potentiallyOrphanedAssets.add(relation.to);
@@ -415,11 +498,14 @@ function removeOriginalFontFaceRules(
 // Rewrite CSS source-map relations to the caller's chosen hrefType so they
 // align with the rest of the emitted assets. Only invoked when sourceMaps is
 // enabled — subsetFonts normally skips source-map serialization for speed.
-async function rewriteCssSourceMaps(assetGraph, hrefType) {
+async function rewriteCssSourceMaps(
+  assetGraph: AssetGraph,
+  hrefType: string
+): Promise<void> {
   await assetGraph.serializeSourceMaps(undefined, {
     type: 'Css',
     outgoingRelations: {
-      $where: (relations) =>
+      $where: (relations: Relation[]) =>
         relations.some((relation) => relation.type === 'CssSourceMappingUrl'),
     },
   });
@@ -439,7 +525,10 @@ async function rewriteCssSourceMaps(assetGraph, hrefType) {
 // Remove assets whose last incoming relation was severed during subset
 // injection (original @font-face rules, merged Google Fonts CSS, etc.) so
 // the emitted site doesn't ship with dangling files.
-function removeOrphanedAssets(assetGraph, potentiallyOrphanedAssets) {
+function removeOrphanedAssets(
+  assetGraph: AssetGraph,
+  potentiallyOrphanedAssets: Set<Asset>
+): void {
   for (const asset of potentiallyOrphanedAssets) {
     if (asset.incomingRelations.length === 0) {
       assetGraph.removeAsset(asset);
@@ -450,7 +539,9 @@ function removeOrphanedAssets(assetGraph, potentiallyOrphanedAssets) {
 // Shape the per-page fontUsages into the external fontInfo report: strip
 // internal bookkeeping (subsets buffer, feature-tag scratch) and flatten
 // each page to { assetFileName, fontUsages }.
-function buildFontInfoReport(htmlOrSvgAssetTextsWithProps) {
+function buildFontInfoReport(
+  htmlOrSvgAssetTextsWithProps: AssetTextWithProps[]
+): Array<{ assetFileName: string; fontUsages: Partial<FontUsage>[] }> {
   return htmlOrSvgAssetTextsWithProps.map(({ fontUsages, htmlOrSvgAsset }) => ({
     assetFileName: htmlOrSvgAsset.nonInlineAncestor.urlOrDescription,
     fontUsages: fontUsages.map((fontUsage) =>
@@ -461,13 +552,41 @@ function buildFontInfoReport(htmlOrSvgAssetTextsWithProps) {
   }));
 }
 
+interface SubsetFontsOptions {
+  formats?: string[];
+  subsetPath?: string;
+  omitFallbacks?: boolean;
+  inlineCss?: boolean;
+  fontDisplay?: string;
+  hrefType?: string;
+  onlyInfo?: boolean;
+  dynamic?: boolean;
+  console?: Console;
+  text?: string;
+  sourceMaps?: boolean;
+  debug?: boolean;
+  concurrency?: number;
+  chromeArgs?: string[];
+  cacheDir?: string | null;
+}
+
+type SubsetFontsTimings = Record<
+  string,
+  number | undefined | Record<string, number | undefined>
+>;
+
+interface SubsetFontsResult {
+  fontInfo: Array<{ assetFileName: string; fontUsages: Partial<FontUsage>[] }>;
+  timings: SubsetFontsTimings;
+}
+
 async function subsetFonts(
-  assetGraph,
+  assetGraph: AssetGraph,
   {
     formats = ['woff2'],
     subsetPath = 'subfont/',
     omitFallbacks = false,
-    inlineCss,
+    inlineCss = false,
     fontDisplay,
     hrefType = 'rootRelative',
     onlyInfo,
@@ -479,9 +598,9 @@ async function subsetFonts(
     concurrency,
     chromeArgs = [],
     cacheDir = null,
-  } = {}
-) {
-  if (!validFontDisplayValues.includes(fontDisplay)) {
+  }: SubsetFontsOptions = {}
+): Promise<SubsetFontsResult> {
+  if (fontDisplay && !validFontDisplayValues.includes(fontDisplay)) {
     fontDisplay = undefined;
   }
 
@@ -494,7 +613,7 @@ async function subsetFonts(
 
   const subsetUrl = urltools.ensureTrailingSlash(assetGraph.root + subsetPath);
 
-  const timings = {};
+  const timings: SubsetFontsTimings = {};
   const trackPhase = makePhaseTracker(console, debug);
 
   const applySourceMapsPhase = trackPhase('applySourceMaps');
@@ -540,7 +659,7 @@ async function subsetFonts(
   timings.collectTextsByPageDetails = subTimings;
 
   const omitFallbacksPhase = trackPhase('omitFallbacks processing');
-  const potentiallyOrphanedAssets = new Set();
+  const potentiallyOrphanedAssets = new Set<Asset>();
   if (omitFallbacks) {
     removeOriginalFontFaceRules(
       htmlOrSvgAssets,
@@ -553,7 +672,7 @@ async function subsetFonts(
   const codepointPhase = trackPhase('codepoint generation');
 
   if (fontDisplay) {
-    for (const htmlOrSvgAssetTextWithProps of htmlOrSvgAssetTextsWithProps) {
+    for (const htmlOrSvgAssetTextWithProps of htmlOrSvgAssetTextsWithProps as AssetTextWithProps[]) {
       for (const fontUsage of htmlOrSvgAssetTextWithProps.fontUsages) {
         fontUsage.props['font-display'] = fontDisplay;
       }
@@ -563,12 +682,12 @@ async function subsetFonts(
   // Pre-compute the global codepoints (original, used, unused) once per fontUrl
   // since fontUsage.text is the same global union on every page.
   // Pre-index all loaded assets by URL for O(1) lookups instead of O(n) scans.
-  const loadedAssetsByUrl = new Map();
+  const loadedAssetsByUrl = new Map<string, Asset>();
   for (const asset of assetGraph.findAssets({ isLoaded: true })) {
     if (asset.url) loadedAssetsByUrl.set(asset.url, asset);
   }
-  const codepointFontAssetByUrl = new Map();
-  for (const htmlOrSvgAssetTextWithProps of htmlOrSvgAssetTextsWithProps) {
+  const codepointFontAssetByUrl = new Map<string, Asset>();
+  for (const htmlOrSvgAssetTextWithProps of htmlOrSvgAssetTextsWithProps as AssetTextWithProps[]) {
     for (const fontUsage of htmlOrSvgAssetTextWithProps.fontUsages) {
       if (
         fontUsage.fontUrl &&
@@ -585,12 +704,16 @@ async function subsetFonts(
   // getFontInfo internally serializes harfbuzzjs WASM calls (which are
   // not concurrency-safe), so Promise.all here just queues them up
   // and avoids awaiting each individually in the loop below.
-  const fontInfoPromises = new Map();
+  type FontInfo = Awaited<ReturnType<typeof getFontInfo>> | null;
+  const fontInfoPromises = new Map<string, Promise<FontInfo>>();
   for (const [fontUrl, fontAsset] of codepointFontAssetByUrl) {
     if (fontAsset.isLoaded) {
       fontInfoPromises.set(
         fontUrl,
-        getFontInfo(fontAsset.rawSrc).catch((err) => {
+        // Catch-clause idiom: TypeScript types caught errors as `unknown`.
+        // eslint-disable-next-line no-restricted-syntax
+        getFontInfo(fontAsset.rawSrc).catch((rawErr: unknown) => {
+          const err = rawErr as AssetGraphError;
           err.asset = err.asset || fontAsset;
           assetGraph.warn(err);
           return null;
@@ -598,26 +721,39 @@ async function subsetFonts(
       );
     }
   }
-  const fontInfoResults = new Map(
+  const fontInfoResults = new Map<string, FontInfo>(
     await Promise.all(
-      [...fontInfoPromises].map(async ([key, promise]) => [key, await promise])
+      [...fontInfoPromises].map(
+        async ([key, promise]) => [key, await promise] as [string, FontInfo]
+      )
     )
   );
 
   // Build global codepoints synchronously from pre-fetched results
-  const globalCodepointsByFontUrl = new Map();
-  const codepointsCache = new Map();
-  for (const htmlOrSvgAssetTextWithProps of htmlOrSvgAssetTextsWithProps) {
+  const globalCodepointsByFontUrl = new Map<
+    string | undefined,
+    {
+      originalCodepoints: number[] | null;
+      usedCodepoints?: number[];
+      unusedCodepoints?: number[];
+    }
+  >();
+  const codepointsCache = new Map<string, number[]>();
+  for (const htmlOrSvgAssetTextWithProps of htmlOrSvgAssetTextsWithProps as AssetTextWithProps[]) {
     for (const fontUsage of htmlOrSvgAssetTextWithProps.fontUsages) {
       let cached = globalCodepointsByFontUrl.get(fontUsage.fontUrl);
       if (!cached) {
         cached = { originalCodepoints: null };
-        const fontInfo = fontInfoResults.get(fontUsage.fontUrl);
+        const fontInfo = fontUsage.fontUrl
+          ? fontInfoResults.get(fontUsage.fontUrl)
+          : undefined;
         if (fontInfo) {
-          cached.originalCodepoints = fontInfo.characterSet;
-          cached.usedCodepoints = getCodepoints(fontUsage.text);
-          const usedCodepointsSet = new Set(cached.usedCodepoints);
-          cached.unusedCodepoints = cached.originalCodepoints.filter(
+          const originalCodepoints: number[] = fontInfo.characterSet;
+          const usedCodepoints = getCodepoints(fontUsage.text);
+          const usedCodepointsSet = new Set(usedCodepoints);
+          cached.originalCodepoints = originalCodepoints;
+          cached.usedCodepoints = usedCodepoints;
+          cached.unusedCodepoints = originalCodepoints.filter(
             (n) => !usedCodepointsSet.has(n)
           );
         }
@@ -627,15 +763,16 @@ async function subsetFonts(
       if (cached.originalCodepoints) {
         // Cache getCodepoints result by pageText string to avoid
         // recomputing for pages with identical text per font
-        let pageCodepoints = codepointsCache.get(fontUsage.pageText);
+        const pageText = fontUsage.pageText ?? '';
+        let pageCodepoints = codepointsCache.get(pageText);
         if (!pageCodepoints) {
-          pageCodepoints = getCodepoints(fontUsage.pageText);
-          codepointsCache.set(fontUsage.pageText, pageCodepoints);
+          pageCodepoints = getCodepoints(pageText);
+          codepointsCache.set(pageText, pageCodepoints);
         }
         fontUsage.codepoints = {
           original: cached.originalCodepoints,
-          used: cached.usedCodepoints,
-          unused: cached.unusedCodepoints,
+          used: cached.usedCodepoints ?? [],
+          unused: cached.unusedCodepoints ?? [],
           page: pageCodepoints,
         };
       } else {
@@ -653,7 +790,7 @@ async function subsetFonts(
 
   if (onlyInfo) {
     return {
-      fontInfo: htmlOrSvgAssetTextsWithProps.map(
+      fontInfo: (htmlOrSvgAssetTextsWithProps as AssetTextWithProps[]).map(
         ({ fontUsages, htmlOrSvgAsset }) => ({
           assetFileName: htmlOrSvgAsset.nonInlineAncestor.urlOrDescription,
           fontUsages: fontUsages.map((fontUsage) =>
@@ -704,19 +841,21 @@ async function subsetFonts(
 
   // Pre-compute which fontUrls are used (with text) on every page.
   // Set intersection: O(pages × fonts_per_page) vs the old every+some approach.
-  const fontUrlsUsedOnEveryPage = new Set();
+  const fontUrlsUsedOnEveryPage = new Set<string>();
   if (htmlOrSvgAssetTextsWithProps.length > 0) {
-    const firstPageFontUrls = new Set();
-    for (const fu of htmlOrSvgAssetTextsWithProps[0].fontUsages) {
-      if (fu.pageText) firstPageFontUrls.add(fu.fontUrl);
+    const firstPageFontUrls = new Set<string>();
+    for (const fu of (htmlOrSvgAssetTextsWithProps as AssetTextWithProps[])[0]
+      .fontUsages) {
+      if (fu.pageText && fu.fontUrl) firstPageFontUrls.add(fu.fontUrl);
     }
     for (const fontUrl of firstPageFontUrls) {
       fontUrlsUsedOnEveryPage.add(fontUrl);
     }
     for (let i = 1; i < htmlOrSvgAssetTextsWithProps.length; i++) {
-      const pageFontUrls = new Set();
-      for (const fu of htmlOrSvgAssetTextsWithProps[i].fontUsages) {
-        if (fu.pageText) pageFontUrls.add(fu.fontUrl);
+      const pageFontUrls = new Set<string>();
+      for (const fu of (htmlOrSvgAssetTextsWithProps as AssetTextWithProps[])[i]
+        .fontUsages) {
+        if (fu.pageText && fu.fontUrl) pageFontUrls.add(fu.fontUrl);
       }
       for (const fontUrl of fontUrlsUsedOnEveryPage) {
         if (!pageFontUrls.has(fontUrl)) {
@@ -728,21 +867,24 @@ async function subsetFonts(
 
   // Cache subset CSS assets by their source text to avoid redundant
   // addAsset/minify/removeAsset cycles for pages sharing identical CSS.
-  const subsetCssAssetCache = new Map();
+  const subsetCssAssetCache = new Map<string, Asset>();
 
   // Cache the heavy CSS-text assembly (including base64-encoded font data)
   // keyed by the shared accumulatedFontFaceDeclarations array. Pages grouped
   // under the same stylesheet config produce byte-identical output, so this
   // collapses the per-page string build from O(pages) to O(unique configs).
-  const subsetCssTextCache = new WeakMap();
+  const subsetCssTextCache = new WeakMap<
+    object,
+    { subset: string; unused: string }
+  >();
 
   // Pre-index relations by source asset to avoid O(allRelations) scans
   // in the per-page injection loop below. Build indices once, then use
   // O(1) lookups per page instead of repeated assetGraph.findRelations.
-  const styleRelsByAsset = new Map();
-  const noscriptRelsByAsset = new Map();
-  const preloadRelsByAsset = new Map();
-  const relTypeToIndex = {
+  const styleRelsByAsset = new Map<Asset, Relation[]>();
+  const noscriptRelsByAsset = new Map<Asset, Relation[]>();
+  const preloadRelsByAsset = new Map<Asset, Relation[]>();
+  const relTypeToIndex: Record<string, Map<Asset, Relation[]>> = {
     HtmlStyle: styleRelsByAsset,
     SvgStyle: styleRelsByAsset,
     HtmlNoscript: noscriptRelsByAsset,
@@ -755,7 +897,7 @@ async function subsetFonts(
     const index = relTypeToIndex[relation.type];
     const from = relation.from;
     if (!index.has(from)) index.set(from, []);
-    index.get(from).push(relation);
+    index.get(from)!.push(relation);
   }
 
   const insertPhase = trackPhase(
@@ -768,7 +910,7 @@ async function subsetFonts(
     accumulatedFontFaceDeclarations,
   } of htmlOrSvgAssetTextsWithProps) {
     const styleRels = styleRelsByAsset.get(htmlOrSvgAsset) || [];
-    let insertionPoint = styleRels[0];
+    let insertionPoint: Relation | undefined = styleRels[0];
 
     // Fall back to inserting before a <noscript> that contains a stylesheet
     // when no direct stylesheet relation exists (assetgraph#1251)
@@ -782,23 +924,25 @@ async function subsetFonts(
         }
       }
     }
-    const subsetFontUsages = fontUsages.filter(
+    const subsetFontUsages = (fontUsages as FontUsage[]).filter(
       (fontUsage) => fontUsage.subsets
     );
     const subsetFontUsagesSet = new Set(subsetFontUsages);
-    const unsubsettedFontUsages = fontUsages.filter(
+    const unsubsettedFontUsages = (fontUsages as FontUsage[]).filter(
       (fontUsage) => !subsetFontUsagesSet.has(fontUsage)
     );
 
     // Remove all existing preload hints to fonts that might have new subsets
-    const fontUrls = new Set(fontUsages.map((fu) => fu.fontUrl));
+    const fontUrls = new Set<string | undefined>(
+      (fontUsages as FontUsage[]).map((fu) => fu.fontUrl)
+    );
     for (const relation of preloadRelsByAsset.get(htmlOrSvgAsset) || []) {
       if (!relation.to || !fontUrls.has(relation.to.url)) continue;
 
       if (relation.type === 'HtmlPrefetchLink') {
         const err = new Error(
           `Detached ${relation.node.outerHTML}. Will be replaced with preload with JS fallback.\nIf you feel this is wrong, open an issue at https://github.com/alexander-turner/subfont/issues`
-        );
+        ) as AssetGraphError;
         err.asset = relation.from;
         err.relation = relation;
         assetGraph.info(err);
@@ -814,7 +958,7 @@ async function subsetFonts(
       // Insert <link rel="preload">
       for (const fontUsage of unsubsettedFontUsagesToPreload) {
         // Always preload unsubsetted font files, they might be any format, so can't be clever here
-        const preloadRelation = htmlOrSvgAsset.addRelation(
+        const preloadRelation: Relation = htmlOrSvgAsset.addRelation(
           {
             type: 'HtmlPreloadLink',
             hrefType,
@@ -833,7 +977,9 @@ async function subsetFonts(
     }
     numFontUsagesWithSubset += subsetFontUsages.length;
 
-    let cssTextParts = subsetCssTextCache.get(accumulatedFontFaceDeclarations);
+    let cssTextParts = subsetCssTextCache.get(
+      accumulatedFontFaceDeclarations as object
+    );
     if (!cssTextParts) {
       cssTextParts = {
         subset: getFontUsageStylesheet(subsetFontUsages),
@@ -842,7 +988,10 @@ async function subsetFonts(
           accumulatedFontFaceDeclarations
         ),
       };
-      subsetCssTextCache.set(accumulatedFontFaceDeclarations, cssTextParts);
+      subsetCssTextCache.set(
+        accumulatedFontFaceDeclarations as object,
+        cssTextParts
+      );
     }
     let subsetCssText = cssTextParts.subset;
     const unusedVariantsCss = cssTextParts.unused;
@@ -910,19 +1059,21 @@ async function subsetFonts(
   }
 
   const lazyFallbackPhase = trackPhase('lazy load fallback CSS');
-  const relationsToRemove = new Set();
+  const relationsToRemove = new Set<Relation>();
 
   // Lazy load the original @font-face declarations of self-hosted fonts (unless omitFallbacks)
-  const originalRelations = new Set();
-  const fallbackCssAssetCache = new Map();
+  const originalRelations = new Set<Relation>();
+  const fallbackCssAssetCache = new Map<string, Asset>();
   for (const htmlOrSvgAsset of htmlOrSvgAssets) {
     const accumulatedFontFaceDeclarations =
       fontFaceDeclarationsByHtmlOrSvgAsset.get(htmlOrSvgAsset);
-    const containedRelationsByFontFaceRule = new Map();
+    if (!accumulatedFontFaceDeclarations) continue;
+    const containedRelationsByFontFaceRule = new Map<PostCssNode, Relation[]>();
     for (const { relations } of accumulatedFontFaceDeclarations) {
       for (const relation of relations) {
         if (
-          relation.from.hostname === 'fonts.googleapis.com' || // Google Web Fonts handled separately below
+          (relation.from as Asset & { hostname?: string }).hostname ===
+            'fonts.googleapis.com' || // Google Web Fonts handled separately below
           containedRelationsByFontFaceRule.has(relation.node)
         ) {
           continue;
@@ -931,7 +1082,7 @@ async function subsetFonts(
         containedRelationsByFontFaceRule.set(
           relation.node,
           relation.from.outgoingRelations.filter(
-            (otherRelation) => otherRelation.node === relation.node
+            (otherRelation: Relation) => otherRelation.node === relation.node
           )
         );
       }
@@ -949,27 +1100,27 @@ async function subsetFonts(
     // fallback CSS preserves the original media-conditional loading.
     // Walk up the ancestor chain in case the rule is nested (e.g.
     // inside @supports inside @media).
-    const rulesByMedia = new Map(); // media params (or '') → [cssText, ...]
+    const rulesByMedia = new Map<string, string[]>();
     for (const rule of containedRelationsByFontFaceRule.keys()) {
       let mediaKey = '';
-      let ancestor = rule.parent;
+      let ancestor: PostCssNode | undefined = rule.parent;
       while (ancestor) {
         if (
           ancestor.type === 'atrule' &&
-          ancestor.name.toLowerCase() === 'media'
+          ancestor.name?.toLowerCase() === 'media'
         ) {
-          mediaKey = ancestor.params;
+          mediaKey = ancestor.params ?? '';
           break;
         }
         ancestor = ancestor.parent;
       }
       if (!rulesByMedia.has(mediaKey)) rulesByMedia.set(mediaKey, []);
       rulesByMedia
-        .get(mediaKey)
+        .get(mediaKey)!
         .push(
           getFontFaceDeclarationText(
             rule,
-            containedRelationsByFontFaceRule.get(rule)
+            containedRelationsByFontFaceRule.get(rule) ?? []
           )
         );
     }
@@ -1015,7 +1166,7 @@ async function subsetFonts(
   const removeFontFacePhase = trackPhase('remove original @font-face');
 
   // Remove the original @font-face blocks, and don't leave behind empty stylesheets:
-  const maybeEmptyCssAssets = new Set();
+  const maybeEmptyCssAssets = new Set<Asset>();
   for (const relation of originalRelations) {
     const cssAsset = relation.from;
     if (relation.node.parent) {
@@ -1043,17 +1194,17 @@ async function subsetFonts(
   // the surrounding loop entirely when no Google Fonts were detected up
   // front — the final detach loop below still runs because other phases
   // (lazy fallback CSS) populate relationsToRemove.
-  const googleFontStylesheets = hasGoogleFonts
+  const googleFontStylesheets: Asset[] = hasGoogleFonts
     ? assetGraph.findAssets({
         type: 'Css',
         url: { $regex: googleFontsCssUrlRegex },
       })
     : [];
-  const selfHostedGoogleCssByUrl = new Map();
+  const selfHostedGoogleCssByUrl = new Map<string, Asset>();
   for (const googleFontStylesheet of googleFontStylesheets) {
-    const seenPages = new Set(); // Only do the work once for each font on each page
+    const seenPages = new Set<Asset>(); // Only do the work once for each font on each page
     for (const googleFontStylesheetRelation of googleFontStylesheet.incomingRelations) {
-      let htmlParents;
+      let htmlParents: Asset[];
 
       if (googleFontStylesheetRelation.type === 'CssImport') {
         // Gather Html parents. Relevant if we are dealing with CSS @import relations
@@ -1063,7 +1214,7 @@ async function subsetFonts(
           isLoaded: true,
         });
       } else if (
-        ['Html', 'Svg'].includes(googleFontStylesheetRelation.from.type)
+        ['Html', 'Svg'].includes(googleFontStylesheetRelation.from.type ?? '')
       ) {
         htmlParents = [googleFontStylesheetRelation.from];
       } else {
@@ -1139,8 +1290,10 @@ async function subsetFonts(
     }
   }
 
-  let customPropertyDefinitions; // Avoid computing this unless necessary
-  const cssAssetsDirtiedByCustomProps = new Set();
+  let customPropertyDefinitions:
+    | ReturnType<typeof findCustomPropertyDefinitions>
+    | undefined;
+  const cssAssetsDirtiedByCustomProps = new Set<Asset>();
   // Inject subset font name before original webfont in SVG font-family attributes
   const svgAssets = assetGraph.findAssets({ type: 'Svg' });
   for (const svgAsset of svgAssets) {
@@ -1179,7 +1332,7 @@ async function subsetFonts(
     type: 'Css',
     isLoaded: true,
   });
-  const parseTreeToAsset = new Map();
+  const parseTreeToAsset = new Map<Asset['parseTree'], Asset>();
   for (const cssAsset of cssAssets) {
     parseTreeToAsset.set(cssAsset.parseTree, cssAsset);
   }
@@ -1289,4 +1442,4 @@ async function subsetFonts(
   };
 }
 
-module.exports = subsetFonts;
+export = subsetFonts;

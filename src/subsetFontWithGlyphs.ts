@@ -1,8 +1,8 @@
-const os = require('os');
-const { readFile } = require('fs').promises;
-const fontverter = require('fontverter');
-const { toSfnt } = require('./sfntCache');
-const { convert: convertInWorker } = require('./fontConverter');
+import os = require('os');
+import { readFile } from 'fs/promises';
+import * as fontverter from 'fontverter';
+import { toSfnt } from './sfntCache';
+import { convert as convertInWorker } from './fontConverter';
 
 // hb_subset_sets_t enum values — https://github.com/harfbuzz/harfbuzz/blob/main/src/hb-subset.h
 const HB_SUBSET_SETS_GLYPH_INDEX = 0;
@@ -13,11 +13,71 @@ const HB_SUBSET_SETS_NAME_ID = 4;
 // hb_subset_flags_t
 const HB_SUBSET_FLAGS_NO_HINTING = 0x00000001;
 
+// Minimal shape of the harfbuzz subsetter WASM exports we actually call.
+// All pointers are exposed as numbers (WASM i32).
+interface HarfbuzzExports {
+  memory: WebAssembly.Memory;
+  malloc(size: number): number;
+  free(ptr: number): void;
+  hb_blob_create(
+    data: number,
+    length: number,
+    mode: number,
+    userData: number,
+    destroy: number
+  ): number;
+  hb_blob_destroy(blob: number): void;
+  hb_blob_get_data(blob: number, lengthOut: number): number;
+  hb_blob_get_length(blob: number): number;
+  hb_face_create(blob: number, index: number): number;
+  hb_face_destroy(face: number): void;
+  hb_face_reference_blob(face: number): number;
+  hb_set_add(set: number, codepoint: number): void;
+  hb_set_clear(set: number): void;
+  hb_set_invert(set: number): void;
+  hb_subset_input_create_or_fail(): number;
+  hb_subset_input_destroy(input: number): void;
+  hb_subset_input_get_flags(input: number): number;
+  hb_subset_input_set_flags(input: number, flags: number): void;
+  hb_subset_input_pin_axis_location(
+    input: number,
+    face: number,
+    tag: number,
+    value: number
+  ): boolean | number;
+  hb_subset_input_set_axis_range(
+    input: number,
+    face: number,
+    tag: number,
+    min: number,
+    max: number,
+    def: number
+  ): boolean | number;
+  hb_subset_input_set(input: number, setType: number): number;
+  hb_subset_input_unicode_set(input: number): number;
+  hb_subset_or_fail(face: number, input: number): number;
+}
+
+interface PoolInstance {
+  exports: HarfbuzzExports;
+  busy: boolean;
+}
+
+type VariationAxisValue =
+  | number
+  | { min: number; max: number; default?: number };
+
+interface SubsetFontWithGlyphsOptions {
+  targetFormat?: string;
+  glyphIds?: number[];
+  variationAxes?: Record<string, VariationAxisValue>;
+}
+
 // Pool of WASM instances for parallel subsetting.  Each instance has its
 // own linear memory so concurrent calls are safe.  The module is compiled
 // once and instantiated N times (N = CPU count, capped at 8).
-let _compilePromise;
-function compileModule() {
+let _compilePromise: Promise<WebAssembly.Module> | undefined;
+function compileModule(): Promise<WebAssembly.Module> {
   if (!_compilePromise) {
     // Assign the promise synchronously so concurrent callers share it
     // (an async function would await readFile before the assignment).
@@ -28,19 +88,25 @@ function compileModule() {
   return _compilePromise;
 }
 
-const _pool = []; // Array of { exports, busy: boolean }
-let _poolReady;
+const _pool: PoolInstance[] = [];
+let _poolReady: Promise<void> | undefined;
 const POOL_SIZE = Math.max(1, Math.min(os.cpus().length, 8));
 
-async function initPool() {
+async function initPool(): Promise<void> {
   if (!_poolReady) {
     _poolReady = (async () => {
       const mod = await compileModule();
-      const instantiations = [];
+      const instantiations: Array<Promise<void>> = [];
       for (let i = 0; i < POOL_SIZE; i++) {
         instantiations.push(
-          WebAssembly.instantiate(mod).then(({ exports }) => {
-            _pool.push({ exports, busy: false });
+          WebAssembly.instantiate(mod).then((inst) => {
+            _pool.push({
+              // WebAssembly.Exports is opaque (Record<string, ExportValue>);
+              // bridge it to our typed surface in one place.
+              // eslint-disable-next-line no-restricted-syntax
+              exports: inst.exports as unknown as HarfbuzzExports,
+              busy: false,
+            });
           })
         );
       }
@@ -51,10 +117,10 @@ async function initPool() {
 }
 
 // Waiters queue: callers waiting for an idle WASM instance.
-const _waiters = [];
+const _waiters: Array<(inst: PoolInstance) => void> = [];
 const ACQUIRE_TIMEOUT_MS = 120_000;
 
-async function acquireInstance() {
+async function acquireInstance(): Promise<PoolInstance> {
   await initPool();
   const idle = _pool.find((inst) => !inst.busy);
   if (idle) {
@@ -62,7 +128,7 @@ async function acquireInstance() {
     return idle;
   }
   // All instances busy — wait for one to be released.
-  return new Promise((resolve, reject) => {
+  return new Promise<PoolInstance>((resolve, reject) => {
     const timer = setTimeout(() => {
       const idx = _waiters.indexOf(entry);
       if (idx !== -1) _waiters.splice(idx, 1);
@@ -73,7 +139,7 @@ async function acquireInstance() {
       );
     }, ACQUIRE_TIMEOUT_MS);
     timer.unref();
-    const entry = (inst) => {
+    const entry = (inst: PoolInstance) => {
       clearTimeout(timer);
       resolve(inst);
     };
@@ -81,11 +147,12 @@ async function acquireInstance() {
   });
 }
 
-function releaseInstance(inst) {
+function releaseInstance(inst: PoolInstance): void {
   inst.busy = false;
   if (_waiters.length > 0) {
     inst.busy = true;
-    _waiters.shift()(inst);
+    const waiter = _waiters.shift();
+    if (waiter) waiter(inst);
   }
 }
 
@@ -97,19 +164,25 @@ function releaseInstance(inst) {
 
 // Re-create on every call — WASM memory.buffer is detached when memory grows,
 // so a cached Uint8Array would silently read/write stale data.
-function getHeapu8(exports) {
+function getHeapu8(exports: HarfbuzzExports): Uint8Array {
   return new Uint8Array(exports.memory.buffer);
 }
 
 // >>> 0 keeps the accumulator unsigned; without it, tags whose first byte
 // exceeds 0x7F would overflow into negative i32 territory after << 24.
-function HB_TAG(str) {
+function HB_TAG(str: string): number {
   return str.split('').reduce(function (a, ch) {
     return ((a << 8) >>> 0) + ch.charCodeAt(0);
   }, 0);
 }
 
-function pinAxisLocation(exports, input, face, axisName, value) {
+function pinAxisLocation(
+  exports: HarfbuzzExports,
+  input: number,
+  face: number,
+  axisName: string,
+  value: number
+): void {
   const ok = exports.hb_subset_input_pin_axis_location(
     input,
     face,
@@ -121,7 +194,13 @@ function pinAxisLocation(exports, input, face, axisName, value) {
   }
 }
 
-function setAxisRange(exports, input, face, axisName, value) {
+function setAxisRange(
+  exports: HarfbuzzExports,
+  input: number,
+  face: number,
+  axisName: string,
+  value: { min: number; max: number; default?: number }
+): void {
   const ok = exports.hb_subset_input_set_axis_range(
     input,
     face,
@@ -145,13 +224,13 @@ const DROP_TABLE_TAGS = ['DSIG', 'LTSH', 'VDMX', 'hdmx', 'gasp', 'PCLT'];
 const KEEP_NAME_IDS = [1, 2, 4, 6];
 
 function configureSubsetInput(
-  exports,
-  input,
-  face,
-  text,
-  glyphIds,
-  variationAxes
-) {
+  exports: HarfbuzzExports,
+  input: number,
+  face: number,
+  text: string,
+  glyphIds: number[] | undefined,
+  variationAxes: Record<string, VariationAxisValue> | undefined
+): void {
   // --- Retain all layout features ---
   const layoutFeatures = exports.hb_subset_input_set(
     input,
@@ -189,10 +268,10 @@ function configureSubsetInput(
   const nfc = text.normalize('NFC');
   const nfd = text.normalize('NFD');
   for (const c of nfc) {
-    exports.hb_set_add(inputUnicodes, c.codePointAt(0));
+    exports.hb_set_add(inputUnicodes, c.codePointAt(0) as number);
   }
   for (const c of nfd) {
-    exports.hb_set_add(inputUnicodes, c.codePointAt(0));
+    exports.hb_set_add(inputUnicodes, c.codePointAt(0) as number);
   }
 
   // --- Add explicit glyph IDs (from feature glyph collection) ---
@@ -218,7 +297,7 @@ function configureSubsetInput(
   }
 }
 
-function extractSubsetFont(exports, subset) {
+function extractSubsetFont(exports: HarfbuzzExports, subset: number): Buffer {
   const result = exports.hb_face_reference_blob(subset);
   const offset = exports.hb_blob_get_data(result, 0);
   const subsetByteLength = exports.hb_blob_get_length(result);
@@ -246,11 +325,20 @@ function extractSubsetFont(exports, subset) {
   return subsetFont;
 }
 
+interface SubsetFontWithGlyphsFn {
+  (
+    originalFont: Buffer | Uint8Array,
+    text: string,
+    options?: SubsetFontWithGlyphsOptions
+  ): Promise<Buffer>;
+  warmup(): Promise<void>;
+}
+
 async function subsetFontWithGlyphs(
-  originalFont,
-  text,
-  { targetFormat, glyphIds, variationAxes } = {}
-) {
+  originalFont: Buffer | Uint8Array,
+  text: string,
+  { targetFormat, glyphIds, variationAxes }: SubsetFontWithGlyphsOptions = {}
+): Promise<Buffer> {
   // Reuse cached sfnt conversion when available (same buffer may have
   // been converted by getFontInfo or collectFeatureGlyphIds already).
   // sfntCache routes woff2 decompression through the worker pool.
@@ -275,7 +363,7 @@ async function subsetFontWithGlyphs(
       throw new Error('hb_subset_input_create_or_fail returned zero');
     }
 
-    let subsetFont;
+    let subsetFont: Buffer | undefined;
     let subset = 0;
     try {
       configureSubsetInput(exports, input, face, text, glyphIds, variationAxes);
@@ -303,14 +391,18 @@ async function subsetFontWithGlyphs(
     // wawoff2 WASM instance).  Non-woff2 formats use JS-based converters
     // that are safe to call concurrently in the main thread.
     return targetFormat === 'woff2'
-      ? convertInWorker(subsetFont, targetFormat, 'truetype')
-      : fontverter.convert(subsetFont, targetFormat, 'truetype');
+      ? convertInWorker(subsetFont as Buffer, targetFormat, 'truetype')
+      : fontverter.convert(
+          subsetFont as Buffer,
+          targetFormat as string,
+          'truetype'
+        );
   } finally {
     if (!released) releaseInstance(inst);
   }
 }
 
 // Pre-warm the WASM pool: call early to overlap compilation with other work.
-subsetFontWithGlyphs.warmup = () => initPool();
+(subsetFontWithGlyphs as SubsetFontWithGlyphsFn).warmup = () => initPool();
 
-module.exports = subsetFontWithGlyphs;
+export = subsetFontWithGlyphs as SubsetFontWithGlyphsFn;

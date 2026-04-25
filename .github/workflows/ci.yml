@@ -34,6 +34,8 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install
+      - name: Build TypeScript
+        run: pnpm run build
       - name: Cache Puppeteer Chrome
         id: puppeteer-cache
         uses: actions/cache@v4
@@ -72,6 +74,21 @@ jobs:
       - run: pnpm install
       - run: pnpm run lint
 
+  typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    name: Typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm run typecheck
+
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -85,6 +102,8 @@ jobs:
           node-version: '24'
           cache: pnpm
       - run: pnpm install
+      - name: Build TypeScript
+        run: pnpm run build
       - name: Cache Puppeteer Chrome
         id: puppeteer-cache
         uses: actions/cache@v4
@@ -115,6 +134,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: pnpm
+      - run: pnpm install
       - name: Pack and install as consumer
         run: |
           TARBALL=$(pnpm pack 2>/dev/null | tail -1)
@@ -127,12 +148,12 @@ jobs:
     name: CI Gate
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test, lint, coverage, install-check]
+    needs: [test, lint, typecheck, coverage, install-check]
     if: always()
     steps:
       - name: Check results
         run: |
-          if [[ "${{ needs.test.result }}" != "success" || "${{ needs.lint.result }}" != "success" || "${{ needs.coverage.result }}" != "success" || "${{ needs.install-check.result }}" != "success" ]]; then
+          if [[ "${{ needs.test.result }}" != "success" || "${{ needs.lint.result }}" != "success" || "${{ needs.typecheck.result }}" != "success" || "${{ needs.coverage.result }}" != "success" || "${{ needs.install-check.result }}" != "success" ]]; then
             echo "One or more required jobs failed"
             exit 1
           fi
