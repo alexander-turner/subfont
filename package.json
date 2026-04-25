@@ -67,7 +67,6 @@
     "jsdom": "^25.0.0",
     "lines-and-columns": "^1.1.6",
     "memoizesync": "^1.1.1",
-    "p-limit": "^3.0.0",
     "parse5": "^7.0.0",
     "postcss": "^8.3.11",
     "postcss-value-parser": "^4.0.2",

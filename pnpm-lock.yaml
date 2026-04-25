@@ -52,9 +52,6 @@ importers:
       memoizesync:
         specifier: ^1.1.1
         version: 1.1.1
-      p-limit:
-        specifier: ^3.0.0
-        version: 3.1.0
       parse5:
         specifier: ^7.0.0
         version: 7.3.0
