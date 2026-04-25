@@ -105,4 +105,27 @@ describe('FontConverterPool', function () {
 
     await expect(pool.convert(invalidBuffer, 'sfnt'), 'to be rejected');
   });
+
+  it('should auto-shutdown then re-initialize on next convert', async function () {
+    pool = new FontConverterPool(1);
+    const woff2Font = fs.readFileSync(
+      pathModule.resolve(
+        __dirname,
+        '..',
+        'testdata',
+        'subsetFonts',
+        'Roboto-400.woff2'
+      )
+    );
+
+    const r1 = await pool.convert(woff2Font, 'sfnt');
+    expect(r1, 'to be a', Buffer);
+    expect(r1.length, 'to be greater than', 0);
+
+    // Workers should have auto-shutdown after the task completed.
+    // A second call should re-initialize and succeed.
+    const r2 = await pool.convert(woff2Font, 'sfnt');
+    expect(r2, 'to be a', Buffer);
+    expect(r2.length, 'to equal', r1.length);
+  });
 });
