@@ -28,7 +28,7 @@ interface SubfontOptions {
   inlineCss?: boolean;
   fontDisplay?: string;
   inPlace?: boolean;
-  inputFiles?: Array<string | URL>;
+  inputFiles?: Array<string | number | URL>;
   recursive?: boolean;
   relativeUrls?: boolean;
   dynamic?: boolean;

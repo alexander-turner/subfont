@@ -1,10 +1,10 @@
-// Ambient stubs for untyped npm dependencies used by the six converted
-// source files. The assetgraph surface is typed minimally — only the
-// methods and fields the converted code actually touches — so our .ts
-// sources can avoid bare `any` annotations.
+// Ambient stubs for untyped npm dependencies. Each declaration covers
+// only the methods and fields the converted source files actually touch —
+// these are pragmatic shims, not exhaustive contracts.
 
 declare module 'assetgraph' {
   export interface Asset {
+    id: string | number;
     url: string;
     type?: string;
     rawSrc: Buffer;
@@ -44,6 +44,11 @@ declare module 'assetgraph' {
     hrefType?: string;
     media?: string;
     crossorigin?: boolean;
+    condition?: string;
+    conditionalComments?: ReadonlyArray<unknown>;
+    // For CssFontFaceSrc relations: the regex matching the original token
+    // in the @font-face src value, so callers can rewrite it.
+    tokenRegExp?: RegExp;
     node: PostCssNode;
     detach(): void;
     remove(): void;
@@ -66,6 +71,10 @@ declare module 'assetgraph' {
     outerHTML?: string;
     walkDecls(cb: (decl: PostCssDecl) => void): void;
     removeChild(child: PostCssNode): void;
+    // PostCSS Container methods exposed on at-rules. Only the slice we use:
+    some(predicate: (node: PostCssNode) => boolean): boolean;
+    append(decl: { prop: string; value: string }): void;
+    remove?(): void;
   }
 
   export interface PostCssDecl {
@@ -78,7 +87,7 @@ declare module 'assetgraph' {
     prop: string;
     value: string;
     parent: { type: string };
-    root(): unknown;
+    root(): AssetParseTree;
   }
 
   export interface AssetParseTree {
@@ -155,13 +164,28 @@ declare module 'assetgraph/lib/compileQuery' {
   export = compileQuery;
 }
 
+declare module 'jsdom' {
+  export interface JSDOMWindow {
+    document: any;
+    close(): void;
+  }
+  export class JSDOM {
+    constructor(html: string);
+    window: JSDOMWindow;
+  }
+}
+
 declare module 'fontverter' {
   export function convert(
     buffer: Buffer | Uint8Array,
     targetFormat: string,
     sourceFormat?: string
   ): Promise<Buffer>;
-  const _default: { convert: typeof convert };
+  export function detectFormat(buffer: Buffer | Uint8Array): string;
+  const _default: {
+    convert: typeof convert;
+    detectFormat: typeof detectFormat;
+  };
   export default _default;
 }
 
@@ -170,6 +194,8 @@ declare module 'urltools' {
   export function fileUrlToFsPath(url: string): string;
   export function findCommonUrlPrefix(urls: string[]): string;
   export function ensureTrailingSlash(url: string): string;
+  export function resolveUrl(base: string, rel: string): string;
+  export function buildRelativeUrl(base: string, target: string): string;
 }
 
 declare module 'sanitize-filename' {
@@ -201,4 +227,129 @@ declare module 'css-font-parser' {
 
 declare module 'css-list-helpers' {
   export function splitByCommas(value: string): string[];
+}
+
+declare module 'postcss-value-parser' {
+  export interface Node {
+    type: string;
+    value: string;
+    before?: string;
+    after?: string;
+    quote?: string;
+    nodes?: Node[];
+  }
+  export interface Root {
+    nodes: Node[];
+  }
+  interface ParserFn {
+    (value: string): Root;
+    stringify(node: Node | Node[] | Root): string;
+  }
+  const parser: ParserFn;
+  export = parser;
+}
+
+declare module 'memoizesync' {
+  function memoizeSync<F extends (...args: any[]) => any>(fn: F): F;
+  export = memoizeSync;
+}
+
+declare module 'lines-and-columns' {
+  export class LinesAndColumns {
+    constructor(source: string);
+    locationForIndex(index: number): { line: number; column: number };
+  }
+  // Older default-export form used elsewhere in the codebase.
+  const _default: { default: typeof LinesAndColumns };
+  export default _default;
+}
+
+declare module 'font-snapper' {
+  function fontSnapper(
+    declarations: any[],
+    props: Record<string, unknown>
+  ): any | undefined;
+  export = fontSnapper;
+}
+
+declare module 'font-snapper/lib/normalizeFontStretch' {
+  function normalizeFontStretch(value: string): string;
+  export = normalizeFontStretch;
+}
+
+declare module 'font-tracer' {
+  function fontTracer(
+    documentOrTree: any,
+    options?: {
+      stylesheetsWithPredicates?: any[];
+      getCssRulesByProperty?: (...args: any[]) => any;
+      asset?: any;
+    }
+  ): Array<{ text: string; props: Record<string, string> }>;
+  export = fontTracer;
+}
+
+declare module 'css-font-weight-names' {
+  const map: Record<string, string>;
+  export = map;
+}
+
+declare module '@hookun/parse-animation-shorthand' {
+  export interface ParsedAnimation {
+    name: string;
+    timingFunction: unknown;
+    [key: string]: unknown;
+  }
+  export function parseSingle(value: string): { value: ParsedAnimation };
+  export function serialize(value: Partial<ParsedAnimation>): string;
+}
+
+declare module 'specificity' {
+  export interface SpecificityResult {
+    selector: string;
+    specificityArray: [number, number, number, number];
+  }
+  export function calculate(selector: string): SpecificityResult[];
+}
+
+declare module 'harfbuzzjs' {
+  // harfbuzzjs is loaded via dynamic await require(); the module itself
+  // resolves to a thenable. The exposed surface exercised by subfont is
+  // captured in this shim.
+  interface HBBlob {
+    destroy(): void;
+  }
+  interface HBFace {
+    collectUnicodes(): Iterable<number>;
+    getAxisInfos(): Record<
+      string,
+      { min: number; max: number; default: number }
+    >;
+    getTableFeatureTags(table: string): Iterable<string>;
+    destroy(): void;
+  }
+  interface HBFont {
+    destroy(): void;
+  }
+  interface HBBuffer {
+    addText(text: string): void;
+    guessSegmentProperties(): void;
+    json(font: HBFont): Array<{ g: number }>;
+    destroy(): void;
+  }
+  export interface Harfbuzz {
+    createBlob(buffer: ArrayBuffer | Uint8Array | Buffer): HBBlob;
+    createFace(blob: HBBlob, index: number): HBFace;
+    createFont(face: HBFace): HBFont;
+    createBuffer(): HBBuffer;
+    shapeWithTrace(
+      font: HBFont,
+      buffer: HBBuffer,
+      features: string,
+      a: number,
+      b: number
+    ): void;
+  }
+  const _default: Harfbuzz;
+  export = _default;
 }

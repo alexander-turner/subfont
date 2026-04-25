@@ -7,28 +7,8 @@ package-lock.json
 .DS_Store
 *.log
 
-# TypeScript output (src/*.ts → lib/*.js)
-lib/cli.js
-lib/cli.d.ts
-lib/cli.d.ts.map
-lib/cli.js.map
-lib/subfont.js
-lib/subfont.d.ts
-lib/subfont.d.ts.map
-lib/subfont.js.map
-lib/subsetFonts.js
-lib/subsetFonts.d.ts
-lib/subsetFonts.d.ts.map
-lib/subsetFonts.js.map
-lib/FontTracerPool.js
-lib/FontTracerPool.d.ts
-lib/FontTracerPool.d.ts.map
-lib/FontTracerPool.js.map
-lib/subsetFontWithGlyphs.js
-lib/subsetFontWithGlyphs.d.ts
-lib/subsetFontWithGlyphs.d.ts.map
-lib/subsetFontWithGlyphs.js.map
-lib/subsetGeneration.js
-lib/subsetGeneration.d.ts
-lib/subsetGeneration.d.ts.map
-lib/subsetGeneration.js.map
+# TypeScript output (src/*.ts → lib/*.{js,d.ts})
+lib/*.js
+lib/*.js.map
+lib/*.d.ts
+lib/*.d.ts.map

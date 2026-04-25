@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc && chmod +x lib/cli.js",
-    "clean": "rimraf 'lib/{cli,subfont,subsetFonts,FontTracerPool,subsetFontWithGlyphs,subsetGeneration}.{js,d.ts,d.ts.map,js.map}'",
+    "clean": "rimraf 'lib/*.{js,d.ts,d.ts.map,js.map}'",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . && prettier --check '**/*.{js,ts,md}'",
     "pretest": "npm run build",
