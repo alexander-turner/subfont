@@ -2,23 +2,13 @@ const expect = require('unexpected').clone().use(require('unexpected-sinon'));
 const sinon = require('sinon');
 const proxyquire = require('proxyquire').noCallThru();
 
-function createMockPool(convertStub) {
-  return {
-    getPool() {
-      return { convert: convertStub };
-    },
-  };
-}
-
 describe('sfntCache', function () {
   it('should return the buffer directly when format is sfnt', async function () {
     const buffer = Buffer.from('test');
     const convertStub = sinon.stub();
     const { toSfnt } = proxyquire('../lib/sfntCache', {
-      fontverter: {
-        detectFormat: sinon.stub().returns('sfnt'),
-      },
-      './fontConverterPool': createMockPool(convertStub),
+      fontverter: { detectFormat: sinon.stub().returns('sfnt') },
+      './fontConverter': { convert: convertStub },
     });
 
     const result = await toSfnt(buffer);
@@ -26,40 +16,37 @@ describe('sfntCache', function () {
     expect(convertStub, 'was not called');
   });
 
-  it('should route woff2 through the converter pool', async function () {
+  it('should route woff2 through a worker', async function () {
     const buffer = Buffer.from('test');
     const converted = Buffer.from('converted');
     const convertStub = sinon.stub().resolves(converted);
     const { toSfnt } = proxyquire('../lib/sfntCache', {
-      fontverter: {
-        detectFormat: sinon.stub().returns('woff2'),
-      },
-      './fontConverterPool': createMockPool(convertStub),
+      fontverter: { detectFormat: sinon.stub().returns('woff2') },
+      './fontConverter': { convert: convertStub },
     });
 
     const result = await toSfnt(buffer);
     expect(result, 'to be', converted);
-    expect(convertStub, 'was called with', buffer, 'sfnt');
   });
 
   it('should convert non-woff2 non-sfnt via fontverter directly', async function () {
     const buffer = Buffer.from('test');
     const converted = Buffer.from('converted');
-    const poolConvert = sinon.stub();
+    const convertStub = sinon.stub();
     const { toSfnt } = proxyquire('../lib/sfntCache', {
       fontverter: {
         detectFormat: sinon.stub().returns('woff'),
         convert: sinon.stub().resolves(converted),
       },
-      './fontConverterPool': createMockPool(poolConvert),
+      './fontConverter': { convert: convertStub },
     });
 
     const result = await toSfnt(buffer);
     expect(result, 'to be', converted);
-    expect(poolConvert, 'was not called');
+    expect(convertStub, 'was not called');
   });
 
-  it('should fall back to pool when detectFormat throws', async function () {
+  it('should fall back to worker when detectFormat throws', async function () {
     const buffer = Buffer.from('garbage');
     const converted = Buffer.from('converted');
     const convertStub = sinon.stub().resolves(converted);
@@ -67,7 +54,7 @@ describe('sfntCache', function () {
       fontverter: {
         detectFormat: sinon.stub().throws(new Error('Unknown format')),
       },
-      './fontConverterPool': createMockPool(convertStub),
+      './fontConverter': { convert: convertStub },
     });
 
     const result = await toSfnt(buffer);
@@ -79,26 +66,8 @@ describe('sfntCache', function () {
     const converted = Buffer.from('converted');
     const convertStub = sinon.stub().resolves(converted);
     const { toSfnt } = proxyquire('../lib/sfntCache', {
-      fontverter: {
-        detectFormat: sinon.stub().returns('woff2'),
-      },
-      './fontConverterPool': createMockPool(convertStub),
-    });
-
-    await toSfnt(buffer);
-    await toSfnt(buffer);
-    expect(convertStub, 'was called once');
-  });
-
-  it('should cache the fallback convert when detectFormat throws', async function () {
-    const buffer = Buffer.from('garbage');
-    const converted = Buffer.from('converted');
-    const convertStub = sinon.stub().resolves(converted);
-    const { toSfnt } = proxyquire('../lib/sfntCache', {
-      fontverter: {
-        detectFormat: sinon.stub().throws(new Error('Unknown format')),
-      },
-      './fontConverterPool': createMockPool(convertStub),
+      fontverter: { detectFormat: sinon.stub().returns('woff2') },
+      './fontConverter': { convert: convertStub },
     });
 
     await toSfnt(buffer);
@@ -117,10 +86,8 @@ describe('sfntCache', function () {
       return Promise.resolve(Buffer.from('ok'));
     });
     const { toSfnt } = proxyquire('../lib/sfntCache', {
-      fontverter: {
-        detectFormat: sinon.stub().returns('woff2'),
-      },
-      './fontConverterPool': createMockPool(convertStub),
+      fontverter: { detectFormat: sinon.stub().returns('woff2') },
+      './fontConverter': { convert: convertStub },
     });
 
     await expect(toSfnt(buffer), 'to be rejected with', 'fail');
