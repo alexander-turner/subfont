@@ -710,6 +710,8 @@ async function subsetFonts(
     if (fontAsset.isLoaded) {
       fontInfoPromises.set(
         fontUrl,
+        // Catch-clause idiom: TypeScript types caught errors as `unknown`.
+        // eslint-disable-next-line no-restricted-syntax
         getFontInfo(fontAsset.rawSrc).catch((rawErr: unknown) => {
           const err = rawErr as AssetGraphError;
           err.asset = err.asset || fontAsset;

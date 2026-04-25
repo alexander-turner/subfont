@@ -101,6 +101,9 @@ async function initPool(): Promise<void> {
         instantiations.push(
           WebAssembly.instantiate(mod).then((inst) => {
             _pool.push({
+              // WebAssembly.Exports is opaque (Record<string, ExportValue>);
+              // bridge it to our typed surface in one place.
+              // eslint-disable-next-line no-restricted-syntax
               exports: inst.exports as unknown as HarfbuzzExports,
               busy: false,
             });

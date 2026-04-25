@@ -8,13 +8,20 @@ import { Worker } from 'worker_threads';
 const DEFAULT_TASK_TIMEOUT_MS = 60_000;
 
 interface TaskCallbacks {
+  // The pool is generic over the trace payload; the caller knows the
+  // concrete shape (font-tracer's textByProps Map).
+  // eslint-disable-next-line no-restricted-syntax
   resolve: (value: unknown) => void;
+  // eslint-disable-next-line no-restricted-syntax
   reject: (reason?: unknown) => void;
 }
 
 interface StylesheetWithPredicates {
   text?: string;
   asset?: { text?: string };
+  // CSS-tracing predicates are opaque to the pool — it just passes them
+  // through to the worker thread.
+  // eslint-disable-next-line no-restricted-syntax
   predicates?: Record<string, unknown>;
 }
 
@@ -24,6 +31,7 @@ interface TraceMessage {
   htmlText: string;
   stylesheetsWithPredicates: Array<{
     text: string;
+    // eslint-disable-next-line no-restricted-syntax
     predicates: Record<string, unknown>;
   }>;
 }
@@ -31,6 +39,8 @@ interface TraceMessage {
 interface WorkerResultMessage {
   type: 'result';
   taskId: number;
+  // The trace result shape lives in font-tracer; the pool is unaware.
+  // eslint-disable-next-line no-restricted-syntax
   textByProps: unknown;
 }
 
@@ -234,9 +244,12 @@ class FontTracerPool {
    * Run fontTracer on the given HTML text + stylesheets in a worker.
    * Returns a promise that resolves to textByProps.
    */
+  // The pool is payload-agnostic; callers (subsetFonts.ts) interpret the
+  // returned textByProps according to font-tracer's contract.
   trace(
     htmlText: string,
     stylesheetsWithPredicates: StylesheetWithPredicates[]
+    // eslint-disable-next-line no-restricted-syntax
   ): Promise<unknown> {
     const taskId = this._nextTaskId++;
     // Serialize stylesheets to plain data — asset objects contain DOM/PostCSS

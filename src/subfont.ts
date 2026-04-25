@@ -118,6 +118,8 @@ const subfont = async function subfont(
 
   const formats = ['woff2'];
 
+  // Variadic console-style helpers: console.log / .warn accept any argument.
+  /* eslint-disable no-restricted-syntax */
   function logToConsole(severity: 'log' | 'warn', ...args: unknown[]): void {
     if (!silent && console) {
       (console[severity] as Console['log'])(...args);
@@ -129,6 +131,7 @@ const subfont = async function subfont(
   function warn(...args: unknown[]): void {
     logToConsole('warn', ...args);
   }
+  /* eslint-enable no-restricted-syntax */
 
   let rootUrl: string | undefined =
     root && urlTools.urlOrFsPathToUrl(root, true);
@@ -221,8 +224,11 @@ const subfont = async function subfont(
   }
   const assetGraph = new AssetGraph(assetGraphConfig);
 
+  // Catch-clause idiom: error values are `unknown` until narrowed.
+  // eslint-disable-next-line no-restricted-syntax
   function isExtensionlessEnoent(err: unknown): boolean {
     if (typeof err !== 'object' || err === null) return false;
+    // eslint-disable-next-line no-restricted-syntax
     const e = err as { code?: unknown; path?: unknown };
     return (
       e.code === 'ENOENT' &&
@@ -233,6 +239,8 @@ const subfont = async function subfont(
 
   let sawWarning = false;
   const origEmit = assetGraph.emit;
+  // EventEmitter.emit forwards arbitrary varargs.
+  // eslint-disable-next-line no-restricted-syntax
   assetGraph.emit = function (event: string, ...rest: unknown[]) {
     if (event === 'warn') {
       if (isExtensionlessEnoent(rest[0])) return false;

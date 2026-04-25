@@ -25,9 +25,11 @@ module.exports = [
       globals: globals.mocha,
     },
   },
-  // TypeScript source: forbid explicit `any`. Untyped third-party shims live
-  // in src/types/ and src/*.d.ts where loose `any` is unavoidable; those
-  // files are exempted below.
+  // TypeScript source: forbid explicit `any` and `unknown`. Both are
+  // permitted in .d.ts shims for untyped deps (see next config block) and
+  // can be opted into per-line with `// eslint-disable-next-line` when
+  // the boundary is genuinely opaque (catch clauses, variadic args, WASM
+  // exports, generic worker payloads).
   {
     files: ['src/**/*.ts'],
     languageOptions: {
@@ -38,6 +40,14 @@ module.exports = [
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'TSUnknownKeyword',
+          message:
+            'Avoid `unknown`; specify a concrete type. If the value is genuinely opaque, disable this line with an eslint-disable-next-line comment.',
+        },
+      ],
       // TypeScript's own checker handles undefined identifiers, including
       // built-in globals like Console / NodeJS that ESLint's no-undef
       // doesn't recognise.
@@ -45,8 +55,9 @@ module.exports = [
     },
   },
   {
-    // .d.ts ambient shims for untyped dependencies — `any` is the right
-    // tool here; tightening would require typing the deps themselves.
+    // .d.ts ambient shims for untyped dependencies — `any`/`unknown` are
+    // the right tools here; tightening would require typing the deps
+    // themselves.
     files: ['src/**/*.d.ts'],
     languageOptions: {
       parser: tseslint.parser,
@@ -56,6 +67,7 @@ module.exports = [
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      'no-restricted-syntax': 'off',
       'no-undef': 'off',
     },
   },
