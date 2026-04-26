@@ -129,9 +129,6 @@ async function acquireInstance(): Promise<PoolInstance> {
   }
   // All instances busy — wait for one to be released.
   return new Promise<PoolInstance>((resolve, reject) => {
-    // Define entry before the timer so the reader sees the callback's shape
-    // before its use in indexOf — both closures capture the other variable
-    // safely (neither runs until the event loop tick after both are assigned).
     const entry = (inst: PoolInstance) => {
       clearTimeout(timer);
       resolve(inst);
