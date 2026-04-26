@@ -949,7 +949,9 @@ interface AssetTextWithPropsEntry {
     typeof findFontFamiliesWithFeatureSettings
   >;
   featureTagsByFamily: Map<string, Set<string>>;
-  // Populated by buildPerPageFontUsages before subsetFonts consumes it.
+  // Populated by buildPerPageFontUsages, then progressively enriched by
+  // subsetFonts (codepoints, subsets, etc.). The wide type reflects this
+  // cross-module mutation pattern.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fontUsages: any[];
 }

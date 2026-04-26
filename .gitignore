@@ -7,8 +7,8 @@ package-lock.json
 .DS_Store
 *.log
 
-# TypeScript output (src/*.ts → lib/*.{js,d.ts})
-lib/*.js
-lib/*.js.map
-lib/*.d.ts
-lib/*.d.ts.map
+# TypeScript output (src/**/*.ts → lib/**/*.{js,d.ts})
+lib/**/*.js
+lib/**/*.js.map
+lib/**/*.d.ts
+lib/**/*.d.ts.map

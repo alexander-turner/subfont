@@ -1,7 +1,8 @@
 import * as fs from 'fs/promises';
 import pathModule = require('path');
 import * as crypto from 'crypto';
-import type { Asset, AssetGraph, Relation } from 'assetgraph';
+import type { Asset, AssetGraph } from 'assetgraph';
+import type { VariationAxes, AssetGraphError } from './types/shared';
 import { getVariationAxisBounds } from './variationAxes';
 import collectFeatureGlyphIds = require('./collectFeatureGlyphIds');
 import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
@@ -11,12 +12,6 @@ import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
 const SUBSET_CACHE_VERSION = '2';
 
 type FontBuffer = Buffer | Uint8Array;
-
-type VariationAxes =
-  | Record<string, number | { min: number; max: number; default?: number }>
-  | undefined;
-
-type AssetGraphError = Error & { asset?: Asset; relation?: Relation };
 
 interface FontUsage {
   text: string;
@@ -266,9 +261,13 @@ export async function getSubsetsForFontUsage(
           // Feature glyph collection failed — continue without feature
           // glyphs rather than blocking all fonts (Promise.all would
           // reject entirely if this propagated).
-          const err = rawErr as AssetGraphError;
-          err.asset = err.asset || fontAssetsByUrl.get(fontUrl);
-          assetGraph.warn(err);
+          const err =
+            rawErr instanceof Error
+              ? (rawErr as AssetGraphError)
+              : new Error(String(rawErr));
+          (err as AssetGraphError).asset =
+            (err as AssetGraphError).asset || fontAssetsByUrl.get(fontUrl);
+          assetGraph.warn(err as AssetGraphError);
         }
       }
 
@@ -316,9 +315,14 @@ export async function getSubsetsForFontUsage(
                   return result;
                 })
                 .catch((rawErr) => {
-                  const err = rawErr as AssetGraphError;
-                  err.asset = err.asset || fontAssetsByUrl.get(fontUrl);
-                  assetGraph.warn(err);
+                  const err =
+                    rawErr instanceof Error
+                      ? (rawErr as AssetGraphError)
+                      : new Error(String(rawErr));
+                  (err as AssetGraphError).asset =
+                    (err as AssetGraphError).asset ||
+                    fontAssetsByUrl.get(fontUrl);
+                  assetGraph.warn(err as AssetGraphError);
                   return null;
                 })
             );

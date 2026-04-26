@@ -7,6 +7,7 @@ import type {
   PostCssNode,
   Relation,
 } from 'assetgraph';
+import type { VariationAxes, AssetGraphError } from './types/shared';
 import compileQuery = require('assetgraph/lib/compileQuery');
 
 import findCustomPropertyDefinitions = require('./findCustomPropertyDefinitions');
@@ -39,12 +40,6 @@ import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
 import warnAboutMissingGlyphs = require('./warnAboutMissingGlyphs');
 
 const googleFontsCssUrlRegex = /^(?:https?:)?\/\/fonts\.googleapis\.com\/css/;
-
-type VariationAxes =
-  | Record<string, number | { min: number; max: number; default?: number }>
-  | undefined;
-
-type AssetGraphError = Error & { asset?: Asset; relation?: Relation };
 
 interface FontUsage {
   text: string;
@@ -607,9 +602,14 @@ async function subsetFonts(
   // Pre-warm the WASM pool: start compiling harfbuzz WASM while
   // collectTextsByPage traces fonts. Compilation (~50-200ms) overlaps
   // with tracing work rather than appearing on the critical path.
-  // Catch silently — the error will surface when subsetFontWithGlyphs
-  // is actually called, where it's properly handled.
-  subsetFontWithGlyphs.warmup().catch(() => {});
+  subsetFontWithGlyphs.warmup().catch((err) => {
+    if (debug) {
+      console.warn(
+        'WASM warmup failed (will retry on first subset call):',
+        err
+      );
+    }
+  });
 
   const subsetUrl = urltools.ensureTrailingSlash(assetGraph.root + subsetPath);
 
@@ -710,12 +710,15 @@ async function subsetFonts(
     if (fontAsset.isLoaded) {
       fontInfoPromises.set(
         fontUrl,
-        // Catch-clause idiom: TypeScript types caught errors as `unknown`.
         // eslint-disable-next-line no-restricted-syntax
         getFontInfo(fontAsset.rawSrc).catch((rawErr: unknown) => {
-          const err = rawErr as AssetGraphError;
-          err.asset = err.asset || fontAsset;
-          assetGraph.warn(err);
+          const err =
+            rawErr instanceof Error
+              ? (rawErr as AssetGraphError)
+              : new Error(String(rawErr));
+          (err as AssetGraphError).asset =
+            (err as AssetGraphError).asset || fontAsset;
+          assetGraph.warn(err as AssetGraphError);
           return null;
         })
       );

@@ -79,6 +79,12 @@ subfont path/to/index.html -i --cache
 
 Run `subfont --help` for the full list.
 
+### Environment variables
+
+| Variable                    | Description                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `PUPPETEER_EXECUTABLE_PATH` | Path to a Chrome/Chromium binary; skips auto-download when `--dynamic` is used |
+
 To include extra characters in a specific font's subset, add `-subfont-text` to its `@font-face`:
 
 ```css
