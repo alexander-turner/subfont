@@ -92,6 +92,15 @@ declare module 'assetgraph' {
 
   export interface AssetParseTree {
     querySelectorAll(selector: string): ArrayLike<SvgElement>;
+    // postcss Root methods (present on CSS assets)
+    walkRules?(cb: (rule: PostCssNode) => void): void;
+    walkDecls?(cb: (decl: { prop: string; value: string }) => void): void;
+    nodes?: Array<{
+      type: string;
+      text?: string;
+      prop?: string;
+      value?: string;
+    }>;
   }
 
   export interface SvgElement {
