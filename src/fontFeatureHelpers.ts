@@ -187,7 +187,7 @@ export function recordRuleFeatureTags(
 }
 
 interface StylesheetEntry {
-  asset?: { parseTree?: { walkRules(cb: (rule: PostCssRule) => void): void } };
+  asset?: { parseTree?: { walkRules?(cb: (rule: PostCssRule) => void): void } };
 }
 
 // Determine which font-families use font-feature-settings or font-variant-*.
@@ -199,7 +199,7 @@ export function findFontFamiliesWithFeatureSettings(
 ): true | Set<string> | null {
   let result: true | Set<string> | null = null;
   for (const { asset } of stylesheetsWithPredicates) {
-    if (!asset || !asset.parseTree) continue;
+    if (!asset?.parseTree?.walkRules) continue;
     asset.parseTree.walkRules((rule) => {
       if (result === true && !featureTagsByFamily) return;
 

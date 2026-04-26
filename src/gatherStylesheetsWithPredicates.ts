@@ -2,10 +2,10 @@ interface AssetLike {
   type?: string;
   isLoaded?: boolean;
   text: string;
-  // assetgraph populates parseTree on CSS assets — kept loose so this
-  // shim can be passed to consumers (fontFeatureHelpers) that walk it.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parseTree?: any;
+  parseTree?: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    walkRules?(cb: (rule: any) => void): void;
+  };
 }
 
 interface RelationLike {

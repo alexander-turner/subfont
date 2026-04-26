@@ -288,13 +288,13 @@ export function getCodepoints(text: string): number[] {
   return [...codepointSet];
 }
 
-// AssetGraph's CSS parseTree nodes include comments (with `text`) — wider
-// than the assetgraph type shim. Loose typing keeps the helper agnostic.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function cssAssetIsEmpty(cssAsset: { parseTree: any }): boolean {
-  return cssAsset.parseTree.nodes.every(
-    (node: { type: string; text?: string }) =>
-      node.type === 'comment' && !(node.text ?? '').startsWith('!')
+export function cssAssetIsEmpty(cssAsset: {
+  parseTree: { nodes?: Array<{ type: string; text?: string }> };
+}): boolean {
+  const nodes = cssAsset.parseTree.nodes;
+  if (!nodes) return true;
+  return nodes.every(
+    (node) => node.type === 'comment' && !(node.text ?? '').startsWith('!')
   );
 }
 

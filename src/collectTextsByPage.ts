@@ -70,8 +70,7 @@ interface FontFaceDeclaration {
   src?: string;
   '-subfont-text'?: string;
   relations: Relation[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [descriptor: string]: any;
+  [descriptor: string]: string | Relation[] | undefined;
 }
 
 // Stylesheet entries are produced by gatherStylesheetsWithPredicates and
@@ -80,7 +79,7 @@ interface FontFaceDeclaration {
 interface StylesheetEntry {
   asset: {
     text?: string;
-    parseTree?: { walkRules(cb: (rule: PostCssNode) => void): void };
+    parseTree?: { walkRules?(cb: (rule: PostCssNode) => void): void };
   };
   text: string;
   predicates: Record<string, boolean>;
@@ -242,7 +241,7 @@ function computeSnappedGlobalEntries(
 
         snappedResults.push({
           fontUrl,
-          props,
+          props: props as Record<string, string>,
           fontRelations: relations,
           fontStyle: normalizeFontPropertyValue(
             'font-style',
@@ -342,7 +341,13 @@ function populateGlobalFontUsages(
     if (extras.length > 0) {
       let arr = extraTextsByFontUrl.get(fontUrl);
       if (!arr) {
-        arr = { texts: [], props, fontRelations: relations };
+        // After destructuring out `relations` and `-subfont-text`, the
+        // remaining spread props are CSS descriptor strings.
+        arr = {
+          texts: [],
+          props: props as Record<string, string>,
+          fontRelations: relations,
+        };
         extraTextsByFontUrl.set(fontUrl, arr);
       }
       arr.texts.push(...extras);
@@ -431,8 +436,7 @@ interface TracePagesOptions {
   headlessBrowser: HeadlessBrowser | null;
   concurrency: number | undefined;
   console: Console | null | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  memoizedGetCssRulesByProperty: any;
+  memoizedGetCssRulesByProperty: typeof getCssRulesByProperty;
   debug?: boolean;
 }
 
@@ -555,8 +559,7 @@ async function tracePages(
 }
 
 interface ProcessFastPathOptions {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  memoizedGetCssRulesByProperty: any;
+  memoizedGetCssRulesByProperty: typeof getCssRulesByProperty;
 }
 
 // For each page that shares a representative's CSS configuration, copy the
