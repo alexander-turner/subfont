@@ -93,9 +93,17 @@ describe('regression bug fixes', function () {
   });
 
   describe('Bug 5: FontTracerPool should reject pending tasks when all workers crash', function () {
+    const crashWorkerPath = pathModule.resolve(__dirname, '_crashWorker.js');
+    afterEach(function () {
+      try {
+        fs.unlinkSync(crashWorkerPath);
+      } catch {
+        // File may not exist if test didn't reach the write step
+      }
+    });
+
     it('should reject the promise when a worker crashes', async function () {
       // Create a minimal worker that exits immediately with code 1
-      const crashWorkerPath = pathModule.resolve(__dirname, '_crashWorker.js');
       fs.writeFileSync(
         crashWorkerPath,
         `
@@ -136,9 +144,6 @@ parentPort.on('message', (msg) => {
 
       const exitCode = await exitPromise;
       expect(exitCode, 'to equal', 1);
-
-      // Clean up
-      fs.unlinkSync(crashWorkerPath);
     });
 
     it('should reject all pending tasks when no workers remain', function () {
