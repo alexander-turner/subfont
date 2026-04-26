@@ -224,6 +224,17 @@ describe('fontFeatureHelpers', function () {
       recordRuleFeatureTags(rule, map);
       expect(map.get('*'), 'to satisfy', new Set(['dlig']));
     });
+
+    it('should return families but skip recording when map is null', function () {
+      const rule = {
+        nodes: [
+          { type: 'decl', prop: 'font-family', value: 'Roboto' },
+          { type: 'decl', prop: 'font-variant-caps', value: 'small-caps' },
+        ],
+      };
+      const result = recordRuleFeatureTags(rule, null);
+      expect(result, 'to be an', 'array');
+    });
   });
 
   describe('resolveFeatureSettings', function () {
