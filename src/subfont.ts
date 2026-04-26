@@ -18,26 +18,47 @@ class UsageError extends Error {
   }
 }
 
+/** Options for the subfont programmatic API. One of `output`, `inPlace`, or `dryRun` must be set. */
 interface SubfontOptions {
+  /** Path or URL to the web root. Deduced from `inputFiles` if omitted. */
   root?: string;
+  /** URI root where the site will be deployed (rewrites absolute URLs). */
   canonicalRoot?: string;
+  /** Output directory. Mutually exclusive with `inPlace`. */
   output?: string;
+  /** Emit verbose timing and glyph-detection info. */
   debug?: boolean;
+  /** Trace and compute subsets but do not write any files. */
   dryRun?: boolean;
+  /** Suppress all log output. */
   silent?: boolean;
+  /** Inline the subset @font-face CSS into the HTML document. */
   inlineCss?: boolean;
+  /** CSS font-display value: `auto`, `block`, `swap`, `fallback`, or `optional`. */
   fontDisplay?: string;
+  /** Modify input files in-place. */
   inPlace?: boolean;
+  /** HTML entry points (file paths or URLs). */
   inputFiles?: Array<string | number | URL>;
+  /** Crawl linked pages starting from `inputFiles`. */
   recursive?: boolean;
+  /** Emit relative URLs instead of root-relative. */
   relativeUrls?: boolean;
+  /** Trace JS-rendered content in headless Chrome. */
   dynamic?: boolean;
+  /** Async-load the full original font as a fallback for dynamic content. */
   fallbacks?: boolean;
+  /** Extra characters to include in every subset. */
   text?: string;
+  /** Preserve CSS source maps (slower). */
   sourceMaps?: boolean;
+  /** Max parallel tracing workers. Defaults to CPU count, capped by available memory. */
   concurrency?: number;
+  /** Extra Chrome flags forwarded to puppeteer when `dynamic` is set. */
   chromeFlags?: string[];
+  /** Cache subset results. Pass a path or `true` for `.subfont-cache` inside `root`. */
   cache?: boolean | string;
+  /** Exit non-zero if any warnings are emitted. */
   strict?: boolean;
 }
 
