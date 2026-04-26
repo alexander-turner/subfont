@@ -30,9 +30,12 @@ function parseCommandLineOptions(argv?: string[]): ParseResult {
 
   const maxConcurrency = getMaxConcurrency();
 
+  const { version } = require('../package.json');
+
   y.usage(
     'Create optimal font subsets from your actual font usage.\n$0 [options] <htmlFile(s) | url(s)>'
   )
+    .version(version)
     .options('root', {
       describe:
         'Path to your web root (will be deduced from your input files if not specified)',

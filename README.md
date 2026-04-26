@@ -17,11 +17,11 @@ A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web f
 
 On the [`turntrout.com/design`](https://turntrout.com/design) page, a typical font subset (OpenSans, woff2) is **48-68% smaller** than a naive subset of the same glyphs:
 
-| Text sample       | Naive subset | `subfont`| Savings |
-| ----------------- | ------------ | ------- | ------- |
-| Heading (short)   | 2,604 B      | 824 B   | **68%** |
-| Paragraph         | 4,052 B      | 1,840 B | **55%** |
-| Full page charset | 5,268 B      | 2,716 B | **48%** |
+| Text sample       | Naive subset | `subfont` | Savings |
+| ----------------- | ------------ | --------- | ------- |
+| Heading (short)   | 2,604 B      | 824 B     | **68%** |
+| Paragraph         | 4,052 B      | 1,840 B   | **55%** |
+| Full page charset | 5,268 B      | 2,716 B   | **48%** |
 
 ## Install
 
@@ -35,22 +35,22 @@ Requires Node.js >= 18.
 
 ```bash
 # Optimize build artifacts in-place (recommended)
-`subfont`path/to/dist/index.html -i
+subfont path/to/dist/index.html -i
 
 # Preview without writing
-`subfont`path/to/dist/index.html --dry-run
+subfont path/to/dist/index.html --dry-run
 
 # Output to a separate directory
-`subfont`path/to/index.html -o path/to/output
+subfont path/to/index.html -o path/to/output
 
 # Crawl all linked pages
-`subfont`path/to/index.html -i --recursive
+subfont path/to/index.html -i --recursive
 
 # Trace JS-rendered content in headless Chrome
-`subfont`path/to/index.html -i --dynamic
+subfont path/to/index.html -i --dynamic
 
 # Cache subset results between runs
-`subfont`path/to/index.html -i --cache
+subfont path/to/index.html -i --cache
 ```
 
 ## Options
@@ -92,7 +92,7 @@ To include extra characters in a specific font's subset, add `-subfont-text` to 
 ## Programmatic API
 
 ```js
-const `subfont`= require('@turntrout/subfont');
+const subfont = require('@turntrout/subfont');
 
 const assetGraph = await subfont(
   {
