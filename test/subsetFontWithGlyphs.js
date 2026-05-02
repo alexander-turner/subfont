@@ -13,6 +13,16 @@ const variableFontPath = pathModule.resolve(
   '../testdata/subsetFonts/variable-font-unused-axes/RobotoFlex-VariableFont_GRAD,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf'
 );
 
+function listSfntTables(buf) {
+  const numTables = buf.readUInt16BE(4);
+  const set = new Set();
+  for (let i = 0; i < numTables; i++) {
+    const off = 12 + i * 16;
+    set.add(buf.slice(off, off + 4).toString('ascii'));
+  }
+  return set;
+}
+
 describe('subsetFontWithGlyphs', function () {
   this.timeout(30000);
 
@@ -184,6 +194,22 @@ describe('subsetFontWithGlyphs', function () {
       featureTags: [], // no extra features beyond harfbuzz defaults
     });
     expect(targeted.length, 'to be less than', retainAll.length);
+  });
+
+  it('should drop hinting and unused web tables from a TrueType subset', async function () {
+    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+      targetFormat: 'truetype',
+      featureTags: [],
+    });
+    const tables = listSfntTables(result);
+    // NO_HINTING flag drops these for TrueType outlines.
+    for (const tag of ['cvt ', 'fpgm', 'prep', 'hdmx']) {
+      expect(tables.has(tag), 'to be false');
+    }
+    // DROP_TABLE_TAGS catches the rest that NO_HINTING leaves behind.
+    for (const tag of ['gasp', 'DSIG', 'LTSH', 'VDMX', 'PCLT']) {
+      expect(tables.has(tag), 'to be false');
+    }
   });
 
   it('should handle concurrent calls via worker pool', async function () {

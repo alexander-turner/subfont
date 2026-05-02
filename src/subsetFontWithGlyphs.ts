@@ -6,9 +6,9 @@ import { convert as convertInWorker } from './fontConverter';
 
 // hb_subset_sets_t enum values — https://github.com/harfbuzz/harfbuzz/blob/main/src/hb-subset.h
 const HB_SUBSET_SETS_GLYPH_INDEX = 0;
-const HB_SUBSET_SETS_DROP_TABLE_TAG = 5;
-const HB_SUBSET_SETS_LAYOUT_FEATURE_TAG = 6;
+const HB_SUBSET_SETS_DROP_TABLE_TAG = 3;
 const HB_SUBSET_SETS_NAME_ID = 4;
+const HB_SUBSET_SETS_LAYOUT_FEATURE_TAG = 6;
 
 // hb_subset_flags_t
 const HB_SUBSET_FLAGS_NO_HINTING = 0x00000001;
@@ -220,7 +220,9 @@ function setAxisRange(
 }
 
 // Tables unnecessary for web rendering — safe to drop unconditionally.
-// gasp is only meaningful when hinting is present (which we strip above).
+// HB_SUBSET_FLAGS_NO_HINTING already drops cvt/fpgm/prep/hdmx in the
+// harfbuzzjs build we use; gasp/LTSH/VDMX/DSIG/PCLT survive the flag and
+// must be dropped here.
 const DROP_TABLE_TAGS = ['DSIG', 'LTSH', 'VDMX', 'hdmx', 'gasp', 'PCLT'];
 
 // Name IDs needed for web fonts: family (1), subfamily (2), full name (4),

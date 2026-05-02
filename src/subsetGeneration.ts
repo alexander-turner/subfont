@@ -9,10 +9,7 @@ import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
-// Bumped to '3' when feature retention switched from retain-all to targeted
-// (harfbuzz default shaping set + CSS-requested tags only). Cached subsets
-// from earlier versions had different GSUB/GPOS contents.
-const SUBSET_CACHE_VERSION = '3';
+const SUBSET_CACHE_VERSION = '4';
 
 type FontBuffer = Buffer | Uint8Array;
 
