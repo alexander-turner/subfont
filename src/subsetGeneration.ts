@@ -6,7 +6,10 @@ import type { VariationAxes, AssetGraphError } from './types/shared';
 import { getVariationAxisBounds } from './variationAxes';
 import collectFeatureGlyphIds = require('./collectFeatureGlyphIds');
 import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
-import { pageNeedsMathTable } from './codepointHeuristics';
+import {
+  pageNeedsMathTable,
+  pageNeedsColorTables,
+} from './codepointHeuristics';
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
@@ -277,10 +280,13 @@ export async function getSubsetsForFontUsage(
         }
       }
 
-      // Drop the MATH table when the page text doesn't reference any math
-      // codepoints. Math typesetting via MathML or other engines depends on
-      // the table, so we only strip it when no math characters are visible.
+      // Drop optional metric tables when the page text doesn't reference
+      // codepoints those tables exist to support. False positives (keeping
+      // a table the page doesn't need) cost a few hundred bytes; false
+      // negatives (dropping a needed table) break rendering, so the
+      // heuristics err on the side of keeping.
       const dropMathTable = !pageNeedsMathTable(text);
+      const dropColorTables = !pageNeedsColorTables(text);
 
       for (const targetFormat of formats) {
         const promiseId = getSubsetPromiseId(
@@ -290,7 +296,7 @@ export async function getSubsetsForFontUsage(
         );
 
         if (!subsetPromiseMap.has(promiseId)) {
-          const extraCacheOptions = { dropMathTable };
+          const extraCacheOptions = { dropMathTable, dropColorTables };
           const cacheKey = diskCache
             ? subsetCacheKey(
                 fontBuffer,
@@ -327,6 +333,7 @@ export async function getSubsetsForFontUsage(
               variationAxes: subsetInfo.variationAxes,
               featureTags,
               dropMathTable,
+              dropColorTables,
             });
 
             subsetPromiseMap.set(

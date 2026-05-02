@@ -85,6 +85,10 @@ interface SubsetFontWithGlyphsOptions {
   // When true, drop the OpenType MATH table. Caller is responsible for
   // ensuring the page does not render math content with this font.
   dropMathTable?: boolean;
+  // When true, drop COLR/CPAL/SVG/CBDT/CBLC/EBDT/EBLC/EBSC/sbix. Caller is
+  // responsible for ensuring the page does not render color emoji or color
+  // glyphs with this font.
+  dropColorTables?: boolean;
 }
 
 // Pool of WASM instances for parallel subsetting.  Each instance has its
@@ -234,6 +238,22 @@ function setAxisRange(
 // must be dropped here.
 const DROP_TABLE_TAGS = ['DSIG', 'LTSH', 'VDMX', 'hdmx', 'gasp', 'PCLT'];
 
+// Color and bitmap tables — only relevant for color emoji (Apple/Google)
+// and legacy bitmap fonts. Dropped only when the caller signals that no
+// color content needs to render with this font.
+// Note: 'SVG ' has a trailing space (4-byte tag).
+const COLOR_TABLE_TAGS = [
+  'COLR',
+  'CPAL',
+  'SVG ',
+  'CBDT',
+  'CBLC',
+  'sbix',
+  'EBDT',
+  'EBLC',
+  'EBSC',
+];
+
 // Name IDs needed for web fonts: family (1), subfamily (2), full name (4),
 // PostScript name (6).  Copyright (0), unique ID (3), version (5), and
 // everything above 6 are display/license metadata that browsers never read.
@@ -247,7 +267,8 @@ function configureSubsetInput(
   glyphIds: number[] | undefined,
   variationAxes: Record<string, VariationAxisValue> | undefined,
   featureTags: string[] | undefined,
-  dropMathTable: boolean
+  dropMathTable: boolean,
+  dropColorTables: boolean
 ): void {
   // --- Retain layout features ---
   // hb_subset_input_create_or_fail pre-populates the layout-features set with
@@ -299,6 +320,11 @@ function configureSubsetInput(
   }
   if (dropMathTable) {
     exports.hb_set_add(dropTableSet, HB_TAG('MATH'));
+  }
+  if (dropColorTables) {
+    for (const tag of COLOR_TABLE_TAGS) {
+      exports.hb_set_add(dropTableSet, HB_TAG(tag));
+    }
   }
 
   // --- Add unicode codepoints ---
@@ -385,6 +411,7 @@ async function subsetFontWithGlyphs(
     variationAxes,
     featureTags,
     dropMathTable = false,
+    dropColorTables = false,
   }: SubsetFontWithGlyphsOptions = {}
 ): Promise<Buffer> {
   // Reuse cached sfnt conversion when available (same buffer may have
@@ -422,7 +449,8 @@ async function subsetFontWithGlyphs(
         glyphIds,
         variationAxes,
         featureTags,
-        dropMathTable
+        dropMathTable,
+        dropColorTables
       );
 
       subset = exports.hb_subset_or_fail(face, input);

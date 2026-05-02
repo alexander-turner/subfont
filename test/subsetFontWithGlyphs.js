@@ -225,6 +225,22 @@ describe('subsetFontWithGlyphs', function () {
     }
   });
 
+  it('should accept dropColorTables without affecting fonts that lack color tables', async function () {
+    // No testdata font ships COLR/CPAL/SVG/CBDT/sbix, so this only verifies
+    // that setting the option produces a valid subset (no-op behavior when
+    // the tables are absent).
+    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+      targetFormat: 'truetype',
+      featureTags: [],
+      dropColorTables: true,
+    });
+    const tables = listSfntTables(result);
+    for (const tag of ['COLR', 'CPAL', 'SVG ', 'CBDT', 'CBLC', 'sbix']) {
+      expect(tables.has(tag), 'to be false');
+    }
+    expect(result.length, 'to be greater than', 0);
+  });
+
   it('should accept dropMathTable without affecting fonts that lack a MATH table', async function () {
     // No testdata font ships a MATH table, so this only verifies that
     // setting the option produces a valid subset (the option is a no-op
