@@ -55,4 +55,25 @@ describe('subset size benchmarks', function () {
       expect(tables.has('gasp'), 'to be false');
     });
   });
+
+  describe('layout-script filtering (HB_SUBSET_SETS_LAYOUT_SCRIPT_TAG)', function () {
+    [
+      { name: 'Roboto', path: fonts.Roboto },
+      { name: 'IBMPlexSans', path: fonts.IBMPlexSans },
+    ].forEach(({ name, path }) => {
+      it(`${name} woff2 with scriptTags=[DFLT, latn] is smaller than retain-all-scripts`, async function () {
+        const buf = fs.readFileSync(path);
+        const all = await subsetFontWithGlyphs(buf, PANGRAM, {
+          targetFormat: 'woff2',
+          featureTags: [],
+        });
+        const latnOnly = await subsetFontWithGlyphs(buf, PANGRAM, {
+          targetFormat: 'woff2',
+          featureTags: [],
+          scriptTags: ['DFLT', 'latn'],
+        });
+        expect(latnOnly.length, 'to be less than', all.length);
+      });
+    });
+  });
 });

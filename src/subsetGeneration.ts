@@ -10,6 +10,7 @@ import {
   pageNeedsMathTable,
   pageNeedsColorTables,
 } from './codepointHeuristics';
+import { scriptsForText } from './scriptForCodepoint';
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
@@ -58,8 +59,7 @@ function getFontBufferHashPrefix(fontBuffer: FontBuffer): crypto.Hash {
   return cached;
 }
 
-// Concrete enough for our use; widen if we plumb non-boolean knobs through.
-type ExtraSubsetCacheOptions = Record<string, boolean>;
+type ExtraSubsetCacheOptions = Record<string, boolean | string[]>;
 
 function subsetCacheKey(
   fontBuffer: FontBuffer,
@@ -287,6 +287,7 @@ export async function getSubsetsForFontUsage(
       // heuristics err on the side of keeping.
       const dropMathTable = !pageNeedsMathTable(text);
       const dropColorTables = !pageNeedsColorTables(text);
+      const scriptTags = scriptsForText(text);
 
       for (const targetFormat of formats) {
         const promiseId = getSubsetPromiseId(
@@ -296,7 +297,11 @@ export async function getSubsetsForFontUsage(
         );
 
         if (!subsetPromiseMap.has(promiseId)) {
-          const extraCacheOptions = { dropMathTable, dropColorTables };
+          const extraCacheOptions = {
+            dropMathTable,
+            dropColorTables,
+            scriptTags,
+          };
           const cacheKey = diskCache
             ? subsetCacheKey(
                 fontBuffer,
@@ -334,6 +339,7 @@ export async function getSubsetsForFontUsage(
               featureTags,
               dropMathTable,
               dropColorTables,
+              scriptTags,
             });
 
             subsetPromiseMap.set(

@@ -225,6 +225,22 @@ describe('subsetFontWithGlyphs', function () {
     }
   });
 
+  it('should produce a smaller subset when scriptTags excludes scripts the font ships', async function () {
+    // Roboto-400 ships shaping data for DFLT/cyrl/grek/latn; restricting
+    // to DFLT+latn should drop cyrl/grek lookups.
+    const text = 'The quick brown fox';
+    const allScripts = await subsetFontWithGlyphs(ttfBuffer, text, {
+      targetFormat: 'woff2',
+      featureTags: [],
+    });
+    const latnOnly = await subsetFontWithGlyphs(ttfBuffer, text, {
+      targetFormat: 'woff2',
+      featureTags: [],
+      scriptTags: ['DFLT', 'latn'],
+    });
+    expect(latnOnly.length, 'to be less than', allScripts.length);
+  });
+
   it('should accept dropColorTables without affecting fonts that lack color tables', async function () {
     // No testdata font ships COLR/CPAL/SVG/CBDT/sbix, so this only verifies
     // that setting the option produces a valid subset (no-op behavior when

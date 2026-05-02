@@ -10,6 +10,7 @@ const HB_SUBSET_SETS_DROP_TABLE_TAG = 3;
 const HB_SUBSET_SETS_NAME_ID = 4;
 const HB_SUBSET_SETS_NAME_LANG_ID = 5;
 const HB_SUBSET_SETS_LAYOUT_FEATURE_TAG = 6;
+const HB_SUBSET_SETS_LAYOUT_SCRIPT_TAG = 7;
 
 // Windows English (United States). The only name-table language we keep —
 // browsers don't expose localized name strings to web pages, so other lang
@@ -89,6 +90,11 @@ interface SubsetFontWithGlyphsOptions {
   // responsible for ensuring the page does not render color emoji or color
   // glyphs with this font.
   dropColorTables?: boolean;
+  // OpenType script tags to retain GSUB/GPOS lookups for (e.g. ['latn',
+  // 'cyrl', 'DFLT']). When provided, harfbuzz's default "retain all
+  // scripts" set is replaced by exactly these tags. When undefined, all
+  // scripts in the font are retained (legacy behavior).
+  scriptTags?: string[];
 }
 
 // Pool of WASM instances for parallel subsetting.  Each instance has its
@@ -268,7 +274,8 @@ function configureSubsetInput(
   variationAxes: Record<string, VariationAxisValue> | undefined,
   featureTags: string[] | undefined,
   dropMathTable: boolean,
-  dropColorTables: boolean
+  dropColorTables: boolean,
+  scriptTags: string[] | undefined
 ): void {
   // --- Retain layout features ---
   // hb_subset_input_create_or_fail pre-populates the layout-features set with
@@ -288,6 +295,20 @@ function configureSubsetInput(
   } else {
     for (const tag of featureTags) {
       exports.hb_set_add(layoutFeatures, HB_TAG(tag));
+    }
+  }
+
+  // --- Retain layout scripts ---
+  // When scriptTags is provided, replace harfbuzz's default (all scripts)
+  // with exactly the listed tags. Undefined leaves the default in place.
+  if (scriptTags !== undefined) {
+    const layoutScripts = exports.hb_subset_input_set(
+      input,
+      HB_SUBSET_SETS_LAYOUT_SCRIPT_TAG
+    );
+    exports.hb_set_clear(layoutScripts);
+    for (const tag of scriptTags) {
+      exports.hb_set_add(layoutScripts, HB_TAG(tag));
     }
   }
 
@@ -412,6 +433,7 @@ async function subsetFontWithGlyphs(
     featureTags,
     dropMathTable = false,
     dropColorTables = false,
+    scriptTags,
   }: SubsetFontWithGlyphsOptions = {}
 ): Promise<Buffer> {
   // Reuse cached sfnt conversion when available (same buffer may have
@@ -450,7 +472,8 @@ async function subsetFontWithGlyphs(
         variationAxes,
         featureTags,
         dropMathTable,
-        dropColorTables
+        dropColorTables,
+        scriptTags
       );
 
       subset = exports.hb_subset_or_fail(face, input);
