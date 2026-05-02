@@ -15,10 +15,8 @@ describe('unicode range', function () {
     expect(unicodeRange([0x41]), 'to equal', 'U+41');
   });
 
-  it('should handle duplicate characters in the input array', function () {
-    // The function does not deduplicate; duplicates appear as individual entries
-    // adjacent to the range they belong to
-    expect(unicodeRange([0x41, 0x41, 0x42]), 'to equal', 'U+41,U+41-42');
+  it('should deduplicate codepoints in the input', function () {
+    expect(unicodeRange([0x41, 0x41, 0x42]), 'to equal', 'U+41-42');
   });
 
   it('should handle non-contiguous ranges with multiple gaps', function () {

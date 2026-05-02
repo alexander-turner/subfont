@@ -22,8 +22,14 @@ export function toSfnt(buffer: FontBuffer): Promise<FontBuffer> {
   } catch {
     promise = convert(buffer, 'sfnt');
   }
-  // Evict on rejection so retries with the same buffer aren't stuck
-  promise.catch(() => sfntPromiseByBuffer.delete(buffer as object));
-  sfntPromiseByBuffer.set(buffer as object, promise);
-  return promise;
+  // Evict on rejection so retries with the same buffer aren't stuck.
+  // Rethrow so callers see the original error and Node doesn't surface an
+  // unhandled rejection if this branch is the only consumer.
+  // eslint-disable-next-line no-restricted-syntax
+  const tracked = promise.catch((err: unknown) => {
+    sfntPromiseByBuffer.delete(buffer as object);
+    throw err;
+  });
+  sfntPromiseByBuffer.set(buffer as object, tracked);
+  return tracked;
 }

@@ -1,23 +1,10 @@
 import getFontInfo = require('./getFontInfo');
 import parseFontVariationSettings = require('./parseFontVariationSettings');
 
-export const standardVariationAxes = new Set<string>([
-  'wght',
-  'wdth',
-  'ital',
-  'slnt',
-  'opsz',
-]);
-
 // CSS oblique without an explicit <angle> defaults to 14deg. The OpenType slnt
 // axis uses the opposite sign convention (positive = counter-clockwise), so
 // CSS maps oblique to slnt -14.
 const DEFAULT_OBLIQUE_SLNT = -14;
-
-// When no opsz values are determined from font-variation-settings, the axis is
-// pinned to its default value rather than preserving the full range, which can
-// significantly bloat variable font subsets.
-export const ignoredVariationAxes = new Set<string>();
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -194,15 +181,20 @@ export async function getVariationAxisBounds(
       { min, max, default: defaultValue },
     ] of fontVariationEntries) {
       let seenAxisValues = seenAxisValuesByAxisName.get(axisName);
-      if (!seenAxisValues && !ignoredVariationAxes.has(axisName)) {
+      if (!seenAxisValues) {
         seenAxisValues = new Set([defaultValue]);
       }
-      if (seenAxisValues && seenAxisValues.size === 1) {
-        variationAxes[axisName] = clamp([...seenAxisValues][0], min, max);
+      if (seenAxisValues.size === 1) {
+        const [only] = seenAxisValues;
+        variationAxes[axisName] = clamp(only, min, max);
         numAxesPinned += 1;
-      } else if (seenAxisValues) {
-        const minSeenValue = Math.min(...seenAxisValues);
-        const maxSeenValue = Math.max(...seenAxisValues);
+      } else {
+        let minSeenValue = Infinity;
+        let maxSeenValue = -Infinity;
+        for (const v of seenAxisValues) {
+          if (v < minSeenValue) minSeenValue = v;
+          if (v > maxSeenValue) maxSeenValue = v;
+        }
         variationAxes[axisName] = {
           min: Math.max(minSeenValue, min),
           max: Math.min(maxSeenValue, max),

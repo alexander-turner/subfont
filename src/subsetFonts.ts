@@ -845,19 +845,15 @@ async function subsetFonts(
   // Pre-compute which fontUrls are used (with text) on every page.
   // Set intersection: O(pages × fonts_per_page) vs the old every+some approach.
   const fontUrlsUsedOnEveryPage = new Set<string>();
-  if (htmlOrSvgAssetTextsWithProps.length > 0) {
-    const firstPageFontUrls = new Set<string>();
-    for (const fu of (htmlOrSvgAssetTextsWithProps as AssetTextWithProps[])[0]
-      .fontUsages) {
-      if (fu.pageText && fu.fontUrl) firstPageFontUrls.add(fu.fontUrl);
+  const pages = htmlOrSvgAssetTextsWithProps as AssetTextWithProps[];
+  if (pages.length > 0) {
+    for (const fu of pages[0].fontUsages) {
+      if (fu.pageText && fu.fontUrl) fontUrlsUsedOnEveryPage.add(fu.fontUrl);
     }
-    for (const fontUrl of firstPageFontUrls) {
-      fontUrlsUsedOnEveryPage.add(fontUrl);
-    }
-    for (let i = 1; i < htmlOrSvgAssetTextsWithProps.length; i++) {
+    for (let i = 1; i < pages.length; i++) {
+      if (fontUrlsUsedOnEveryPage.size === 0) break;
       const pageFontUrls = new Set<string>();
-      for (const fu of (htmlOrSvgAssetTextsWithProps as AssetTextWithProps[])[i]
-        .fontUsages) {
+      for (const fu of pages[i].fontUsages) {
         if (fu.pageText && fu.fontUrl) pageFontUrls.add(fu.fontUrl);
       }
       for (const fontUrl of fontUrlsUsedOnEveryPage) {

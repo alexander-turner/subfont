@@ -83,6 +83,17 @@ async function warnAboutMissingGlyphs(
     })
   );
 
+  // Codepoint unions per @font-face declaration, keyed by the at-rule node.
+  // Built across all fontUsages on a page, then flushed in a single append
+  // per @font-face so multiple fontUsages sharing a family don't lose data.
+  const unicodeRangeAccumulator = new Map<
+    AtRuleLike,
+    {
+      relation: FontFaceRelationLike;
+      codepoints: Set<number>;
+    }
+  >();
+
   for (const {
     htmlOrSvgAsset,
     fontUsages,
@@ -163,26 +174,33 @@ async function warnAboutMissingGlyphs(
         }
       }
       if (missedAny) {
-        const fontFaces = accumulatedFontFaceDeclarations.filter((fontFace) =>
-          fontFace['font-family']
-            ? fontUsage.fontFamilies.has(fontFace['font-family'])
-            : false
-        );
-        for (const fontFace of fontFaces) {
-          const cssFontFaceSrc = fontFace.relations[0];
-          const fontFaceDeclaration = cssFontFaceSrc.node;
-          if (
-            !fontFaceDeclaration.some((node) => node.prop === 'unicode-range')
-          ) {
-            fontFaceDeclaration.append({
-              prop: 'unicode-range',
-              value: unicodeRange(fontUsage.codepoints.original),
-            });
-            cssFontFaceSrc.from.markDirty();
+        for (const fontFace of accumulatedFontFaceDeclarations) {
+          const family = fontFace['font-family'];
+          if (!family || !fontUsage.fontFamilies.has(family)) continue;
+          const relation = fontFace.relations[0];
+          const node = relation.node;
+          if (node.some((decl) => decl.prop === 'unicode-range')) continue;
+          let entry = unicodeRangeAccumulator.get(node);
+          if (!entry) {
+            entry = { relation, codepoints: new Set() };
+            unicodeRangeAccumulator.set(node, entry);
+          }
+          for (const cp of fontUsage.codepoints.original) {
+            entry.codepoints.add(cp);
           }
         }
       }
     }
+  }
+
+  // Flush accumulated unicode-range declarations: one append per @font-face,
+  // covering every fontUsage that mapped to it.
+  for (const { relation, codepoints } of unicodeRangeAccumulator.values()) {
+    relation.node.append({
+      prop: 'unicode-range',
+      value: unicodeRange([...codepoints]),
+    });
+    relation.from.markDirty();
   }
 
   if (missingGlyphsErrors.length) {

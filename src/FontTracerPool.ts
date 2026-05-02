@@ -99,14 +99,22 @@ class FontTracerPool {
       this._workers.push(worker);
 
       const initPromise = new Promise<void>((resolve, reject) => {
-        const onError = reject;
+        const fail = (err: Error) => {
+          worker.off('message', onMessage);
+          worker.off('error', fail);
+          const idx = this._workers.indexOf(worker);
+          if (idx !== -1) this._workers.splice(idx, 1);
+          worker.terminate();
+          reject(err);
+        };
         const onMessage = (msg: WorkerMessage) => {
           if (msg.type === 'ready') {
             worker.off('message', onMessage);
-            worker.off('error', onError);
+            worker.off('error', fail);
             worker.on('message', (msg: WorkerMessage) =>
               this._onWorkerMessage(worker, msg)
             );
+            worker.on('error', (err) => this._onWorkerError(worker, err));
             worker.on('exit', (code: number) =>
               this._onWorkerExit(worker, code)
             );
@@ -115,7 +123,7 @@ class FontTracerPool {
           }
         };
         worker.on('message', onMessage);
-        worker.on('error', onError);
+        worker.on('error', fail);
       });
 
       worker.postMessage({ type: 'init' });
@@ -123,6 +131,22 @@ class FontTracerPool {
       initPromises.push(initPromise);
     }
     await Promise.all(initPromises);
+  }
+
+  private _onWorkerError(worker: Worker, err: Error): void {
+    // A post-init worker emitted an error. Reject the in-flight task so
+    // callers don't hang. The worker is about to exit; _onWorkerExit will
+    // remove it from _workers/_idle.
+    const taskId = this._taskByWorker.get(worker);
+    if (taskId !== undefined) {
+      this._taskByWorker.delete(worker);
+      this._clearTaskTimer(taskId);
+      const cb = this._taskCallbacks.get(taskId);
+      if (cb) {
+        this._taskCallbacks.delete(taskId);
+        cb.reject(err);
+      }
+    }
   }
 
   private _clearTaskTimer(taskId: number): void {
@@ -152,7 +176,6 @@ class FontTracerPool {
   }
 
   private _onWorkerExit(worker: Worker, code: number): void {
-    // Remove crashed worker from tracking
     const workerIdx = this._workers.indexOf(worker);
     if (workerIdx !== -1) {
       this._workers.splice(workerIdx, 1);
@@ -162,32 +185,31 @@ class FontTracerPool {
       this._idle.splice(idleIdx, 1);
     }
 
-    if (code !== 0) {
-      // Reject the task that was in-flight on this worker
-      const taskId = this._taskByWorker.get(worker);
-      this._taskByWorker.delete(worker);
-      if (taskId !== undefined) {
-        this._clearTaskTimer(taskId);
-        const cb = this._taskCallbacks.get(taskId);
-        if (cb) {
-          this._taskCallbacks.delete(taskId);
-          cb.reject(new Error(`Worker exited with code ${code}`));
-        }
+    // Reject any task that was in-flight on this worker. A graceful exit
+    // (code 0) mid-task still leaves the caller waiting, so don't gate on
+    // code !== 0.
+    const taskId = this._taskByWorker.get(worker);
+    this._taskByWorker.delete(worker);
+    if (taskId !== undefined) {
+      this._clearTaskTimer(taskId);
+      const cb = this._taskCallbacks.get(taskId);
+      if (cb) {
+        this._taskCallbacks.delete(taskId);
+        cb.reject(new Error(`Worker exited with code ${code}`));
       }
+    }
 
-      // If no workers remain, reject all pending tasks
-      if (this._workers.length === 0) {
-        for (const task of this._pendingTasks) {
-          const cb = this._taskCallbacks.get(task.message.taskId);
-          if (cb) {
-            this._taskCallbacks.delete(task.message.taskId);
-            cb.reject(
-              new Error('All workers have crashed, no workers available')
-            );
-          }
+    if (code !== 0 && this._workers.length === 0) {
+      for (const task of this._pendingTasks) {
+        const cb = this._taskCallbacks.get(task.message.taskId);
+        if (cb) {
+          this._taskCallbacks.delete(task.message.taskId);
+          cb.reject(
+            new Error('All workers have crashed, no workers available')
+          );
         }
-        this._pendingTasks = [];
       }
+      this._pendingTasks = [];
     }
   }
 

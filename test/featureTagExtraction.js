@@ -133,18 +133,36 @@ describe('extractFeatureTagsFromDecl', function () {
       });
     }
 
-    it('should map styleset() to ss01-ss20', function () {
+    it('should map styleset() with symbolic name to ss01-ss20 (fallback)', function () {
       const tags = extract('font-variant-alternates', 'styleset(alt-g)');
       expect(tags.size, 'to equal', 20);
       expect(tags.has('ss01'), 'to be true');
       expect(tags.has('ss20'), 'to be true');
     });
 
-    it('should map character-variant() to cv01-cv99', function () {
+    it('should map styleset(2, 5) to only ss02 and ss05', function () {
+      const tags = extract('font-variant-alternates', 'styleset(2, 5)');
+      expect(tags, 'to equal', new Set(['ss02', 'ss05']));
+    });
+
+    it('should map character-variant() with symbolic name to cv01-cv99 (fallback)', function () {
       const tags = extract('font-variant-alternates', 'character-variant(a)');
       expect(tags.size, 'to equal', 99);
       expect(tags.has('cv01'), 'to be true');
       expect(tags.has('cv99'), 'to be true');
+    });
+
+    it('should map character-variant(3, 7) to only cv03 and cv07', function () {
+      const tags = extract(
+        'font-variant-alternates',
+        'character-variant(3, 7)'
+      );
+      expect(tags, 'to equal', new Set(['cv03', 'cv07']));
+    });
+
+    it('should ignore out-of-range numeric indices', function () {
+      const tags = extract('font-variant-alternates', 'styleset(0, 21, 5)');
+      expect(tags, 'to equal', new Set(['ss05']));
     });
 
     it('should handle multiple alternates', function () {
