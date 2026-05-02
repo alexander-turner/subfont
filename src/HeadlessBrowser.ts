@@ -98,6 +98,7 @@ class HeadlessBrowser {
   private console: Console;
   private _chromeArgs: string[];
   private _launchPromise?: Promise<PuppeteerBrowser>;
+  private _closed: boolean = false;
 
   constructor({ console, chromeArgs = [] }: HeadlessBrowserOptions) {
     this.console = console;
@@ -105,8 +106,9 @@ class HeadlessBrowser {
   }
 
   private _launchBrowserMemoized(): Promise<PuppeteerBrowser> {
-    // Make sure we only download and launch one browser per HeadlessBrowser instance.
-    // Clear the cached promise on failure so a subsequent call can retry.
+    if (this._closed) {
+      return Promise.reject(new Error('HeadlessBrowser is closed'));
+    }
     if (!this._launchPromise) {
       this._launchPromise = downloadOrLocatePreferredBrowserRevision(
         this._chromeArgs,
@@ -171,18 +173,11 @@ class HeadlessBrowser {
       });
 
       page.on('requestfailed', (request) => {
-        const response = request.response();
-        if (response && response.status() > 400) {
-          this.console.error(
-            `${request.method()} ${request.url()} returned ${response.status()}`
-          );
-        } else {
-          const failure = request.failure();
-          const reason = failure ? failure.errorText : 'unknown error';
-          this.console.error(
-            `${request.method()} ${request.url()} failed: ${reason}`
-          );
-        }
+        const failure = request.failure();
+        const reason = failure ? failure.errorText : 'unknown error';
+        this.console.error(
+          `${request.method()} ${request.url()} failed: ${reason}`
+        );
       });
 
       page.on('pageerror', (err) => {
@@ -239,9 +234,13 @@ class HeadlessBrowser {
   }
 
   async close(): Promise<void> {
+    // Set _closed *before* awaiting so any concurrent tracePage() that hasn't
+    // yet entered _launchBrowserMemoized fails fast instead of starting a
+    // second browser we won't clean up.
+    this._closed = true;
     const launchPromise = this._launchPromise;
+    this._launchPromise = undefined;
     if (launchPromise) {
-      this._launchPromise = undefined;
       let browser: PuppeteerBrowser;
       try {
         browser = await launchPromise;

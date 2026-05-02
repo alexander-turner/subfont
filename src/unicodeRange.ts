@@ -7,15 +7,14 @@ function getHexValue(num: number): string {
 
 const getUnicodeRanges = (codePoints: Iterable<number>): string => {
   const ranges: string[] = [];
-  let start: number, end: number;
-
-  const sorted = [...codePoints].sort((a, b) => a - b);
+  // Dedupe — duplicate codepoints would otherwise emit `U+41,U+41-42`.
+  const sorted = [...new Set(codePoints)].sort((a, b) => a - b);
 
   for (let i = 0; i < sorted.length; i++) {
-    start = sorted[i];
-    end = start;
+    const start = sorted[i];
+    let end = start;
 
-    while (sorted[i + 1] - sorted[i] === 1) {
+    while (i + 1 < sorted.length && sorted[i + 1] - sorted[i] === 1) {
       end = sorted[i + 1];
       i++;
     }

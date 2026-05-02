@@ -250,7 +250,7 @@ export async function getSubsetsForFontUsage(
       subsetInfoByFontUrl.set(fontUrl, subsetInfo);
 
       let featureGlyphIds: number[] | undefined;
-      if (fontUsage.hasFontFeatureSettings && fontBuffer) {
+      if (fontUsage.hasFontFeatureSettings) {
         try {
           featureGlyphIds = await collectFeatureGlyphIds(
             fontBuffer,
@@ -390,7 +390,9 @@ export async function getSubsetsForFontUsage(
       if (canonical && canonical !== fontUsage && canonical.subsets) {
         const info = subsetInfoByFontUrl.get(fontUsage.fontUrl);
         if (!info) continue;
-        fontUsage.subsets = canonical.subsets;
+        // Shallow-copy so per-page mutation of one fontUsage's subsets
+        // doesn't leak into the canonical entry or other pages.
+        fontUsage.subsets = { ...canonical.subsets };
         fontUsage.smallestSubsetSize = canonical.smallestSubsetSize;
         fontUsage.smallestSubsetFormat = canonical.smallestSubsetFormat;
         fontUsage.variationAxes = info.variationAxes;

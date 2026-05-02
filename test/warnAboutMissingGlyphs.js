@@ -199,6 +199,56 @@ describe('warnAboutMissingGlyphs', function () {
     expect(appendArg.prop, 'to equal', 'unicode-range');
   });
 
+  it('should union codepoints across multiple fontUsages on the same @font-face', async function () {
+    getFontInfoStub.resolves({ characterSet: [0x41] });
+
+    // Two fontUsages mapping to the same @font-face but with different
+    // codepoints.original. Both have missing glyphs, so both should
+    // contribute their codepoints to the single appended unicode-range.
+    const subsetBuffer = Buffer.from('fake-subset');
+    const fontFaceNode = { some: () => false, append: sinon.stub() };
+    const cssAsset = { markDirty: sinon.stub() };
+    const fontFaceDecl = {
+      'font-family': 'TestFont',
+      relations: [{ node: fontFaceNode, from: cssAsset }],
+    };
+    const input = {
+      htmlOrSvgAsset: { text: '<p>BCDE</p>', urlOrDescription: 'test.html' },
+      fontUsages: [
+        {
+          subsets: { woff2: subsetBuffer },
+          fontFamilies: new Set(['TestFont']),
+          pageText: 'BC',
+          codepoints: { original: [0x42, 0x43] },
+          props: {
+            'font-family': 'TestFont',
+            'font-weight': '400',
+            'font-style': 'normal',
+          },
+        },
+        {
+          subsets: { woff2: subsetBuffer },
+          fontFamilies: new Set(['TestFont']),
+          pageText: 'DE',
+          codepoints: { original: [0x44, 0x45] },
+          props: {
+            'font-family': 'TestFont',
+            'font-weight': '700',
+            'font-style': 'normal',
+          },
+        },
+      ],
+      accumulatedFontFaceDeclarations: [fontFaceDecl],
+    };
+
+    await warnAboutMissingGlyphs([input], assetGraph);
+
+    expect(fontFaceNode.append, 'was called once');
+    const value = fontFaceNode.append.firstCall.args[0].value;
+    // Union of [0x42, 0x43, 0x44, 0x45] -> U+42-45
+    expect(value, 'to equal', 'U+42-45');
+  });
+
   it('should not add unicode-range to @font-face when one already exists', async function () {
     getFontInfoStub.resolves({ characterSet: [0x41] });
 

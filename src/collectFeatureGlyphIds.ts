@@ -3,7 +3,7 @@ import enqueueWasm = require('./wasmQueue');
 
 // GSUB feature tags that can produce alternate glyphs.  Used as the
 // fallback set when CSS doesn't specify which features are in use.
-// Keep in sync with fontVariantToOTTags in collectTextsByPage.ts.
+// Keep in sync with fontVariantToOTTags in fontFeatureHelpers.ts.
 const GSUB_FEATURE_TAGS = new Set<string>([
   'aalt',
   'afrc',

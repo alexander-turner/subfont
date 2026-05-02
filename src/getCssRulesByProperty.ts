@@ -109,12 +109,6 @@ function getCssRulesByProperty(
   cssSource: string,
   existingPredicates?: Record<string, boolean>
 ): CssRulesByProperty {
-  if (!Array.isArray(properties)) {
-    throw new Error('properties argument must be an array');
-  }
-  if (typeof cssSource !== 'string') {
-    throw new Error('cssSource argument must be a string containing valid CSS');
-  }
   const initialPredicates = existingPredicates || {};
 
   const parseTree = postcss.parse(cssSource);

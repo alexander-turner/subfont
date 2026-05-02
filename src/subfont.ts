@@ -413,13 +413,10 @@ const subfont = async function subfont(
   }
 
   if (rootUrl && !rootUrl.startsWith('file:')) {
-    for (const relation of assetGraph.findRelations()) {
-      if (
-        relation.hrefType === 'protocolRelative' ||
-        relation.hrefType === 'absolute'
-      ) {
-        relation.hrefType = 'rootRelative';
-      }
+    for (const relation of assetGraph.findRelations({
+      hrefType: { $in: ['protocolRelative', 'absolute'] },
+    })) {
+      relation.hrefType = 'rootRelative';
     }
 
     await assetGraph.moveAssets(
@@ -567,6 +564,8 @@ const subfont = async function subfont(
         sumSmallestOriginalSize
       )} total. Created subsets: ${prettyBytes(sumSmallestSubsetSize)} total`
     );
+    const usedPad = String(maxUsedCodePoints).length;
+    const originalPad = String(maxOriginalCodePoints).length;
     for (const fontFamily of Object.keys(fontUsagesByFontFamily).sort()) {
       log(`  ${fontFamily}:`);
       for (const fontUsage of fontUsagesByFontFamily[fontFamily]) {
@@ -575,9 +574,9 @@ const subfont = async function subfont(
         }`;
         let status = `    ${variantShortName}: ${String(
           fontUsage.codepoints.used.length
-        ).padStart(String(maxUsedCodePoints).length)}/${String(
+        ).padStart(usedPad)}/${String(
           fontUsage.codepoints.original.length
-        ).padStart(String(maxOriginalCodePoints).length)} codepoints used`;
+        ).padStart(originalPad)} codepoints used`;
         if (
           fontUsage.codepoints.page.length !== fontUsage.codepoints.used.length
         ) {

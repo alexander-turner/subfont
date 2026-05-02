@@ -57,6 +57,41 @@ export const fontVariantToOTTags: Record<string, Record<string, string[]>> = {
   },
 };
 
+// Add indexed feature tags (e.g. ss01, cv02) referenced by `styleset(2, 5)` /
+// `character-variant(...)`. CSS allows symbolic names (declared via
+// `@font-feature-values`) — those are preserved as-is and skipped here, since
+// we only know how to resolve numeric indices.
+function addIndexedTags(
+  value: string,
+  callRe: RegExp,
+  prefix: 'ss' | 'cv',
+  maxIndex: number,
+  tags: Set<string>
+): void {
+  let m: RegExpExecArray | null;
+  while ((m = callRe.exec(value)) !== null) {
+    const args = m[1];
+    let sawNumeric = false;
+    for (const arg of args.split(',')) {
+      const trimmed = arg.trim();
+      if (/^\d+$/.test(trimmed)) {
+        const idx = Number(trimmed);
+        if (idx >= 1 && idx <= maxIndex) {
+          tags.add(`${prefix}${String(idx).padStart(2, '0')}`);
+          sawNumeric = true;
+        }
+      }
+    }
+    // Symbolic-name argument (or empty) — fall back to including all indices,
+    // since resolving the name would require parsing @font-feature-values.
+    if (!sawNumeric) {
+      for (let i = 1; i <= maxIndex; i++) {
+        tags.add(`${prefix}${String(i).padStart(2, '0')}`);
+      }
+    }
+  }
+}
+
 // Extract OpenType feature tags referenced by a CSS declaration.
 export function extractFeatureTagsFromDecl(
   prop: string,
@@ -82,16 +117,8 @@ export function extractFeatureTagsFromDecl(
     if (/swash\s*\(/.test(v)) tags.add('swsh');
     if (/ornaments\s*\(/.test(v)) tags.add('ornm');
     if (/annotation\s*\(/.test(v)) tags.add('nalt');
-    if (/styleset\s*\(/.test(v)) {
-      for (let i = 1; i <= 20; i++) {
-        tags.add(`ss${String(i).padStart(2, '0')}`);
-      }
-    }
-    if (/character-variant\s*\(/.test(v)) {
-      for (let i = 1; i <= 99; i++) {
-        tags.add(`cv${String(i).padStart(2, '0')}`);
-      }
-    }
+    addIndexedTags(v, /styleset\s*\(([^)]*)\)/g, 'ss', 20, tags);
+    addIndexedTags(v, /character-variant\s*\(([^)]*)\)/g, 'cv', 99, tags);
     return tags;
   }
 
