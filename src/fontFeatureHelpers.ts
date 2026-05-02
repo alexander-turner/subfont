@@ -93,6 +93,13 @@ function addIndexedTags(
 }
 
 // Extract OpenType feature tags referenced by a CSS declaration.
+// Sentinel inserted into a feature-tag set when a CSS declaration references
+// var() (or any other token we can't statically resolve). Downstream code
+// detecting this sentinel must treat the rule's feature contribution as
+// "unknown" and avoid using targeted feature retention. The wildcard '*'
+// is not a valid 4-letter OT tag and won't collide with real tags.
+export const UNRESOLVED_FEATURES_SENTINEL = '*';
+
 export function extractFeatureTagsFromDecl(
   prop: string,
   value: string
@@ -106,6 +113,12 @@ export function extractFeatureTagsFromDecl(
     let m: RegExpExecArray | null;
     while ((m = re.exec(value)) !== null) {
       tags.add(m[1]);
+    }
+    // var() chains (and other dynamic tokens) hide feature tags from static
+    // extraction. Mark the rule as "unresolved" so the subsetter doesn't
+    // strip features the page actually uses.
+    if (/var\s*\(/.test(value)) {
+      tags.add(UNRESOLVED_FEATURES_SENTINEL);
     }
     return tags;
   }
@@ -279,7 +292,12 @@ export function resolveFeatureSettings(
         for (const t of familyTags) tags.add(t);
       }
     }
-    if (tags.size > 0) {
+    // If any contributing rule had unresolved tokens (e.g. var()), we don't
+    // know the full set — leave fontFeatureTags undefined so callers fall
+    // back to retain-all-features instead of dropping features silently.
+    if (tags.has(UNRESOLVED_FEATURES_SENTINEL)) {
+      tags.delete(UNRESOLVED_FEATURES_SENTINEL);
+    } else if (tags.size > 0) {
       fontFeatureTags = [...tags];
     }
   }

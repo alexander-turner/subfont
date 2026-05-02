@@ -71,6 +71,11 @@ interface SubsetFontWithGlyphsOptions {
   targetFormat?: string;
   glyphIds?: number[];
   variationAxes?: Record<string, VariationAxisValue>;
+  // OpenType feature tags requested by CSS (e.g. ['smcp', 'ss02']). When
+  // provided, these are added to harfbuzz's built-in essential-shaping set
+  // instead of retaining every layout feature in the font. When undefined,
+  // fall back to retaining all layout features (legacy behavior).
+  featureTags?: string[];
 }
 
 // Pool of WASM instances for parallel subsetting.  Each instance has its
@@ -229,15 +234,29 @@ function configureSubsetInput(
   face: number,
   text: string,
   glyphIds: number[] | undefined,
-  variationAxes: Record<string, VariationAxisValue> | undefined
+  variationAxes: Record<string, VariationAxisValue> | undefined,
+  featureTags: string[] | undefined
 ): void {
-  // --- Retain all layout features ---
+  // --- Retain layout features ---
+  // hb_subset_input_create_or_fail pre-populates the layout-features set with
+  // a curated list of shaping-essential tags (locl, ccmp, calt, mark, mkmk,
+  // Indic/Arabic/Khmer shaping features, etc.).  When the caller passes
+  // featureTags, we leave that default in place and add the CSS-requested
+  // tags on top.  Optional features the page never references (e.g. ss##,
+  // cv##, smcp, swsh) are then dropped, shrinking the GSUB/GPOS tables.
+  // When featureTags is undefined, fall back to retain-all behavior.
   const layoutFeatures = exports.hb_subset_input_set(
     input,
     HB_SUBSET_SETS_LAYOUT_FEATURE_TAG
   );
-  exports.hb_set_clear(layoutFeatures);
-  exports.hb_set_invert(layoutFeatures);
+  if (featureTags === undefined) {
+    exports.hb_set_clear(layoutFeatures);
+    exports.hb_set_invert(layoutFeatures);
+  } else {
+    for (const tag of featureTags) {
+      exports.hb_set_add(layoutFeatures, HB_TAG(tag));
+    }
+  }
 
   // --- Strip hinting instructions (ignored by modern browsers) ---
   const flags = exports.hb_subset_input_get_flags(input);
@@ -337,7 +356,12 @@ interface SubsetFontWithGlyphsFn {
 async function subsetFontWithGlyphs(
   originalFont: Buffer | Uint8Array,
   text: string,
-  { targetFormat, glyphIds, variationAxes }: SubsetFontWithGlyphsOptions = {}
+  {
+    targetFormat,
+    glyphIds,
+    variationAxes,
+    featureTags,
+  }: SubsetFontWithGlyphsOptions = {}
 ): Promise<Buffer> {
   // Reuse cached sfnt conversion when available (same buffer may have
   // been converted by getFontInfo or collectFeatureGlyphIds already).
@@ -366,7 +390,15 @@ async function subsetFontWithGlyphs(
     let subsetFont: Buffer | undefined;
     let subset = 0;
     try {
-      configureSubsetInput(exports, input, face, text, glyphIds, variationAxes);
+      configureSubsetInput(
+        exports,
+        input,
+        face,
+        text,
+        glyphIds,
+        variationAxes,
+        featureTags
+      );
 
       subset = exports.hb_subset_or_fail(face, input);
       if (subset === 0) {
