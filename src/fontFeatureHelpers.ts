@@ -96,9 +96,13 @@ function addIndexedTags(
 // Sentinel inserted into a feature-tag set when a CSS declaration references
 // var() (or any other token we can't statically resolve). Downstream code
 // detecting this sentinel must treat the rule's feature contribution as
-// "unknown" and avoid using targeted feature retention. The wildcard '*'
-// is not a valid 4-letter OT tag and won't collide with real tags.
-export const UNRESOLVED_FEATURES_SENTINEL = '*';
+// "unknown" and avoid using targeted feature retention. The string is more
+// than 4 chars so it can't collide with a real OT feature tag.
+export const UNRESOLVED_FEATURES_SENTINEL = '<unresolved>';
+
+// Detects the CSS var() function. CSS keywords are case-insensitive, so
+// vAr(--x) is just as valid as var(--x).
+const VAR_FUNCTION_RE = /\bvar\s*\(/i;
 
 export function extractFeatureTagsFromDecl(
   prop: string,
@@ -106,6 +110,7 @@ export function extractFeatureTagsFromDecl(
 ): Set<string> {
   const tags = new Set<string>();
   const propLower = prop.toLowerCase();
+  const hasUnresolvedToken = VAR_FUNCTION_RE.test(value);
 
   if (propLower === 'font-feature-settings') {
     // Parse quoted 4-letter tags: "liga" 1, 'dlig', etc.
@@ -114,12 +119,7 @@ export function extractFeatureTagsFromDecl(
     while ((m = re.exec(value)) !== null) {
       tags.add(m[1]);
     }
-    // var() chains (and other dynamic tokens) hide feature tags from static
-    // extraction. Mark the rule as "unresolved" so the subsetter doesn't
-    // strip features the page actually uses.
-    if (/var\s*\(/.test(value)) {
-      tags.add(UNRESOLVED_FEATURES_SENTINEL);
-    }
+    if (hasUnresolvedToken) tags.add(UNRESOLVED_FEATURES_SENTINEL);
     return tags;
   }
 
@@ -132,6 +132,7 @@ export function extractFeatureTagsFromDecl(
     if (/annotation\s*\(/.test(v)) tags.add('nalt');
     addIndexedTags(v, /styleset\s*\(([^)]*)\)/g, 'ss', 20, tags);
     addIndexedTags(v, /character-variant\s*\(([^)]*)\)/g, 'cv', 99, tags);
+    if (hasUnresolvedToken) tags.add(UNRESOLVED_FEATURES_SENTINEL);
     return tags;
   }
 
@@ -145,6 +146,7 @@ export function extractFeatureTagsFromDecl(
         for (const t of otTags) tags.add(t);
       }
     }
+    if (hasUnresolvedToken) tags.add(UNRESOLVED_FEATURES_SENTINEL);
   }
   return tags;
 }

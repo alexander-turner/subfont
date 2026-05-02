@@ -306,6 +306,30 @@ describe('fontFeatureHelpers', function () {
       expect(tags.has('liga'), 'to be true');
     });
 
+    it('should detect var() case-insensitively', function () {
+      const tags = extractFeatureTagsFromDecl(
+        'font-feature-settings',
+        'VAR(--x)'
+      );
+      expect(tags.has(UNRESOLVED_FEATURES_SENTINEL), 'to be true');
+    });
+
+    it('should add the sentinel when var() appears in font-variant-caps', function () {
+      const tags = extractFeatureTagsFromDecl(
+        'font-variant-caps',
+        'var(--my-caps)'
+      );
+      expect(tags.has(UNRESOLVED_FEATURES_SENTINEL), 'to be true');
+    });
+
+    it('should add the sentinel when var() appears in font-variant-alternates', function () {
+      const tags = extractFeatureTagsFromDecl(
+        'font-variant-alternates',
+        'var(--my-alts)'
+      );
+      expect(tags.has(UNRESOLVED_FEATURES_SENTINEL), 'to be true');
+    });
+
     it('should leave fontFeatureTags undefined when sentinel is present', function () {
       const map = new Map();
       addTagsToMapEntry(
