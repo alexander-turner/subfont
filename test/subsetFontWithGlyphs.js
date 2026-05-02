@@ -196,6 +196,35 @@ describe('subsetFontWithGlyphs', function () {
     expect(targeted.length, 'to be less than', retainAll.length);
   });
 
+  it('should retain only en-US name-table entries in the subset', async function () {
+    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+      targetFormat: 'truetype',
+      featureTags: [],
+    });
+    const num = result.readUInt16BE(4);
+    let nameOff = 0;
+    let nameLen = 0;
+    for (let i = 0; i < num; i++) {
+      const o = 12 + i * 16;
+      if (result.slice(o, o + 4).toString() === 'name') {
+        nameOff = result.readUInt32BE(o + 8);
+        nameLen = result.readUInt32BE(o + 12);
+        break;
+      }
+    }
+    expect(nameLen, 'to be greater than', 0);
+    const name = result.slice(nameOff, nameOff + nameLen);
+    const count = name.readUInt16BE(2);
+    expect(count, 'to be greater than', 0);
+    for (let i = 0; i < count; i++) {
+      const r = 6 + i * 12;
+      const langID = name.readUInt16BE(r + 4);
+      // Windows English (0x409) is what we keep; Mac records use 0x0,
+      // which signifies the platform's default English. Both are en-US.
+      expect([0x409, 0x0], 'to contain', langID);
+    }
+  });
+
   it('should accept dropMathTable without affecting fonts that lack a MATH table', async function () {
     // No testdata font ships a MATH table, so this only verifies that
     // setting the option produces a valid subset (the option is a no-op

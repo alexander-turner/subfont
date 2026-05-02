@@ -8,7 +8,13 @@ import { convert as convertInWorker } from './fontConverter';
 const HB_SUBSET_SETS_GLYPH_INDEX = 0;
 const HB_SUBSET_SETS_DROP_TABLE_TAG = 3;
 const HB_SUBSET_SETS_NAME_ID = 4;
+const HB_SUBSET_SETS_NAME_LANG_ID = 5;
 const HB_SUBSET_SETS_LAYOUT_FEATURE_TAG = 6;
+
+// Windows English (United States). The only name-table language we keep —
+// browsers don't expose localized name strings to web pages, so other lang
+// IDs are pure overhead.
+const KEEP_NAME_LANG_ID_EN_US = 0x0409;
 
 // hb_subset_flags_t
 const HB_SUBSET_FLAGS_NO_HINTING = 0x00000001;
@@ -274,6 +280,14 @@ function configureSubsetInput(
   for (const id of KEEP_NAME_IDS) {
     exports.hb_set_add(nameIdSet, id);
   }
+
+  // --- Keep only en-US localized name strings ---
+  const nameLangSet = exports.hb_subset_input_set(
+    input,
+    HB_SUBSET_SETS_NAME_LANG_ID
+  );
+  exports.hb_set_clear(nameLangSet);
+  exports.hb_set_add(nameLangSet, KEEP_NAME_LANG_ID_EN_US);
 
   // --- Drop tables not needed for web rendering ---
   const dropTableSet = exports.hb_subset_input_set(
