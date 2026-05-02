@@ -7,6 +7,7 @@ const {
   resolveFeatureSettings,
   addTagsToMapEntry,
   featureSettingsProps,
+  UNRESOLVED_FEATURES_SENTINEL,
 } = require('../lib/fontFeatureHelpers');
 
 describe('fontFeatureHelpers', function () {
@@ -292,6 +293,64 @@ describe('fontFeatureHelpers', function () {
         featureTagsByFamily
       );
       expect(result.fontFeatureTags, 'to be undefined');
+    });
+  });
+
+  describe('font-feature-settings with var() fallback', function () {
+    it('should add the unresolved sentinel when var() is referenced', function () {
+      const tags = extractFeatureTagsFromDecl(
+        'font-feature-settings',
+        'var(--my-feature), "liga" 1'
+      );
+      expect(tags.has(UNRESOLVED_FEATURES_SENTINEL), 'to be true');
+      expect(tags.has('liga'), 'to be true');
+    });
+
+    it('should detect var() case-insensitively', function () {
+      const tags = extractFeatureTagsFromDecl(
+        'font-feature-settings',
+        'VAR(--x)'
+      );
+      expect(tags.has(UNRESOLVED_FEATURES_SENTINEL), 'to be true');
+    });
+
+    it('should add the sentinel when var() appears in font-variant-caps', function () {
+      const tags = extractFeatureTagsFromDecl(
+        'font-variant-caps',
+        'var(--my-caps)'
+      );
+      expect(tags.has(UNRESOLVED_FEATURES_SENTINEL), 'to be true');
+    });
+
+    it('should add the sentinel when var() appears in font-variant-alternates', function () {
+      const tags = extractFeatureTagsFromDecl(
+        'font-variant-alternates',
+        'var(--my-alts)'
+      );
+      expect(tags.has(UNRESOLVED_FEATURES_SENTINEL), 'to be true');
+    });
+
+    it('should leave fontFeatureTags undefined when sentinel is present', function () {
+      const map = new Map();
+      addTagsToMapEntry(
+        map,
+        'open sans',
+        new Set(['liga', UNRESOLVED_FEATURES_SENTINEL])
+      );
+      const result = resolveFeatureSettings(['Open Sans'], true, map);
+      expect(result.hasFontFeatureSettings, 'to be true');
+      expect(result.fontFeatureTags, 'to be undefined');
+    });
+
+    it('should produce concrete tags when no sentinel is present', function () {
+      const map = new Map();
+      addTagsToMapEntry(map, 'open sans', new Set(['liga', 'smcp']));
+      const result = resolveFeatureSettings(['Open Sans'], true, map);
+      expect(
+        new Set(result.fontFeatureTags),
+        'to equal',
+        new Set(['liga', 'smcp'])
+      );
     });
   });
 

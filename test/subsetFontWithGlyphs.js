@@ -165,6 +165,27 @@ describe('subsetFontWithGlyphs', function () {
     }
   });
 
+  it('targeted feature retention should produce a smaller subset than retain-all', async function () {
+    // IBMPlexSans has many optional features (aalt, salt, ss##, sinf, etc.)
+    // that the retain-all path keeps but targeted retention drops.
+    const ibmPlexBuffer = fs.readFileSync(
+      pathModule.resolve(
+        __dirname,
+        '../testdata/referenceImages/fontVariant/IBMPlexSans-Regular.woff'
+      )
+    );
+    const text = 'The quick brown fox jumps over the lazy dog';
+    const retainAll = await subsetFontWithGlyphs(ibmPlexBuffer, text, {
+      targetFormat: 'woff2',
+      // featureTags omitted -> retain-all-features (legacy behavior)
+    });
+    const targeted = await subsetFontWithGlyphs(ibmPlexBuffer, text, {
+      targetFormat: 'woff2',
+      featureTags: [], // no extra features beyond harfbuzz defaults
+    });
+    expect(targeted.length, 'to be less than', retainAll.length);
+  });
+
   it('should handle concurrent calls via worker pool', async function () {
     const results = await Promise.all([
       subsetFontWithGlyphs(ttfBuffer, 'A', { targetFormat: 'woff2' }),

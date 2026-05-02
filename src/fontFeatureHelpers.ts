@@ -93,12 +93,24 @@ function addIndexedTags(
 }
 
 // Extract OpenType feature tags referenced by a CSS declaration.
+// Sentinel inserted into a feature-tag set when a CSS declaration references
+// var() (or any other token we can't statically resolve). Downstream code
+// detecting this sentinel must treat the rule's feature contribution as
+// "unknown" and avoid using targeted feature retention. The string is more
+// than 4 chars so it can't collide with a real OT feature tag.
+export const UNRESOLVED_FEATURES_SENTINEL = '<unresolved>';
+
+// Detects the CSS var() function. CSS keywords are case-insensitive, so
+// vAr(--x) is just as valid as var(--x).
+const VAR_FUNCTION_RE = /\bvar\s*\(/i;
+
 export function extractFeatureTagsFromDecl(
   prop: string,
   value: string
 ): Set<string> {
   const tags = new Set<string>();
   const propLower = prop.toLowerCase();
+  const hasUnresolvedToken = VAR_FUNCTION_RE.test(value);
 
   if (propLower === 'font-feature-settings') {
     // Parse quoted 4-letter tags: "liga" 1, 'dlig', etc.
@@ -107,6 +119,7 @@ export function extractFeatureTagsFromDecl(
     while ((m = re.exec(value)) !== null) {
       tags.add(m[1]);
     }
+    if (hasUnresolvedToken) tags.add(UNRESOLVED_FEATURES_SENTINEL);
     return tags;
   }
 
@@ -119,6 +132,7 @@ export function extractFeatureTagsFromDecl(
     if (/annotation\s*\(/.test(v)) tags.add('nalt');
     addIndexedTags(v, /styleset\s*\(([^)]*)\)/g, 'ss', 20, tags);
     addIndexedTags(v, /character-variant\s*\(([^)]*)\)/g, 'cv', 99, tags);
+    if (hasUnresolvedToken) tags.add(UNRESOLVED_FEATURES_SENTINEL);
     return tags;
   }
 
@@ -132,6 +146,7 @@ export function extractFeatureTagsFromDecl(
         for (const t of otTags) tags.add(t);
       }
     }
+    if (hasUnresolvedToken) tags.add(UNRESOLVED_FEATURES_SENTINEL);
   }
   return tags;
 }
@@ -279,7 +294,12 @@ export function resolveFeatureSettings(
         for (const t of familyTags) tags.add(t);
       }
     }
-    if (tags.size > 0) {
+    // If any contributing rule had unresolved tokens (e.g. var()), we don't
+    // know the full set — leave fontFeatureTags undefined so callers fall
+    // back to retain-all-features instead of dropping features silently.
+    if (tags.has(UNRESOLVED_FEATURES_SENTINEL)) {
+      tags.delete(UNRESOLVED_FEATURES_SENTINEL);
+    } else if (tags.size > 0) {
       fontFeatureTags = [...tags];
     }
   }

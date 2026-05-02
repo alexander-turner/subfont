@@ -9,7 +9,10 @@ import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
-const SUBSET_CACHE_VERSION = '2';
+// Bumped to '3' when feature retention switched from retain-all to targeted
+// (harfbuzz default shaping set + CSS-requested tags only). Cached subsets
+// from earlier versions had different GSUB/GPOS contents.
+const SUBSET_CACHE_VERSION = '3';
 
 type FontBuffer = Buffer | Uint8Array;
 
@@ -296,10 +299,23 @@ export async function getSubsetsForFontUsage(
             subsetPromiseMap.set(promiseId, Promise.resolve(cachedResult));
           } else {
             if (cacheStats) cacheStats.misses++;
+            // Targeted feature retention when we can fully enumerate the
+            // CSS-requested feature tags. If the page declares feature
+            // settings but the tags couldn't be extracted (e.g. resolution
+            // through CSS custom-property var() chains is incomplete),
+            // fall back to retain-all so we don't drop features the page
+            // actually uses.
+            const featureTags =
+              fontUsage.hasFontFeatureSettings && !fontUsage.fontFeatureTags
+                ? undefined
+                : fontUsage.fontFeatureTags
+                  ? [...fontUsage.fontFeatureTags]
+                  : [];
             const subsetCall = subsetFontWithGlyphs(fontBuffer, text, {
               targetFormat,
               glyphIds: featureGlyphIds,
               variationAxes: subsetInfo.variationAxes,
+              featureTags,
             });
 
             subsetPromiseMap.set(
