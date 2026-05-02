@@ -6,6 +6,7 @@ import type { VariationAxes, AssetGraphError } from './types/shared';
 import { getVariationAxisBounds } from './variationAxes';
 import collectFeatureGlyphIds = require('./collectFeatureGlyphIds');
 import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
+import { pageNeedsMathTable } from './codepointHeuristics';
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
@@ -54,12 +55,16 @@ function getFontBufferHashPrefix(fontBuffer: FontBuffer): crypto.Hash {
   return cached;
 }
 
+// Concrete enough for our use; widen if we plumb non-boolean knobs through.
+type ExtraSubsetCacheOptions = Record<string, boolean>;
+
 function subsetCacheKey(
   fontBuffer: FontBuffer,
   text: string,
   targetFormat: string,
   variationAxes: VariationAxes,
-  featureGlyphIds: number[] | undefined
+  featureGlyphIds: number[] | undefined,
+  extraOptions: ExtraSubsetCacheOptions | undefined = undefined
 ): string {
   // Clone the pre-computed prefix (version + font buffer) and append
   // the remaining fields. hash.copy() is O(1) — just copies the
@@ -69,6 +74,7 @@ function subsetCacheKey(
   hash.update(targetFormat);
   if (variationAxes) hash.update(JSON.stringify(variationAxes));
   if (featureGlyphIds) hash.update(JSON.stringify(featureGlyphIds));
+  if (extraOptions) hash.update(JSON.stringify(extraOptions));
   return hash.digest('hex');
 }
 
@@ -271,6 +277,11 @@ export async function getSubsetsForFontUsage(
         }
       }
 
+      // Drop the MATH table when the page text doesn't reference any math
+      // codepoints. Math typesetting via MathML or other engines depends on
+      // the table, so we only strip it when no math characters are visible.
+      const dropMathTable = !pageNeedsMathTable(text);
+
       for (const targetFormat of formats) {
         const promiseId = getSubsetPromiseId(
           fontUsage,
@@ -279,13 +290,15 @@ export async function getSubsetsForFontUsage(
         );
 
         if (!subsetPromiseMap.has(promiseId)) {
+          const extraCacheOptions = { dropMathTable };
           const cacheKey = diskCache
             ? subsetCacheKey(
                 fontBuffer,
                 text,
                 targetFormat,
                 subsetInfo.variationAxes,
-                featureGlyphIds
+                featureGlyphIds,
+                extraCacheOptions
               )
             : null;
           const cachedResult =
@@ -313,6 +326,7 @@ export async function getSubsetsForFontUsage(
               glyphIds: featureGlyphIds,
               variationAxes: subsetInfo.variationAxes,
               featureTags,
+              dropMathTable,
             });
 
             subsetPromiseMap.set(

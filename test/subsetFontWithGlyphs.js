@@ -196,6 +196,20 @@ describe('subsetFontWithGlyphs', function () {
     expect(targeted.length, 'to be less than', retainAll.length);
   });
 
+  it('should accept dropMathTable without affecting fonts that lack a MATH table', async function () {
+    // No testdata font ships a MATH table, so this only verifies that
+    // setting the option produces a valid subset (the option is a no-op
+    // when the table is absent).
+    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+      targetFormat: 'truetype',
+      featureTags: [],
+      dropMathTable: true,
+    });
+    const tables = listSfntTables(result);
+    expect(tables.has('MATH'), 'to be false');
+    expect(result.length, 'to be greater than', 0);
+  });
+
   it('should drop hinting and unused web tables from a TrueType subset', async function () {
     const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
       targetFormat: 'truetype',

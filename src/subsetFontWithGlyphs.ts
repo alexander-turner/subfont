@@ -76,6 +76,9 @@ interface SubsetFontWithGlyphsOptions {
   // instead of retaining every layout feature in the font. When undefined,
   // fall back to retaining all layout features (legacy behavior).
   featureTags?: string[];
+  // When true, drop the OpenType MATH table. Caller is responsible for
+  // ensuring the page does not render math content with this font.
+  dropMathTable?: boolean;
 }
 
 // Pool of WASM instances for parallel subsetting.  Each instance has its
@@ -237,7 +240,8 @@ function configureSubsetInput(
   text: string,
   glyphIds: number[] | undefined,
   variationAxes: Record<string, VariationAxisValue> | undefined,
-  featureTags: string[] | undefined
+  featureTags: string[] | undefined,
+  dropMathTable: boolean
 ): void {
   // --- Retain layout features ---
   // hb_subset_input_create_or_fail pre-populates the layout-features set with
@@ -278,6 +282,9 @@ function configureSubsetInput(
   );
   for (const tag of DROP_TABLE_TAGS) {
     exports.hb_set_add(dropTableSet, HB_TAG(tag));
+  }
+  if (dropMathTable) {
+    exports.hb_set_add(dropTableSet, HB_TAG('MATH'));
   }
 
   // --- Add unicode codepoints ---
@@ -363,6 +370,7 @@ async function subsetFontWithGlyphs(
     glyphIds,
     variationAxes,
     featureTags,
+    dropMathTable = false,
   }: SubsetFontWithGlyphsOptions = {}
 ): Promise<Buffer> {
   // Reuse cached sfnt conversion when available (same buffer may have
@@ -399,7 +407,8 @@ async function subsetFontWithGlyphs(
         text,
         glyphIds,
         variationAxes,
-        featureTags
+        featureTags,
+        dropMathTable
       );
 
       subset = exports.hb_subset_or_fail(face, input);

@@ -180,6 +180,17 @@ describe('subsetGeneration', function () {
         desc: 'featureGlyphIds',
         args: [Buffer.from('font'), 'abc', 'woff2', null, [1, 2]],
       },
+      {
+        desc: 'extraOptions',
+        args: [
+          Buffer.from('font'),
+          'abc',
+          'woff2',
+          null,
+          null,
+          { dropMathTable: true },
+        ],
+      },
     ].forEach(({ desc, args }) => {
       it(`should differ when ${desc} changes`, function () {
         expect(
