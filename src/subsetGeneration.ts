@@ -6,13 +6,15 @@ import type { VariationAxes, AssetGraphError } from './types/shared';
 import { getVariationAxisBounds } from './variationAxes';
 import collectFeatureGlyphIds = require('./collectFeatureGlyphIds');
 import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
+import {
+  pageNeedsMathTable,
+  pageNeedsColorTables,
+  scriptsForText,
+} from './codepointMaps';
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
-// Bumped to '3' when feature retention switched from retain-all to targeted
-// (harfbuzz default shaping set + CSS-requested tags only). Cached subsets
-// from earlier versions had different GSUB/GPOS contents.
-const SUBSET_CACHE_VERSION = '3';
+const SUBSET_CACHE_VERSION = '4';
 
 type FontBuffer = Buffer | Uint8Array;
 
@@ -57,12 +59,15 @@ function getFontBufferHashPrefix(fontBuffer: FontBuffer): crypto.Hash {
   return cached;
 }
 
+type ExtraSubsetCacheOptions = Record<string, boolean | string[]>;
+
 function subsetCacheKey(
   fontBuffer: FontBuffer,
   text: string,
   targetFormat: string,
   variationAxes: VariationAxes,
-  featureGlyphIds: number[] | undefined
+  featureGlyphIds: number[] | undefined,
+  extraOptions: ExtraSubsetCacheOptions | undefined = undefined
 ): string {
   // Clone the pre-computed prefix (version + font buffer) and append
   // the remaining fields. hash.copy() is O(1) — just copies the
@@ -72,6 +77,7 @@ function subsetCacheKey(
   hash.update(targetFormat);
   if (variationAxes) hash.update(JSON.stringify(variationAxes));
   if (featureGlyphIds) hash.update(JSON.stringify(featureGlyphIds));
+  if (extraOptions) hash.update(JSON.stringify(extraOptions));
   return hash.digest('hex');
 }
 
@@ -274,6 +280,27 @@ export async function getSubsetsForFontUsage(
         }
       }
 
+      // Per-fontUsage decisions — same across all target formats.
+      // False positives (keeping a table the page doesn't need) cost a few
+      // hundred bytes; false negatives (dropping a needed table) break
+      // rendering, so the heuristics err on the side of keeping.
+      const extraOptions = {
+        dropMathTable: !pageNeedsMathTable(text),
+        dropColorTables: !pageNeedsColorTables(text),
+        scriptTags: scriptsForText(text),
+      };
+      // Targeted feature retention when we can fully enumerate the
+      // CSS-requested feature tags. If the page declares feature settings
+      // but the tags couldn't be extracted (e.g. resolution through CSS
+      // custom-property var() chains is incomplete), fall back to retain-
+      // all so we don't drop features the page actually uses.
+      const featureTags =
+        fontUsage.hasFontFeatureSettings && !fontUsage.fontFeatureTags
+          ? undefined
+          : fontUsage.fontFeatureTags
+            ? [...fontUsage.fontFeatureTags]
+            : [];
+
       for (const targetFormat of formats) {
         const promiseId = getSubsetPromiseId(
           fontUsage,
@@ -288,7 +315,8 @@ export async function getSubsetsForFontUsage(
                 text,
                 targetFormat,
                 subsetInfo.variationAxes,
-                featureGlyphIds
+                featureGlyphIds,
+                extraOptions
               )
             : null;
           const cachedResult =
@@ -299,23 +327,12 @@ export async function getSubsetsForFontUsage(
             subsetPromiseMap.set(promiseId, Promise.resolve(cachedResult));
           } else {
             if (cacheStats) cacheStats.misses++;
-            // Targeted feature retention when we can fully enumerate the
-            // CSS-requested feature tags. If the page declares feature
-            // settings but the tags couldn't be extracted (e.g. resolution
-            // through CSS custom-property var() chains is incomplete),
-            // fall back to retain-all so we don't drop features the page
-            // actually uses.
-            const featureTags =
-              fontUsage.hasFontFeatureSettings && !fontUsage.fontFeatureTags
-                ? undefined
-                : fontUsage.fontFeatureTags
-                  ? [...fontUsage.fontFeatureTags]
-                  : [];
             const subsetCall = subsetFontWithGlyphs(fontBuffer, text, {
               targetFormat,
               glyphIds: featureGlyphIds,
               variationAxes: subsetInfo.variationAxes,
               featureTags,
+              ...extraOptions,
             });
 
             subsetPromiseMap.set(

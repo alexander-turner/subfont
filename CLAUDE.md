@@ -57,3 +57,23 @@ pnpm run check-coverage  # Verify coverage thresholds
 - Node.js >= 18 required
 - Use `const` by default; `let` only when reassignment is needed
 - Template literals preferred over string concatenation
+
+## Subset-size efficiency improvements
+
+Whenever you change anything that affects subset output bytes (new
+`hb_subset_input_set` knob, new `DROP_TABLE_TAGS` entry, new flag, new
+gating heuristic, etc.):
+
+1. Re-run `pnpm run build && node scripts/bench-readme.js` (compares
+   against the `subset-font` package upstream Munter/subfont uses) and
+   paste the printed Markdown rows into the README's "Upstream subfont
+   vs `@turntrout/subfont`" table, replacing the previous numbers.
+2. Add the new optimization to the README's optimization-techniques table
+   (one row per knob: name, one-line explanation, gating condition if any).
+3. Bump `SUBSET_CACHE_VERSION` in `src/subsetGeneration.ts` if the change
+   affects bytes deterministically. Skip the bump if the change is purely
+   defensive (e.g. removing a no-op).
+4. Add a regression test in `test/subsetSizeBenchmarks.js` with a hard
+   upper bound on output size for at least one font that exercises the
+   new path. Bound values get bumped only after confirming a regression
+   isn't a real loss.

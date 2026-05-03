@@ -6,9 +6,16 @@ import { convert as convertInWorker } from './fontConverter';
 
 // hb_subset_sets_t enum values — https://github.com/harfbuzz/harfbuzz/blob/main/src/hb-subset.h
 const HB_SUBSET_SETS_GLYPH_INDEX = 0;
-const HB_SUBSET_SETS_DROP_TABLE_TAG = 5;
-const HB_SUBSET_SETS_LAYOUT_FEATURE_TAG = 6;
+const HB_SUBSET_SETS_DROP_TABLE_TAG = 3;
 const HB_SUBSET_SETS_NAME_ID = 4;
+const HB_SUBSET_SETS_NAME_LANG_ID = 5;
+const HB_SUBSET_SETS_LAYOUT_FEATURE_TAG = 6;
+const HB_SUBSET_SETS_LAYOUT_SCRIPT_TAG = 7;
+
+// Windows English (United States). The only name-table language we keep —
+// browsers don't expose localized name strings to web pages, so other lang
+// IDs are pure overhead.
+const KEEP_NAME_LANG_ID_EN_US = 0x0409;
 
 // hb_subset_flags_t
 const HB_SUBSET_FLAGS_NO_HINTING = 0x00000001;
@@ -76,6 +83,18 @@ interface SubsetFontWithGlyphsOptions {
   // instead of retaining every layout feature in the font. When undefined,
   // fall back to retaining all layout features (legacy behavior).
   featureTags?: string[];
+  // When true, drop the OpenType MATH table. Caller is responsible for
+  // ensuring the page does not render math content with this font.
+  dropMathTable?: boolean;
+  // When true, drop COLR/CPAL/SVG/CBDT/CBLC/EBDT/EBLC/EBSC/sbix. Caller is
+  // responsible for ensuring the page does not render color emoji or color
+  // glyphs with this font.
+  dropColorTables?: boolean;
+  // OpenType script tags to retain GSUB/GPOS lookups for (e.g. ['latn',
+  // 'cyrl', 'DFLT']). When provided, harfbuzz's default "retain all
+  // scripts" set is replaced by exactly these tags. When undefined, all
+  // scripts in the font are retained (legacy behavior).
+  scriptTags?: string[];
 }
 
 // Pool of WASM instances for parallel subsetting.  Each instance has its
@@ -220,8 +239,26 @@ function setAxisRange(
 }
 
 // Tables unnecessary for web rendering — safe to drop unconditionally.
-// gasp is only meaningful when hinting is present (which we strip above).
+// HB_SUBSET_FLAGS_NO_HINTING already drops cvt/fpgm/prep/hdmx in the
+// harfbuzzjs build we use; gasp/LTSH/VDMX/DSIG/PCLT survive the flag and
+// must be dropped here.
 const DROP_TABLE_TAGS = ['DSIG', 'LTSH', 'VDMX', 'hdmx', 'gasp', 'PCLT'];
+
+// Color and bitmap tables — only relevant for color emoji (Apple/Google)
+// and legacy bitmap fonts. Dropped only when the caller signals that no
+// color content needs to render with this font.
+// Note: 'SVG ' has a trailing space (4-byte tag).
+const COLOR_TABLE_TAGS = [
+  'COLR',
+  'CPAL',
+  'SVG ',
+  'CBDT',
+  'CBLC',
+  'sbix',
+  'EBDT',
+  'EBLC',
+  'EBSC',
+];
 
 // Name IDs needed for web fonts: family (1), subfamily (2), full name (4),
 // PostScript name (6).  Copyright (0), unique ID (3), version (5), and
@@ -235,7 +272,10 @@ function configureSubsetInput(
   text: string,
   glyphIds: number[] | undefined,
   variationAxes: Record<string, VariationAxisValue> | undefined,
-  featureTags: string[] | undefined
+  featureTags: string[] | undefined,
+  dropMathTable: boolean,
+  dropColorTables: boolean,
+  scriptTags: string[] | undefined
 ): void {
   // --- Retain layout features ---
   // hb_subset_input_create_or_fail pre-populates the layout-features set with
@@ -258,6 +298,20 @@ function configureSubsetInput(
     }
   }
 
+  // --- Retain layout scripts ---
+  // When scriptTags is provided, replace harfbuzz's default (all scripts)
+  // with exactly the listed tags. Undefined leaves the default in place.
+  if (scriptTags !== undefined) {
+    const layoutScripts = exports.hb_subset_input_set(
+      input,
+      HB_SUBSET_SETS_LAYOUT_SCRIPT_TAG
+    );
+    exports.hb_set_clear(layoutScripts);
+    for (const tag of scriptTags) {
+      exports.hb_set_add(layoutScripts, HB_TAG(tag));
+    }
+  }
+
   // --- Strip hinting instructions (ignored by modern browsers) ---
   const flags = exports.hb_subset_input_get_flags(input);
   exports.hb_subset_input_set_flags(input, flags | HB_SUBSET_FLAGS_NO_HINTING);
@@ -269,6 +323,14 @@ function configureSubsetInput(
     exports.hb_set_add(nameIdSet, id);
   }
 
+  // --- Keep only en-US localized name strings ---
+  const nameLangSet = exports.hb_subset_input_set(
+    input,
+    HB_SUBSET_SETS_NAME_LANG_ID
+  );
+  exports.hb_set_clear(nameLangSet);
+  exports.hb_set_add(nameLangSet, KEEP_NAME_LANG_ID_EN_US);
+
   // --- Drop tables not needed for web rendering ---
   const dropTableSet = exports.hb_subset_input_set(
     input,
@@ -276,6 +338,14 @@ function configureSubsetInput(
   );
   for (const tag of DROP_TABLE_TAGS) {
     exports.hb_set_add(dropTableSet, HB_TAG(tag));
+  }
+  if (dropMathTable) {
+    exports.hb_set_add(dropTableSet, HB_TAG('MATH'));
+  }
+  if (dropColorTables) {
+    for (const tag of COLOR_TABLE_TAGS) {
+      exports.hb_set_add(dropTableSet, HB_TAG(tag));
+    }
   }
 
   // --- Add unicode codepoints ---
@@ -361,6 +431,9 @@ async function subsetFontWithGlyphs(
     glyphIds,
     variationAxes,
     featureTags,
+    dropMathTable = false,
+    dropColorTables = false,
+    scriptTags,
   }: SubsetFontWithGlyphsOptions = {}
 ): Promise<Buffer> {
   // Reuse cached sfnt conversion when available (same buffer may have
@@ -397,7 +470,10 @@ async function subsetFontWithGlyphs(
         text,
         glyphIds,
         variationAxes,
-        featureTags
+        featureTags,
+        dropMathTable,
+        dropColorTables,
+        scriptTags
       );
 
       subset = exports.hb_subset_or_fail(face, input);

@@ -25,6 +25,13 @@ jobs:
         with:
           registry-url: https://registry.npmjs.org
 
+      # `pnpm publish` runs the prepublishOnly hook (npm test), which drives
+      # puppeteer. Use the runner's pre-installed Chrome to skip the
+      # puppeteer-managed download — the pinned version periodically
+      # disappears from Google's chrome-for-testing CDN.
+      - name: Use system Chrome
+        run: echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome" >> $GITHUB_ENV
+
       - name: Auto Version Bump and Publish
         run: bash scripts/version-bump.sh
         env:

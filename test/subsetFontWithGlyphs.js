@@ -13,6 +13,40 @@ const variableFontPath = pathModule.resolve(
   '../testdata/subsetFonts/variable-font-unused-axes/RobotoFlex-VariableFont_GRAD,XTRA,YOPQ,YTAS,YTDE,YTFI,YTLC,YTUC,opsz,slnt,wdth,wght.ttf'
 );
 
+function listSfntTables(buf) {
+  const numTables = buf.readUInt16BE(4);
+  const set = new Set();
+  for (let i = 0; i < numTables; i++) {
+    const off = 12 + i * 16;
+    set.add(buf.slice(off, off + 4).toString('ascii'));
+  }
+  return set;
+}
+
+function findSfntTable(buf, tag) {
+  const numTables = buf.readUInt16BE(4);
+  for (let i = 0; i < numTables; i++) {
+    const o = 12 + i * 16;
+    if (buf.slice(o, o + 4).toString() === tag) {
+      const off = buf.readUInt32BE(o + 8);
+      const len = buf.readUInt32BE(o + 12);
+      return buf.slice(off, off + len);
+    }
+  }
+  return null;
+}
+
+function nameRecordLangIDs(buf) {
+  const name = findSfntTable(buf, 'name');
+  if (!name) return [];
+  const count = name.readUInt16BE(2);
+  const langIDs = [];
+  for (let i = 0; i < count; i++) {
+    langIDs.push(name.readUInt16BE(6 + i * 12 + 4));
+  }
+  return langIDs;
+}
+
 describe('subsetFontWithGlyphs', function () {
   this.timeout(30000);
 
@@ -184,6 +218,71 @@ describe('subsetFontWithGlyphs', function () {
       featureTags: [], // no extra features beyond harfbuzz defaults
     });
     expect(targeted.length, 'to be less than', retainAll.length);
+  });
+
+  it('should retain only en-US name-table entries in the subset', async function () {
+    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+      targetFormat: 'truetype',
+      featureTags: [],
+    });
+    const langIDs = nameRecordLangIDs(result);
+    expect(langIDs.length, 'to be greater than', 0);
+    // Windows en-US is 0x409; Mac platform records use 0x0 for default English.
+    for (const id of langIDs) expect([0x409, 0x0], 'to contain', id);
+  });
+
+  it('should produce a smaller subset when scriptTags excludes scripts the font ships', async function () {
+    // Roboto-400 ships shaping data for DFLT/cyrl/grek/latn; restricting
+    // to DFLT+latn should drop cyrl/grek lookups.
+    const text = 'The quick brown fox';
+    const allScripts = await subsetFontWithGlyphs(ttfBuffer, text, {
+      targetFormat: 'woff2',
+      featureTags: [],
+    });
+    const latnOnly = await subsetFontWithGlyphs(ttfBuffer, text, {
+      targetFormat: 'woff2',
+      featureTags: [],
+      scriptTags: ['DFLT', 'latn'],
+    });
+    expect(latnOnly.length, 'to be less than', allScripts.length);
+  });
+
+  // No testdata font ships MATH or any color table, so these only verify
+  // that the option produces a valid subset (no-op when tables are absent).
+  [
+    { opt: { dropMathTable: true }, expectAbsent: ['MATH'] },
+    {
+      opt: { dropColorTables: true },
+      expectAbsent: ['COLR', 'CPAL', 'SVG ', 'CBDT', 'CBLC', 'sbix'],
+    },
+  ].forEach(({ opt, expectAbsent }) => {
+    const knob = Object.keys(opt)[0];
+    it(`should accept ${knob} without affecting fonts that lack the dropped tables`, async function () {
+      const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+        targetFormat: 'truetype',
+        featureTags: [],
+        ...opt,
+      });
+      expect(result.length, 'to be greater than', 0);
+      const tables = listSfntTables(result);
+      for (const tag of expectAbsent) expect(tables.has(tag), 'to be false');
+    });
+  });
+
+  it('should drop hinting and unused web tables from a TrueType subset', async function () {
+    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+      targetFormat: 'truetype',
+      featureTags: [],
+    });
+    const tables = listSfntTables(result);
+    // NO_HINTING flag drops these for TrueType outlines.
+    for (const tag of ['cvt ', 'fpgm', 'prep', 'hdmx']) {
+      expect(tables.has(tag), 'to be false');
+    }
+    // DROP_TABLE_TAGS catches the rest that NO_HINTING leaves behind.
+    for (const tag of ['gasp', 'DSIG', 'LTSH', 'VDMX', 'PCLT']) {
+      expect(tables.has(tag), 'to be false');
+    }
   });
 
   it('should handle concurrent calls via worker pool', async function () {
