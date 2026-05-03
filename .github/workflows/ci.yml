@@ -36,17 +36,8 @@ jobs:
       - run: pnpm install
       - name: Build TypeScript
         run: pnpm run build
-      - name: Cache Puppeteer Chrome
-        id: puppeteer-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/puppeteer
-          key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - name: Install Chrome for puppeteer
-        if: steps.puppeteer-cache.outputs.cache-hit != 'true'
-        run: pnpm exec puppeteer browsers install chrome
-      - name: Set PUPPETEER_EXECUTABLE_PATH
-        run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require("puppeteer").executablePath())')" >> $GITHUB_ENV
+      - name: Use system Chrome
+        run: echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome" >> $GITHUB_ENV
       - name: Run tests
         run: |
           set -o pipefail
@@ -104,17 +95,8 @@ jobs:
       - run: pnpm install
       - name: Build TypeScript
         run: pnpm run build
-      - name: Cache Puppeteer Chrome
-        id: puppeteer-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/puppeteer
-          key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-      - name: Install Chrome for puppeteer
-        if: steps.puppeteer-cache.outputs.cache-hit != 'true'
-        run: pnpm exec puppeteer browsers install chrome
-      - name: Set PUPPETEER_EXECUTABLE_PATH
-        run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require("puppeteer").executablePath())')" >> $GITHUB_ENV
+      - name: Use system Chrome
+        run: echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome" >> $GITHUB_ENV
       - run: pnpm run coverage
       - name: Check coverage thresholds
         run: pnpm run check-coverage
