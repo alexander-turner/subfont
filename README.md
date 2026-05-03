@@ -19,13 +19,13 @@ A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web f
 | Layout-script filter (gated) | Drops GSUB/GPOS lookups for OpenType scripts the page doesn't render                    |
 | CSS-aware feature retention  | Drops GSUB/GPOS features the page's CSS doesn't reference                               |
 
-Reproducible benchmark on `testdata/subsetFonts/OpenSans-400.ttf` (run with `node scripts/bench-readme.js`); "naive" = raw harfbuzz subset with no flags, woff2-compressed:
+Reproducible benchmark on `testdata/subsetFonts/OpenSans-400.ttf` (run with `node scripts/bench-readme.js`); "upstream" = the [`subset-font`](https://github.com/papandreou/subset-font) package the original [Munter/subfont](https://github.com/Munter/subfont) uses, woff2-compressed:
 
-| Text sample       | Naive subset | `subfont` | Savings |
-| ----------------- | ------------ | --------- | ------- |
-| Heading (short)   | 3,476 B      | 1,396 B   | **60%** |
-| Paragraph         | 4,660 B      | 2,268 B   | **51%** |
-| Full page charset | 9,388 B      | 5,500 B   | **41%** |
+| Text sample       | Upstream subfont | `@turntrout/subfont` | Savings |
+| ----------------- | ---------------- | -------------------- | ------- |
+| Heading (short)   | 3,476 B          | 1,396 B              | **60%** |
+| Paragraph         | 4,660 B          | 2,268 B              | **51%** |
+| Full page charset | 9,388 B          | 5,500 B              | **41%** |
 
 ## Install
 

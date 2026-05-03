@@ -64,9 +64,10 @@ Whenever you change anything that affects subset output bytes (new
 `hb_subset_input_set` knob, new `DROP_TABLE_TAGS` entry, new flag, new
 gating heuristic, etc.):
 
-1. Re-run `pnpm run build && node scripts/bench-readme.js` and paste the
-   printed Markdown rows into the README's "Naive subset vs `subfont`"
-   table, replacing the previous numbers.
+1. Re-run `pnpm run build && node scripts/bench-readme.js` (compares
+   against the `subset-font` package upstream Munter/subfont uses) and
+   paste the printed Markdown rows into the README's "Upstream subfont
+   vs `@turntrout/subfont`" table, replacing the previous numbers.
 2. Add the new optimization to the README's optimization-techniques table
    (one row per knob: name, one-line explanation, gating condition if any).
 3. Bump `SUBSET_CACHE_VERSION` in `src/subsetGeneration.ts` if the change

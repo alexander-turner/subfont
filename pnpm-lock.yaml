@@ -146,6 +146,9 @@ importers:
       sinon:
         specifier: ^19.0.0
         version: 19.0.5
+      subset-font:
+        specifier: ^2.5.0
+        version: 2.5.0
       typescript:
         specifier: ^5.6.0
         version: 5.9.3
@@ -3655,6 +3658,12 @@ packages:
     engines: { node: '>=6' }
     deprecated: this library is no longer supported
 
+  harfbuzzjs@0.10.3:
+    resolution:
+      {
+        integrity: sha512-GJnLUrgLMadlMYrBGEXwYEimObbysy3prWT4HyPpFQERvgTU/OZ+ReUlEPOum6w4RBtFXzXiCCmECOr4sz3qwQ==,
+      }
+
   harfbuzzjs@0.5.0:
     resolution:
       {
@@ -6757,6 +6766,12 @@ packages:
     engines: { node: ^10 || ^12 || >=14.0 }
     peerDependencies:
       postcss: ^8.2.15
+
+  subset-font@2.5.0:
+    resolution:
+      {
+        integrity: sha512-Vsa8ngQ/ohhUj0an7on49y9jLZ2rK5U+T1FzPM4/ZQY0xUy5mLis6BfFtPGzecTjFgYXQlvY7FlsJF4t3R/6Ug==,
+      }
 
   supports-color@5.5.0:
     resolution:
@@ -10231,6 +10246,8 @@ snapshots:
       ajv: 6.14.0
       har-schema: 2.0.0
 
+  harfbuzzjs@0.10.3: {}
+
   harfbuzzjs@0.5.0: {}
 
   has-bigints@1.1.0: {}
@@ -12213,6 +12230,13 @@ snapshots:
       browserslist: 4.28.1
       postcss: 8.5.8
       postcss-selector-parser: 6.1.2
+
+  subset-font@2.5.0:
+    dependencies:
+      fontverter: 2.0.0
+      harfbuzzjs: 0.10.3
+      lodash: 4.17.23
+      p-limit: 3.1.0
 
   supports-color@5.5.0:
     dependencies:
