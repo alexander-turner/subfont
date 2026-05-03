@@ -167,7 +167,8 @@ class FontTracerPool {
       if (msg.type === 'result') {
         cb.resolve(msg.textByProps);
       } else if (msg.type === 'error') {
-        cb.reject(new Error(`Worker error: ${msg.error}\n${msg.stack}`));
+        const detail = msg.stack ? `${msg.error}\n${msg.stack}` : msg.error;
+        cb.reject(new Error(`Worker error: ${detail}`));
       }
     }
     // Worker is now idle, check for pending tasks

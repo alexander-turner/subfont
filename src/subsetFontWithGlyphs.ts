@@ -195,9 +195,13 @@ function getHeapu8(exports: HarfbuzzExports): Uint8Array {
 // >>> 0 keeps the accumulator unsigned; without it, tags whose first byte
 // exceeds 0x7F would overflow into negative i32 territory after << 24.
 function HB_TAG(str: string): number {
-  return str.split('').reduce(function (a, ch) {
-    return ((a << 8) >>> 0) + ch.charCodeAt(0);
-  }, 0);
+  return (
+    (((str.charCodeAt(0) << 24) >>> 0) +
+      (str.charCodeAt(1) << 16) +
+      (str.charCodeAt(2) << 8) +
+      str.charCodeAt(3)) >>>
+    0
+  );
 }
 
 function pinAxisLocation(

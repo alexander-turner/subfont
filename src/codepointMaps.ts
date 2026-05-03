@@ -65,15 +65,28 @@ const SCRIPT_RANGES: ScriptRange[] = [
   { min: 0x20000, max: 0x2a6df, tag: 'hani' }, // CJK Extension B
 ];
 
-function inRange(cp: number, r: Range): boolean {
-  return cp >= r.min && cp <= r.max;
+function codepointHitsRanges(cp: number, ranges: Range[]): boolean {
+  let lo = 0;
+  let hi = ranges.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >>> 1;
+    const r = ranges[mid];
+    if (cp < r.min) {
+      hi = mid - 1;
+    } else if (cp > r.max) {
+      lo = mid + 1;
+    } else {
+      return true;
+    }
+  }
+  return false;
 }
 
 function textHitsRanges(text: string, ranges: Range[]): boolean {
   for (const ch of text) {
     const cp = ch.codePointAt(0);
     if (cp === undefined) continue;
-    for (const r of ranges) if (inRange(cp, r)) return true;
+    if (codepointHitsRanges(cp, ranges)) return true;
   }
   return false;
 }
@@ -94,8 +107,10 @@ export function scriptsForText(text: string): string[] {
   for (const ch of text) {
     const cp = ch.codePointAt(0);
     if (cp === undefined) continue;
+    // Linear scan for script ranges since we need the tag from the matched range.
+    // The list is small (< 30 entries) so binary search overhead isn't worthwhile.
     for (const r of SCRIPT_RANGES) {
-      if (inRange(cp, r)) {
+      if (cp >= r.min && cp <= r.max) {
         tags.add(r.tag);
         break;
       }

@@ -40,7 +40,9 @@ export function convert(
       if (msg.type === 'result' && msg.buffer) {
         resolve(Buffer.from(msg.buffer));
       } else {
-        reject(new Error(msg.error));
+        reject(
+          new Error(msg.error || `Font conversion to ${targetFormat} failed`)
+        );
       }
     });
     worker.on('error', (err) => {

@@ -6,7 +6,8 @@ type FontBuffer = Buffer | Uint8Array;
 const sfntPromiseByBuffer = new WeakMap<object, Promise<FontBuffer>>();
 
 export function toSfnt(buffer: FontBuffer): Promise<FontBuffer> {
-  const cached = sfntPromiseByBuffer.get(buffer as object);
+  const key = buffer as object;
+  const cached = sfntPromiseByBuffer.get(key);
   if (cached) return cached;
 
   let promise: Promise<FontBuffer>;
@@ -23,13 +24,15 @@ export function toSfnt(buffer: FontBuffer): Promise<FontBuffer> {
     promise = convert(buffer, 'sfnt');
   }
   // Evict on rejection so retries with the same buffer aren't stuck.
-  // Rethrow so callers see the original error and Node doesn't surface an
-  // unhandled rejection if this branch is the only consumer.
+  // Only delete if the map still points to this exact promise — a concurrent
+  // caller may have already replaced it with a fresh retry.
   // eslint-disable-next-line no-restricted-syntax
   const tracked = promise.catch((err: unknown) => {
-    sfntPromiseByBuffer.delete(buffer as object);
+    if (sfntPromiseByBuffer.get(key) === tracked) {
+      sfntPromiseByBuffer.delete(key);
+    }
     throw err;
   });
-  sfntPromiseByBuffer.set(buffer as object, tracked);
+  sfntPromiseByBuffer.set(key, tracked);
   return tracked;
 }

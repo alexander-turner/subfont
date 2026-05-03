@@ -25,7 +25,10 @@
   },
   "main": "lib/subfont.js",
   "exports": {
-    ".": "./lib/subfont.js",
+    ".": {
+      "types": "./lib/subfont.d.ts",
+      "default": "./lib/subfont.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
