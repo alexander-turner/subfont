@@ -23,8 +23,8 @@ Reproducible benchmark on `testdata/subsetFonts/OpenSans-400.ttf` (run with `nod
 
 | Text sample       | Upstream subfont | `@turntrout/subfont` | Savings |
 | ----------------- | ---------------- | -------------------- | ------- |
-| Heading (short)   | 3,476 B          | 1,396 B              | **60%** |
-| Paragraph         | 4,660 B          | 2,268 B              | **51%** |
+| Heading (short)   | 2,604 B          | 828 B                | **68%** |
+| Paragraph         | 4,448 B          | 2,072 B              | **53%** |
 | Full page charset | 9,388 B          | 5,500 B              | **41%** |
 
 ## Install

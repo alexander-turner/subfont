@@ -25,12 +25,8 @@ const FONT = path.resolve(
 );
 
 const SAMPLES = [
-  ['Heading (short)', 'Design choices for turntrout.com'],
-  [
-    'Paragraph',
-    'The quick brown fox jumps over the lazy dog. ' +
-      'Subfont strips data your browser never reads, then woff2-compresses the rest.',
-  ],
+  ['Heading (short)', 'Hello World'],
+  ['Paragraph', 'The quick brown fox jumps over the lazy dog.'],
   [
     'Full page charset',
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
