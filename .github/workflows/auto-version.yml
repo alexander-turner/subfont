@@ -25,6 +25,22 @@ jobs:
         with:
           registry-url: https://registry.npmjs.org
 
+      # `pnpm publish` runs the prepublishOnly hook (npm test), and a chunk
+      # of those tests need Chrome for puppeteer-driven rendering. Mirror
+      # ci.yml's cache-then-install-once pattern: a cache hit keeps us going
+      # even when the pinned Chrome version disappears from Google's CDN.
+      - name: Cache Puppeteer Chrome
+        id: puppeteer-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-chrome-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chrome for puppeteer
+        if: steps.puppeteer-cache.outputs.cache-hit != 'true'
+        run: pnpm exec puppeteer browsers install chrome
+      - name: Set PUPPETEER_EXECUTABLE_PATH
+        run: echo "PUPPETEER_EXECUTABLE_PATH=$(node -e 'console.log(require(\"puppeteer\").executablePath())')" >> $GITHUB_ENV
+
       - name: Auto Version Bump and Publish
         run: bash scripts/version-bump.sh
         env:
