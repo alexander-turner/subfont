@@ -23,6 +23,30 @@ function listSfntTables(buf) {
   return set;
 }
 
+function findSfntTable(buf, tag) {
+  const numTables = buf.readUInt16BE(4);
+  for (let i = 0; i < numTables; i++) {
+    const o = 12 + i * 16;
+    if (buf.slice(o, o + 4).toString() === tag) {
+      const off = buf.readUInt32BE(o + 8);
+      const len = buf.readUInt32BE(o + 12);
+      return buf.slice(off, off + len);
+    }
+  }
+  return null;
+}
+
+function nameRecordLangIDs(buf) {
+  const name = findSfntTable(buf, 'name');
+  if (!name) return [];
+  const count = name.readUInt16BE(2);
+  const langIDs = [];
+  for (let i = 0; i < count; i++) {
+    langIDs.push(name.readUInt16BE(6 + i * 12 + 4));
+  }
+  return langIDs;
+}
+
 describe('subsetFontWithGlyphs', function () {
   this.timeout(30000);
 
@@ -201,28 +225,10 @@ describe('subsetFontWithGlyphs', function () {
       targetFormat: 'truetype',
       featureTags: [],
     });
-    const num = result.readUInt16BE(4);
-    let nameOff = 0;
-    let nameLen = 0;
-    for (let i = 0; i < num; i++) {
-      const o = 12 + i * 16;
-      if (result.slice(o, o + 4).toString() === 'name') {
-        nameOff = result.readUInt32BE(o + 8);
-        nameLen = result.readUInt32BE(o + 12);
-        break;
-      }
-    }
-    expect(nameLen, 'to be greater than', 0);
-    const name = result.slice(nameOff, nameOff + nameLen);
-    const count = name.readUInt16BE(2);
-    expect(count, 'to be greater than', 0);
-    for (let i = 0; i < count; i++) {
-      const r = 6 + i * 12;
-      const langID = name.readUInt16BE(r + 4);
-      // Windows English (0x409) is what we keep; Mac records use 0x0,
-      // which signifies the platform's default English. Both are en-US.
-      expect([0x409, 0x0], 'to contain', langID);
-    }
+    const langIDs = nameRecordLangIDs(result);
+    expect(langIDs.length, 'to be greater than', 0);
+    // Windows en-US is 0x409; Mac platform records use 0x0 for default English.
+    for (const id of langIDs) expect([0x409, 0x0], 'to contain', id);
   });
 
   it('should produce a smaller subset when scriptTags excludes scripts the font ships', async function () {
@@ -241,34 +247,26 @@ describe('subsetFontWithGlyphs', function () {
     expect(latnOnly.length, 'to be less than', allScripts.length);
   });
 
-  it('should accept dropColorTables without affecting fonts that lack color tables', async function () {
-    // No testdata font ships COLR/CPAL/SVG/CBDT/sbix, so this only verifies
-    // that setting the option produces a valid subset (no-op behavior when
-    // the tables are absent).
-    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
-      targetFormat: 'truetype',
-      featureTags: [],
-      dropColorTables: true,
+  // No testdata font ships MATH or any color table, so these only verify
+  // that the option produces a valid subset (no-op when tables are absent).
+  [
+    { opt: { dropMathTable: true }, expectAbsent: ['MATH'] },
+    {
+      opt: { dropColorTables: true },
+      expectAbsent: ['COLR', 'CPAL', 'SVG ', 'CBDT', 'CBLC', 'sbix'],
+    },
+  ].forEach(({ opt, expectAbsent }) => {
+    const knob = Object.keys(opt)[0];
+    it(`should accept ${knob} without affecting fonts that lack the dropped tables`, async function () {
+      const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
+        targetFormat: 'truetype',
+        featureTags: [],
+        ...opt,
+      });
+      expect(result.length, 'to be greater than', 0);
+      const tables = listSfntTables(result);
+      for (const tag of expectAbsent) expect(tables.has(tag), 'to be false');
     });
-    const tables = listSfntTables(result);
-    for (const tag of ['COLR', 'CPAL', 'SVG ', 'CBDT', 'CBLC', 'sbix']) {
-      expect(tables.has(tag), 'to be false');
-    }
-    expect(result.length, 'to be greater than', 0);
-  });
-
-  it('should accept dropMathTable without affecting fonts that lack a MATH table', async function () {
-    // No testdata font ships a MATH table, so this only verifies that
-    // setting the option produces a valid subset (the option is a no-op
-    // when the table is absent).
-    const result = await subsetFontWithGlyphs(ttfBuffer, 'ABC', {
-      targetFormat: 'truetype',
-      featureTags: [],
-      dropMathTable: true,
-    });
-    const tables = listSfntTables(result);
-    expect(tables.has('MATH'), 'to be false');
-    expect(result.length, 'to be greater than', 0);
   });
 
   it('should drop hinting and unused web tables from a TrueType subset', async function () {

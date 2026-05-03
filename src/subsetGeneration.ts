@@ -9,8 +9,8 @@ import subsetFontWithGlyphs = require('./subsetFontWithGlyphs');
 import {
   pageNeedsMathTable,
   pageNeedsColorTables,
-} from './codepointHeuristics';
-import { scriptsForText } from './scriptForCodepoint';
+  scriptsForText,
+} from './codepointMaps';
 
 // Bump when subsetting behaviour changes to invalidate stale disk-cache
 // entries (e.g. after adding hinting removal or table stripping).
@@ -280,14 +280,26 @@ export async function getSubsetsForFontUsage(
         }
       }
 
-      // Drop optional metric tables when the page text doesn't reference
-      // codepoints those tables exist to support. False positives (keeping
-      // a table the page doesn't need) cost a few hundred bytes; false
-      // negatives (dropping a needed table) break rendering, so the
-      // heuristics err on the side of keeping.
-      const dropMathTable = !pageNeedsMathTable(text);
-      const dropColorTables = !pageNeedsColorTables(text);
-      const scriptTags = scriptsForText(text);
+      // Per-fontUsage decisions — same across all target formats.
+      // False positives (keeping a table the page doesn't need) cost a few
+      // hundred bytes; false negatives (dropping a needed table) break
+      // rendering, so the heuristics err on the side of keeping.
+      const extraOptions = {
+        dropMathTable: !pageNeedsMathTable(text),
+        dropColorTables: !pageNeedsColorTables(text),
+        scriptTags: scriptsForText(text),
+      };
+      // Targeted feature retention when we can fully enumerate the
+      // CSS-requested feature tags. If the page declares feature settings
+      // but the tags couldn't be extracted (e.g. resolution through CSS
+      // custom-property var() chains is incomplete), fall back to retain-
+      // all so we don't drop features the page actually uses.
+      const featureTags =
+        fontUsage.hasFontFeatureSettings && !fontUsage.fontFeatureTags
+          ? undefined
+          : fontUsage.fontFeatureTags
+            ? [...fontUsage.fontFeatureTags]
+            : [];
 
       for (const targetFormat of formats) {
         const promiseId = getSubsetPromiseId(
@@ -297,11 +309,6 @@ export async function getSubsetsForFontUsage(
         );
 
         if (!subsetPromiseMap.has(promiseId)) {
-          const extraCacheOptions = {
-            dropMathTable,
-            dropColorTables,
-            scriptTags,
-          };
           const cacheKey = diskCache
             ? subsetCacheKey(
                 fontBuffer,
@@ -309,7 +316,7 @@ export async function getSubsetsForFontUsage(
                 targetFormat,
                 subsetInfo.variationAxes,
                 featureGlyphIds,
-                extraCacheOptions
+                extraOptions
               )
             : null;
           const cachedResult =
@@ -320,26 +327,12 @@ export async function getSubsetsForFontUsage(
             subsetPromiseMap.set(promiseId, Promise.resolve(cachedResult));
           } else {
             if (cacheStats) cacheStats.misses++;
-            // Targeted feature retention when we can fully enumerate the
-            // CSS-requested feature tags. If the page declares feature
-            // settings but the tags couldn't be extracted (e.g. resolution
-            // through CSS custom-property var() chains is incomplete),
-            // fall back to retain-all so we don't drop features the page
-            // actually uses.
-            const featureTags =
-              fontUsage.hasFontFeatureSettings && !fontUsage.fontFeatureTags
-                ? undefined
-                : fontUsage.fontFeatureTags
-                  ? [...fontUsage.fontFeatureTags]
-                  : [];
             const subsetCall = subsetFontWithGlyphs(fontBuffer, text, {
               targetFormat,
               glyphIds: featureGlyphIds,
               variationAxes: subsetInfo.variationAxes,
               featureTags,
-              dropMathTable,
-              dropColorTables,
-              scriptTags,
+              ...extraOptions,
             });
 
             subsetPromiseMap.set(

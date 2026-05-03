@@ -8,20 +8,24 @@ A faster fork of [subfont](https://github.com/Munter/subfont) that subsets web f
 
 `subfont` produces dramatically smaller font files by stripping data that browsers never use:
 
-| Optimization                | Technique                                                                          |
-| --------------------------- | ---------------------------------------------------------------------------------- |
-| Hinting removal             | Strips TrueType hinting instructions (browsers auto-hint)                          |
-| Name table pruning          | Keeps only the 4 IDs browsers read (family, subfamily, full name, PostScript name) |
-| Table stripping             | Drops DSIG, LTSH, VDMX, hdmx, gasp, PCLT                                           |
-| CSS-aware feature filtering | Only collects alternate glyphs for OpenType features actually used in your CSS     |
+| Optimization                 | Technique                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| Hinting removal              | Strips TrueType hinting instructions (browsers auto-hint)                               |
+| Name table pruning           | Keeps only the 4 IDs browsers read (family, subfamily, full name, PostScript name)      |
+| Name lang-ID filter          | Keeps only en-US name strings; drops Japanese, Russian, Korean, etc.                    |
+| Table stripping              | Drops `DSIG`, `LTSH`, `VDMX`, `hdmx`, `gasp`, `PCLT`                                    |
+| MATH-table drop (gated)      | Drops `MATH` when no math codepoints are used on the page                               |
+| Color-table drop (gated)     | Drops `COLR`/`CPAL`/`SVG `/`CBDT`/`CBLC`/`sbix`/`EBDT`/`EBLC`/`EBSC` when no emoji used |
+| Layout-script filter (gated) | Drops GSUB/GPOS lookups for OpenType scripts the page doesn't render                    |
+| CSS-aware feature retention  | Drops GSUB/GPOS features the page's CSS doesn't reference                               |
 
-On the [`turntrout.com/design`](https://turntrout.com/design) page, a typical font subset (OpenSans, woff2) is **48-68% smaller** than a naive subset of the same glyphs:
+Reproducible benchmark on `testdata/subsetFonts/OpenSans-400.ttf` (run with `node scripts/bench-readme.js`); "naive" = raw harfbuzz subset with no flags, woff2-compressed:
 
 | Text sample       | Naive subset | `subfont` | Savings |
 | ----------------- | ------------ | --------- | ------- |
-| Heading (short)   | 2,604 B      | 824 B     | **68%** |
-| Paragraph         | 4,052 B      | 1,840 B   | **55%** |
-| Full page charset | 5,268 B      | 2,716 B   | **48%** |
+| Heading (short)   | 3,476 B      | 1,396 B   | **60%** |
+| Paragraph         | 4,660 B      | 2,268 B   | **51%** |
+| Full page charset | 9,388 B      | 5,500 B   | **41%** |
 
 ## Install
 
