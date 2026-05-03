@@ -32,11 +32,15 @@ function getFontInfo(buffer: Buffer | Uint8Array): Promise<FontInfo> {
   const key = buffer as object;
   let cached = fontInfoPromiseByBuffer.get(key);
   if (!cached) {
-    cached = enqueueWasm(() => getFontInfoFromBuffer(buffer)).catch(
+    const promise = enqueueWasm(() => getFontInfoFromBuffer(buffer));
+    // Only evict if the map still points to this exact promise — a concurrent
+    // caller may have already replaced it with a fresh retry.
+    cached = promise.catch(
       // eslint-disable-next-line no-restricted-syntax
       (err: unknown) => {
-        // Evict rejected promises so retries with the same buffer aren't stuck
-        fontInfoPromiseByBuffer.delete(key);
+        if (fontInfoPromiseByBuffer.get(key) === cached) {
+          fontInfoPromiseByBuffer.delete(key);
+        }
         throw err;
       }
     );

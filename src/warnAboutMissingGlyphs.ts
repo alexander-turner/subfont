@@ -62,6 +62,7 @@ async function warnAboutMissingGlyphs(
     for (const fontUsage of fontUsages) {
       if (!fontUsage.subsets) continue;
       const subsetBuffer = Object.values(fontUsage.subsets)[0];
+      if (!subsetBuffer) continue;
       if (!uniqueSubsetBuffers.has(subsetBuffer)) {
         uniqueSubsetBuffers.set(
           subsetBuffer,

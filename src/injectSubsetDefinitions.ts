@@ -35,7 +35,6 @@ function injectSubsetDefinitions(
     if (possibleFontFamily) {
       const possibleFontFamilyLowerCase = possibleFontFamily.toLowerCase();
       if (subsetFontNames.has(possibleFontFamilyLowerCase)) {
-        // Bail out, a subset font is already listed
         return cssValue;
       } else if (webfontNameMap[possibleFontFamilyLowerCase]) {
         const newToken = {
@@ -47,13 +46,9 @@ function injectSubsetDefinitions(
           quote: "'",
         };
         if (replaceOriginal) {
-          rootNode.nodes.splice(
-            rootNode.nodes.indexOf(node),
-            lastFontFamilyTokenIndex - i + 1,
-            newToken
-          );
+          rootNode.nodes.splice(i, lastFontFamilyTokenIndex - i + 1, newToken);
         } else {
-          rootNode.nodes.splice(rootNode.nodes.indexOf(node), 0, newToken, {
+          rootNode.nodes.splice(i, 0, newToken, {
             type: 'div',
             value: ',',
             after: ' ',
